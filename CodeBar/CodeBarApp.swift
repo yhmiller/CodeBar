@@ -39,7 +39,12 @@ struct CodeBarApp: App {
                     preferences: SearchPanelController.shared.preferences
                 ),
                 isOpenAtLoginEnabled: { LoginItem.isEnabled },
-                setOpenAtLogin: { LoginItem.setEnabled($0) }
+                setOpenAtLogin: { LoginItem.setEnabled($0) },
+                isDockIconShown: { SearchPanelController.shared.preferences.showsDockIcon },
+                setDockIconShown: { shows in
+                    SearchPanelController.shared.preferences.showsDockIcon = shows
+                    ActivationPolicyController.setShowsDockIcon(shows)
+                }
             )
         }
     }

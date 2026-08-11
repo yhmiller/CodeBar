@@ -9,4 +9,9 @@ public protocol PreferencesStoring {
     /// Systems included in search. Empty means every installed system.
     var enabledSystems: Set<CodeSystem> { get }
     func setSystem(_ system: CodeSystem, enabled: Bool)
+
+    /// Whether CodeBar appears in the Dock as a full app, rather than living
+    /// only in the menu bar. Defaults to `false` while there is no main window
+    /// behind the icon.
+    var showsDockIcon: Bool { get set }
 }
