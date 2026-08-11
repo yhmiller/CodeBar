@@ -18,6 +18,8 @@ enum Migrations {
                 try migrateLegacyToCurrent(database)
             case 2:
                 try migrateV2ToV3(database)
+            case 3:
+                try migrateV3ToV4(database)
             default:
                 throw StoreError.unsupportedSchemaVersion(version)
             }
@@ -77,6 +79,15 @@ enum Migrations {
             try database.execute(Schema.migrateV2ToV3)
         }
         try database.setUserVersion(3)
+    }
+
+    /// Adds hierarchy and publisher notes. Existing rows report no parent and no
+    /// notes until re-imported from a set that carries the tabular file.
+    private static func migrateV3ToV4(_ database: Database) throws {
+        try database.transaction {
+            try database.execute(Schema.migrateV3ToV4)
+        }
+        try database.setUserVersion(4)
     }
 
     private static func copyLegacyRows(_ database: Database) throws {
