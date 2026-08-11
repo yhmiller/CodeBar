@@ -1,6 +1,7 @@
 # CodeBar code-set format
 
 What `Scripts/import_*.py` produces and what **Import Code Set…** reads.
+The commands that generate it are in the [README](../README.md#importing-full-code-sets).
 
 ## Envelope
 
@@ -15,15 +16,23 @@ What `Scripts/import_*.py` produces and what **Import Code Set…** reads.
       "code": "E11.9",
       "display": "Type 2 diabetes mellitus without complications",
       "system": "ICD-10-CM",
-      "synonyms": ["T2DM", "type 2 diabetes"],
-      "billable": true
+      "synonyms": ["T2DM", "Diabetes, diabetic type 2"],
+      "billable": true,
+      "parent": "E11",
+      "chapter": "Endocrine, nutritional and metabolic diseases (E00-E89)"
     },
     {
       "code": "E11",
       "display": "Type 2 diabetes mellitus",
       "system": "ICD-10-CM",
       "synonyms": [],
-      "billable": false
+      "billable": false,
+      "chapter": "Endocrine, nutritional and metabolic diseases (E00-E89)",
+      "notes": [
+        { "kind": "includes",  "text": "diabetes NOS" },
+        { "kind": "excludes1", "text": "type 1 diabetes mellitus (E10.-)" },
+        { "kind": "useAdditionalCode", "text": "insulin (Z79.4)" }
+      ]
     }
   ]
 }
@@ -46,6 +55,46 @@ What `Scripts/import_*.py` produces and what **Import Code Set…** reads.
 | `system` | yes | Must match the envelope's `system` when both are present. |
 | `synonyms` | no | Additional search terms. Multi-word entries are preserved intact. Defaults to `[]`. |
 | `billable` | no | See below. **Absent means unknown, which is not the same as `false`.** |
+| `parent` | no | The code one level up. Absent for a top-level code, or when the source carried no hierarchy. |
+| `chapter` | no | Grouping label, used when browsing. |
+| `notes` | no | The publisher's coding notes, in the order given. |
+
+## `notes`
+
+Each entry is `{ "kind": …, "text": … }`.
+
+| Kind | Meaning |
+|---|---|
+| `includes` | Terms this code covers |
+| `inclusionTerm` | Alternative wordings that map here |
+| `excludes1` | **Never code together with this code** |
+| `excludes2` | Separate condition; both may be coded |
+| `codeFirst` | Sequence the underlying condition first |
+| `useAdditionalCode` | Add a further code for detail |
+| `codeAlso` | A related code that may also apply |
+| `note` | Anything else the publisher attached |
+
+`excludes1` and `excludes2` look alike and mean opposite things. Collapsing them
+would be a coding error waiting to happen, so they stay distinct through the
+converter, the schema and the UI — which colours `excludes1` apart from every
+other kind.
+
+Notes are **replaced** per system on each import rather than merged. They are
+publisher content, so the incoming file is the authority; merging would
+accumulate notes from superseded releases.
+
+## `parent`
+
+Read from the publisher, never derived. `E11.21`'s parent is `E11.2`, not `E11`,
+so trimming characters would build a wrong tree.
+
+The CMS tabular file does not enumerate everything, though. Seventh-character
+extensions like `S72.001A` are defined by rule rather than listed, which left
+53,223 of 98,186 codes with no stated parent — and every one of them looking like
+a top-level category. `infer_missing_parents` fills those with the longest code
+that is a proper prefix, strictly as a fallback where the publisher is silent and
+never overriding a stated parent. Root count goes from 53,223 to 1,918, which
+matches ICD-10-CM's three-character categories.
 
 ## `mode`: why `replace` matters
 
@@ -92,13 +141,16 @@ than being penalised for an unknown.
 Measured on the real CMS ICD-10-CM FY2026 order file — 98,186 codes, of which
 74,719 are billable and 23,467 are category headers:
 
-| Step | Result |
-|---|---|
-| `import_icd10_cms.py` | 0.9 s, 28 MB of JSON |
-| Decode | 382 ms, peak RSS 112 MB |
-| Ingest | 218 ms |
-| Database on disk | 33 MB |
-| Search | 0.1–64 ms |
+| Step | Order file only | With `--tabular --index` |
+|---|---|---|
+| `import_icd10_cms.py` | 0.9 s, 28 MB of JSON | 1.7 s, 44 MB |
+| Decode | 382 ms, 112 MB peak | 569 ms, 159 MB peak |
+| Ingest | 218 ms | 331 ms |
+| Database on disk | 33 MB | **57 MB** |
+| Search | 0.1–64 ms | 0.1–47 ms |
+
+The extra 24 MB buys the hierarchy, 23,910 coding notes, and 63,138 index
+phrasings — without which `chalasia` and `childhood asthma` match nothing.
 
 The whole file is held in memory during import, which is comfortable at this
 scale and at LOINC's. SNOMED CT is several times larger and would push peak

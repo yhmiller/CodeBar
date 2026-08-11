@@ -8,8 +8,13 @@ Status: phases 0–4 and 7 are implemented, 5 was skipped, 6 is in progress.
 deviation from this document. Sections below describe the target design, not
 necessarily today's code.
 
-**§11 supersedes the scope of §3–4**: CodeBar is becoming a full native app that
-keeps the menu bar panel. Read it before making structural decisions.
+**§11 supersedes the scope of §3–4**: CodeBar is now a full native app that keeps
+the menu bar panel. Read it before making structural decisions.
+
+**The module list in §3–4 is also superseded.** Six packages exist, not four:
+`SQLiteKit` (the SQL layer both stores share) and `CodeLibrary` (the user's own
+data, on the opposite lifecycle to the code index) were added afterwards. §11 has
+the current shape; `make layering` has the enforced rules.
 
 ---
 

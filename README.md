@@ -1,9 +1,10 @@
 # CodeBar
 
-A native macOS menu bar app for fast clinical code lookup — ICD-10-CM,
-LOINC, SNOMED CT, CPT. Click the menu bar icon or press **⌥⌘C** from
-anywhere to summon a Spotlight-style search panel, type a term or a code,
-hit Return to copy it.
+A native macOS app for fast clinical code lookup — ICD-10-CM, LOINC,
+SNOMED CT, CPT — with a menu bar panel as the fast path. Press **⌥⌘C** from
+anywhere, type a term or a code, hit Return to copy it. Or open the window to
+browse the hierarchy, read the publisher's coding notes, and keep your own
+lists and annotations.
 
 Ships with a 100-code ICD-10-CM starter set so it's useful immediately.
 Import the full official code sets whenever you're ready (see below) — the real
@@ -48,19 +49,33 @@ make run        # build a Debug copy and launch it, without installing
 make check      # tests, typecheck, and module-boundary checks
 ```
 
-`make check` is the gate: 144 Swift tests, 32 Python tests, a Swift 6
+`make check` is the gate: 253 Swift tests, 45 Python tests, a Swift 6
 strict-concurrency typecheck of the app target, and an assertion that the module
-boundaries hold. It does **not** cover the SwiftUI layer — see
-[the roadmap](docs/ROADMAP.md#known-gaps) for why that matters.
+boundaries hold. Six of the Swift tests are rendered-image snapshots, which cover
+the class of bug a view model cannot see; interaction is still verified by opening
+the app. See [known gaps](docs/ROADMAP.md#known-gaps).
 
 ## Using it
 
 - Type a term ("diabetes") or a code prefix ("E11") — both search at once.
+  Codes match without their dots, so `E119` finds `E11.9`.
+- Clinical shorthand works: `uti`, `copd`, `t2dm`, `gerd` and 22 others expand to
+  the words a description actually uses.
 - ↑ / ↓ to move the selection, **Return** to copy the highlighted code,
   **Esc** to dismiss.
 - **Shift+Return** copies `ICD-10-CM E11.9 — Type 2 diabetes mellitus without
   complications` instead of just the code, for pasting into a note.
 - Clicking a result also copies it. The pin icon keeps a code in the empty state.
+
+### The window
+
+Open it from the Dock or the menu bar. Three columns: chapters, the code tree,
+and a detail pane carrying the code's ancestry, the codes beneath it, whether it
+is billable, and the publisher's own coding notes — including the `Excludes 1`
+rules that mean *never code these together*.
+
+Lists live in the sidebar: build a problem list or an encounter template, and add
+codes to it from any detail pane.
 
 ## Importing full code sets
 
@@ -78,10 +93,23 @@ the full official sets:
 The converters are in `Scripts/`:
 
 ```bash
-python3 Scripts/import_icd10_cms.py icd10cm_order_2026.txt out.json --release 2026
+# ICD-10-CM. All three files come from the same CMS download page.
+python3 Scripts/import_icd10_cms.py icd10cm_order_2026.txt out.json \
+    --release 2026 \
+    --tabular icd10cm_tabular_2026.xml \
+    --index   icd10cm_index_2026.xml
+
 python3 Scripts/import_loinc_csv.py Loinc.csv out.json --release 2.78
 python3 Scripts/import_snomed_rf2.py sct2_Description_Snapshot-en_*.txt out.json
 ```
+
+The two optional ICD-10-CM files are worth the extra arguments:
+
+- `--tabular` adds the **hierarchy** and the **includes/excludes notes**. Without
+  it the window has nothing to browse, and the coding rules are absent.
+- `--index` adds the alphabetic index as **search synonyms** — 63,138 phrasings
+  clinicians look codes up by. Without it, `chalasia` and `childhood asthma`
+  match nothing, because those words appear in no description.
 
 The output format, including why `billable` is three-state and why a yearly
 release should replace rather than merge, is documented in
@@ -112,15 +140,26 @@ Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); progress in
   normalized code; an external-content FTS5 index is kept in sync by triggers.
   Search is one statement with explicit match tiers: exact code, then code
   prefix, then BM25 over display text and synonyms.
-- **`Packages/CodeBarUI`** — the search panel view and its view model. Depends on
-  `CodeCore` only, so it never sees the concrete store.
-- **`Packages/CodePlatform`** — AppKit and Carbon glue: the global hotkey and the
-  pasteboard.
-- **`CodeBar/`** — what's left of the app: `MenuBarExtra`, the floating `NSPanel`,
-  and the composition root.
+- **`Packages/CodeLibrary`** — your own data: pins, usage history, lists, notes.
+  A separate database from the code index, because their lifecycles are opposite.
+- **`Packages/SQLiteKit`** — the SQL layer both stores share.
+- **`Packages/CodeBarUI`** — the search panel, the browse window and their view
+  models. Depends on `CodeCore` only, so it never sees a concrete store.
+- **`Packages/CodePlatform`** — AppKit and Carbon glue: the global hotkey, the
+  pasteboard, login item, activation policy.
+- **`CodeBar/`** — what's left of the app: scenes, the floating `NSPanel`, and
+  the composition root.
 
-Because the app is sandboxed, its database lives in
-`~/Library/Containers/com.princemiller.CodeBar/Data/Library/Application Support/CodeBar/`.
+Because the app is sandboxed, both databases live in
+`~/Library/Containers/com.princemiller.CodeBar/Data/Library/Application Support/CodeBar/`:
+
+```
+codes.sqlite     the code index — rebuildable, replaced by each yearly release
+library.sqlite   your pins, history, lists and notes — irreplaceable
+```
+
+Two files, not two tables, so importing a new release can never reach your own
+data.
 
 Because storage sits behind `CodeRepository`, the search UI never imports
 `CodeStore` — which is what makes both sides testable.
@@ -142,9 +181,16 @@ set never costs you them.
 
 ## Still to come
 
-Tracked as [phase 6](docs/ROADMAP.md#phase-6--settings-pins-copy-formats).
+Tracked in [the roadmap](docs/ROADMAP.md), with what was measured and rejected
+alongside what is planned.
 
-- Per-system toggle in a settings window (hide code systems you don't use)
-- Code-set management: see installed releases, remove a set
+- Your own synonyms, so a department's shorthand does not need a rebuild
 - Configurable hotkey (currently fixed at ⌥⌘C)
-- iCloud sync of pinned codes across machines
+- iCloud sync of the library across machines
+- Crosswalks between code systems — a separately licensed release, not a column
+
+**Known limits worth reading before relying on it**: nothing tests the app's
+interaction layer, so changes to the UI are verified by opening it; searching a
+condition in general terms surfaces its variants before its catch-all, which
+pinning fixes per-user; and the SNOMED converter has only been exercised against
+constructed rows, not a real distribution.
