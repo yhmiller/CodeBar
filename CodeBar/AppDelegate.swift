@@ -7,6 +7,9 @@ import CodePlatform
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let environment = AppEnvironment()
 
+    /// Shared by the panel and the window, so a pin made in one shows in the other.
+    lazy var actions = LibraryActions(library: environment.library ?? EmptyCodeLibrary())
+
     private let hotkeyRegistrar = CarbonHotkeyRegistrar()
 
     func applicationDidFinishLaunching(_ notification: Notification) {

@@ -1,15 +1,45 @@
 import CodeBarUI
+import CodeCore
+import CodeLibrary
 import CodePlatform
 import SwiftUI
 
 @main
 struct CodeBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+        // The window is for what does not fit in two seconds: seeing where a
+        // code sits, what is beneath it, and what the publisher says about
+        // coding it. The panel stays the fast path. See ARCHITECTURE.md §11.
+        WindowGroup("CodeBar") {
+            MainWindowView(
+                model: BrowseViewModel(repository: appDelegate.environment.repository),
+                isPinned: { appDelegate.actions.isPinned($0) },
+                onCopy: { code, format in appDelegate.actions.copy(code, format: format) },
+                onTogglePin: { appDelegate.actions.togglePin($0) }
+            )
+            .frame(minWidth: 900, minHeight: 560)
+            .task { await appDelegate.actions.refresh() }
+        }
+        .defaultSize(width: 1080, height: 680)
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button("Open Search  \(KeyCombo.default.displayString)") {
+                    SearchPanelController.shared.show()
+                }
+            }
+        }
+
         MenuBarExtra("CodeBar", systemImage: "stethoscope") {
             Button("Open Search  (\(KeyCombo.default.displayString))") {
                 SearchPanelController.shared.show()
+            }
+            Button("Browse Codes…") {
+                ActivationPolicyController.setShowsDockIcon(true)
+                NSApp.activate(ignoringOtherApps: true)
+                openWindowFromMenu()
             }
             Divider()
 
@@ -47,5 +77,14 @@ struct CodeBarApp: App {
                 }
             )
         }
+    }
+}
+
+
+private extension CodeBarApp {
+    /// `openWindow` needs the app to be a regular app first, or the window is
+    /// created without ever coming forward.
+    func openWindowFromMenu() {
+        openWindow(id: "CodeBar")
     }
 }
