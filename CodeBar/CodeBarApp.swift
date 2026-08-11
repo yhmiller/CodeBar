@@ -1,3 +1,4 @@
+import CodePlatform
 import SwiftUI
 
 @main
@@ -6,7 +7,7 @@ struct CodeBarApp: App {
 
     var body: some Scene {
         MenuBarExtra("CodeBar", systemImage: "stethoscope") {
-            Button("Open Search  (⌥⌘C)") {
+            Button("Open Search  (\(KeyCombo.default.displayString))") {
                 SearchPanelController.shared.show()
             }
             Divider()

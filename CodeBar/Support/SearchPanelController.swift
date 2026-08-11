@@ -1,6 +1,7 @@
 import AppKit
 import CodeBarUI
 import CodeCore
+import CodePlatform
 import SwiftUI
 
 private let PANEL_SIZE = NSSize(width: 560, height: 420)
