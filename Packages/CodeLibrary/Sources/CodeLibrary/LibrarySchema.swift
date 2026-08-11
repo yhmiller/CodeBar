@@ -4,18 +4,11 @@
 /// `(system, code)` exactly as the index is. Everything else hangs off it, which
 /// is what lets later features arrive as new tables rather than as a reshape.
 ///
-/// Planned, deliberately **not** created until a feature needs them, because a
-/// migration ladder is cheap here and speculative empty tables are not:
-///
-///   lists(id, name, detail, created_at, sort_order)
-///   list_members(list_id, saved_code_id, sort_order)
-///   notes(saved_code_id, body, updated_at)
-///
-/// Each would reference `saved_codes(id)` with `ON DELETE CASCADE`, so the shape
-/// above is the actual forward planning — not the tables themselves.
+/// v2 added lists and notes, hanging off `saved_codes` exactly as planned when
+/// the hub was designed — new tables rather than a reshape.
 enum LibrarySchema {
 
-    static let version: Int32 = 1
+    static let version: Int32 = 2
 
     static let create = """
     CREATE TABLE saved_codes (
@@ -54,6 +47,63 @@ enum LibrarySchema {
 
     CREATE INDEX idx_usage_used_at ON usage_events(used_at DESC);
     CREATE INDEX idx_usage_code    ON usage_events(saved_code_id);
+    """ + createV2
+
+    /// Lists and notes. Split out so it can be run both on a fresh database and
+    /// as the v1 -> v2 migration, from one definition.
+    static let createV2 = """
+    -- A named collection: a problem list, an encounter template, a personal
+    -- favourites set.
+    CREATE TABLE lists (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL,
+        detail     TEXT,
+        created_at INTEGER NOT NULL,
+        sort_order REAL NOT NULL
+    );
+
+    CREATE TABLE list_members (
+        list_id       INTEGER NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+        saved_code_id INTEGER NOT NULL REFERENCES saved_codes(id) ON DELETE CASCADE,
+        sort_order    REAL NOT NULL,
+        PRIMARY KEY (list_id, saved_code_id)
+    );
+
+    CREATE INDEX idx_list_members ON list_members(list_id, sort_order);
+
+    -- One note per code. What a clinician knows that the publisher does not:
+    -- which code their department actually uses for a given presentation.
+    CREATE TABLE notes (
+        saved_code_id INTEGER PRIMARY KEY REFERENCES saved_codes(id) ON DELETE CASCADE,
+        body          TEXT NOT NULL,
+        updated_at    INTEGER NOT NULL
+    );
+    """
+
+    static let selectLists = """
+    SELECT l.id, l.name, l.detail, l.created_at, COUNT(m.saved_code_id)
+      FROM lists l LEFT JOIN list_members m ON m.list_id = l.id
+     GROUP BY l.id
+     ORDER BY l.sort_order, l.created_at;
+    """
+
+    static let selectListMembers = """
+    SELECT c.system, c.code, c.display, c.synonyms_json, c.is_billable
+      FROM list_members m JOIN saved_codes c ON c.id = m.saved_code_id
+     WHERE m.list_id = :list_id
+     ORDER BY m.sort_order;
+    """
+
+    static let selectNote = """
+    SELECT n.body FROM notes n JOIN saved_codes c ON c.id = n.saved_code_id
+     WHERE c.system = :system AND c.code = :code;
+    """
+
+    static let upsertNote = """
+    INSERT INTO notes (saved_code_id, body, updated_at)
+    VALUES (:id, :body, :now)
+    ON CONFLICT(saved_code_id) DO UPDATE SET body = excluded.body,
+                                             updated_at = excluded.updated_at;
     """
 
     static let upsertSavedCode = """
@@ -97,10 +147,14 @@ enum LibrarySchema {
      LIMIT :limit;
     """
 
-    /// A saved code with neither a pin nor any usage is a leftover.
+    /// A saved code with no pin, no usage, no list membership and no note is a
+    /// leftover. Every reason to keep a row has to be checked, or unpinning a
+    /// code would silently delete the note attached to it.
     static let pruneOrphans = """
     DELETE FROM saved_codes
      WHERE id NOT IN (SELECT saved_code_id FROM pins)
-       AND id NOT IN (SELECT saved_code_id FROM usage_events);
+       AND id NOT IN (SELECT saved_code_id FROM usage_events)
+       AND id NOT IN (SELECT saved_code_id FROM list_members)
+       AND id NOT IN (SELECT saved_code_id FROM notes);
     """
 }

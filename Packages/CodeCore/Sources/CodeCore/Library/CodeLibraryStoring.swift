@@ -32,6 +32,26 @@ public protocol CodeLibraryStoring: Sendable {
     func mostUsedCodes(limit: Int) async throws -> [ClinicalCode]
     func usageCount(for code: ClinicalCode) async throws -> Int
 
+    // MARK: - Lists
+
+    func lists() async throws -> [CodeList]
+    @discardableResult
+    func createList(named name: String, detail: String?) async throws -> CodeList
+    func renameList(_ id: Int, to name: String) async throws
+    func deleteList(_ id: Int) async throws
+    func codes(inList id: Int) async throws -> [ClinicalCode]
+    func addCode(_ code: ClinicalCode, toList id: Int) async throws
+    func removeCode(_ code: ClinicalCode, fromList id: Int) async throws
+
+    // MARK: - Notes
+
+    /// What the user knows that the publisher does not — which code their
+    /// department actually uses for a given presentation, for instance.
+    /// `nil` when there is no note.
+    func note(for code: ClinicalCode) async throws -> String?
+    /// An empty or whitespace-only body removes the note.
+    func setNote(_ body: String, for code: ClinicalCode) async throws
+
     // MARK: - Migration
 
     /// One-time adoption of data held before the library existed.

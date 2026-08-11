@@ -5,21 +5,30 @@ import SwiftUI
 public struct CodeDetailView: View {
     let detail: CodeDetail?
     let isPinned: Bool
+    let note: String
     let onCopy: (ClinicalCode, CopyFormat) -> Void
     let onTogglePin: (ClinicalCode) -> Void
     let onSelectCode: (ClinicalCode) -> Void
+    let onSaveNote: (String) -> Void
+
+    @State private var draft = ""
+    @FocusState private var isEditingNote: Bool
 
     public var body: some View {
         if let detail {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     header(detail)
+                    noteEditor(detail)
                     if !detail.notes.isEmpty { notes(detail) }
                     if !detail.children.isEmpty { children(detail) }
                 }
                 .padding(24)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .onChange(of: detail.code.id) { _, _ in draft = note }
+            .onChange(of: note) { _, latest in draft = latest }
+            .onAppear { draft = note }
         } else {
             ContentUnavailableView("Select a code", systemImage: "stethoscope")
         }
@@ -70,6 +79,38 @@ public struct CodeDetailView: View {
                 Button(isPinned ? "Unpin" : "Pin") { onTogglePin(detail.code) }
             }
             .padding(.top, 4)
+        }
+    }
+
+    /// The user's own note, kept visually distinct from the publisher's — one is
+    /// authoritative, the other is a personal reminder, and confusing them in a
+    /// clinical tool would be careless.
+    private func noteEditor(_ detail: CodeDetail) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Your note")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            TextEditor(text: $draft)
+                .font(.callout)
+                .frame(minHeight: 56)
+                .padding(6)
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.25))
+                )
+                .focused($isEditingNote)
+                .onChange(of: isEditingNote) { _, editing in
+                    // Committed when focus leaves, rather than per keystroke.
+                    if !editing && draft != note { onSaveNote(draft) }
+                }
+
+            if draft != note {
+                Button("Save note") { onSaveNote(draft) }
+                    .controlSize(.small)
+            }
         }
     }
 
