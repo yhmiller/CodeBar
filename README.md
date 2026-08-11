@@ -5,40 +5,35 @@ LOINC, SNOMED CT, CPT. Click the menu bar icon or press **⌥⌘C** from
 anywhere to summon a Spotlight-style search panel, type a term or a code,
 hit Return to copy it.
 
-Ships with a ~150-code ICD-10-CM starter set so it's useful immediately.
+Ships with a 100-code ICD-10-CM starter set so it's useful immediately.
 Import the full official code sets whenever you're ready (see below).
 
-## Setup (Xcode)
+## Setup
 
-1. **File → New → Project → macOS → App.** Name it `CodeBar`, interface:
-   SwiftUI, language: Swift. Uncheck "Use Core Data" / "Include Tests"
-   (not needed).
-2. Delete the auto-generated `ContentView.swift` — this project doesn't use it.
-3. Drag the `CodeBar/` folder from this download into your Xcode project
-   (into the group with the same name Xcode created). Check **"Copy items
-   if needed"** and make sure the target checkbox is ticked.
-4. Confirm `Resources/seed_icd10_sample.json` is included in **Target →
-   Build Phases → Copy Bundle Resources**. If it's missing, drag it in.
-5. **Link SQLite:** select the project → your target → **Build Phases →
-   Link Binary With Libraries → +** → add `libsqlite3.tbd`.
-6. **Deployment target:** set to **macOS 14.0** or later (uses
-   `MenuBarExtra` and `.onKeyPress`, both 14+ APIs).
-7. **Menu-bar-only app (optional but recommended):** Target → Info tab →
-   add key `Application is agent (UIElement)` (raw key `LSUIElement`) =
-   `YES`. This hides the Dock icon and Cmd-Tab entry, so CodeBar behaves
-   like a pure menu bar utility.
-8. **App Sandbox:** if Xcode enabled it by default (Signing & Capabilities),
-   remove it for now. The global hotkey (`NSEvent.addGlobalMonitorForEvents`)
-   needs Accessibility permission, which is much simpler to reason about
-   outside the sandbox for a personal tool. (If you later want to
-   distribute this via the App Store, this is the part that'll need
-   rework — sandboxed apps have real restrictions on global event
-   monitoring.)
-9. Build & run (⌘R). On first launch, macOS will prompt you to grant
-   **Accessibility** permission (System Settings → Privacy & Security →
-   Accessibility) — this is what lets the global hotkey work from any app.
-10. Look for the stethoscope icon in your menu bar. Click it, or press
-    **⌥⌘C** from anywhere, to open search.
+```bash
+make bootstrap        # installs XcodeGen if needed, generates CodeBar.xcodeproj
+open CodeBar.xcodeproj
+```
+
+Then build and run (⌘R). Everything that used to be a manual Xcode step —
+deployment target, `LSUIElement`, SQLite linking, bundle resources — lives in
+[project.yml](project.yml), so the project file is generated and never
+committed.
+
+On first launch macOS prompts for **Accessibility** permission (System
+Settings → Privacy & Security → Accessibility). That's what lets the global
+hotkey work from any app. It goes away in phase 3 of the
+[roadmap](docs/ROADMAP.md), which switches to an API that doesn't need it.
+
+Look for the stethoscope icon in your menu bar. Click it, or press **⌥⌘C**
+from anywhere, to open search.
+
+### Working on it
+
+```bash
+make check       # package tests + Swift 6 typecheck of the app target
+make test        # 58 tests across CodeCore and CodeStore
+```
 
 ## Using it
 
@@ -68,8 +63,14 @@ python3 Scripts/import_loinc_csv.py Loinc.csv loinc_full.json
 ```
 
 Then in CodeBar: menu bar icon → **Import Code Set…** → pick the generated
-JSON file. Codes are merged into the existing search index (nothing is
-overwritten).
+JSON file. Codes are merged into the existing index, keyed on system + code:
+importing the same file twice is a no-op, and re-importing a newer release
+updates the descriptions in place.
+
+Note that merging never *removes* anything, so a code retired by the publisher
+stays searchable. Replace semantics — which fix that — need the versioned file
+format from [phase 7](docs/ROADMAP.md#phase-7--versioned-interchange-format);
+the store already supports them.
 
 For SNOMED CT, there's no script yet since RF2 release file structure
 varies by distribution — you'd map the `sct2_Description` file's
@@ -79,31 +80,30 @@ specified name or preferred synonym typeId) into the same JSON shape:
 Happy to write that converter once you've got a sample file in hand — the
 exact columns depend on which release you're pulling from.
 
-## Architecture notes
+## Architecture
 
-- **Search:** SQLite FTS5 (`CodeDatabase.swift`), so it scales from the
-  ~150-code starter set up to the full ICD-10-CM set (~70k rows) or LOINC
-  (~100k+) without changing any query code. Search does a code-prefix
-  pass first (typing "E11" surfaces E11.x immediately), then a full-text
-  prefix pass over display text and synonyms, deduplicated.
-- **Menu bar icon:** SwiftUI `MenuBarExtra` (`CodeBarApp.swift`).
-- **Global hotkey + floating panel:** `HotkeyManager.swift` +
-  `PanelController.swift`, plain AppKit (`NSEvent` global monitor +
-  `NSPanel`), hosting the SwiftUI search view via `NSHostingView`.
+Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); progress in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Known limitation to fix if you scale to SNOMED-sized datasets
+- **`Packages/CodeCore`** — domain types and the `CodeRepository` protocol.
+  No AppKit, no SQLite.
+- **`Packages/CodeStore`** — `SQLiteCodeStore`, an actor over SQLite. Codes
+  live in a real table with `UNIQUE(system, code)` and an index on the
+  normalized code; an external-content FTS5 index is kept in sync by triggers.
+  Search is one statement with explicit match tiers: exact code, then code
+  prefix, then BM25 over display text and synonyms.
+- **`CodeBar/`** — the app: `MenuBarExtra`, the floating `NSPanel`, and the
+  SwiftUI search view. Moves into its own packages in phase 5.
 
-The code-prefix search pass (`WHERE code LIKE ?`) does a full scan over
-the FTS5 table since it's a virtual table without a real column index.
-Fine at ICD-10-CM/LOINC scale (tens of thousands of rows, low
-single-digit milliseconds). If you add SNOMED CT (350k+ concepts) and
-notice lag on code-prefix queries, add a plain (non-FTS5) companion
-table indexed on `code` and query that instead for the prefix pass.
+Because storage sits behind `CodeRepository`, the search UI never imports
+`CodeStore` — which is what makes both sides testable.
 
 ## Ideas for v2
+
+Tracked as [phase 6](docs/ROADMAP.md#phase-6--settings-pins-copy-formats).
 
 - Pinned/recent codes list at the top of empty-query state
 - Cmd+Return to copy `"SYSTEM code — description"` instead of just the code
 - Per-system toggle in a settings window (hide code systems you don't use)
-- Configurable hotkey (currently hardcoded to ⌥⌘C in `HotkeyManager.swift`)
+- Configurable hotkey (currently hardcoded to ⌥⌘C)
 - iCloud sync of pinned codes across machines

@@ -1,3 +1,4 @@
+import CodeCore
 import SwiftUI
 
 struct ResultRow: View {

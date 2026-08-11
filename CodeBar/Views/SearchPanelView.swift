@@ -1,13 +1,19 @@
-import SwiftUI
 import AppKit
+import CodeCore
+import SwiftUI
+
+private let PANEL_WIDTH: CGFloat = 560
+private let RESULT_LIST_MAX_HEIGHT: CGFloat = 340
 
 struct SearchPanelView: View {
-    @State private var query: String = ""
-    @State private var results: [ClinicalCode] = []
-    @State private var selectedIndex: Int = 0
-    @FocusState private var isFocused: Bool
-
+    let repository: (any CodeRepository)?
     var onDismiss: () -> Void
+
+    @State private var query: String = ""
+    @State private var results: [SearchResult] = []
+    @State private var selectedIndex: Int = 0
+    @State private var searchTask: Task<Void, Never>?
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,34 +38,38 @@ struct SearchPanelView: View {
                     .padding()
                     .frame(maxWidth: .infinity)
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(code: item, isSelected: index == selectedIndex)
-                                    .id(index)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { copy(item) }
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .frame(maxHeight: 340)
-                    .onChange(of: selectedIndex) { _, newValue in
-                        withAnimation(.easeOut(duration: 0.1)) {
-                            proxy.scrollTo(newValue, anchor: .center)
-                        }
-                    }
-                }
+                resultList
             }
         }
-        .frame(width: 560)
+        .frame(width: PANEL_WIDTH)
         .background(.ultraThinMaterial)
         .onAppear { isFocused = true }
         .onKeyPress(.escape) { onDismiss(); return .handled }
         .onKeyPress(.downArrow) { moveSelection(1); return .handled }
         .onKeyPress(.upArrow) { moveSelection(-1); return .handled }
         .onKeyPress(.return) { copySelected(); return .handled }
+    }
+
+    private var resultList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
+                        ResultRow(code: result.code, isSelected: index == selectedIndex)
+                            .id(index)
+                            .contentShape(Rectangle())
+                            .onTapGesture { copy(result.code) }
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .frame(maxHeight: RESULT_LIST_MAX_HEIGHT)
+            .onChange(of: selectedIndex) { _, newValue in
+                withAnimation(.easeOut(duration: 0.1)) {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
     }
 
     private var emptyState: some View {
@@ -74,13 +84,24 @@ struct SearchPanelView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Cancelling the in-flight task is what stops a slow query for "dia"
+    /// landing after a faster one for "diabetes".
+    ///
+    /// TODO(yhmiller): move to a debounced SearchViewModel in phase 2.
     private func runSearch(_ text: String) {
+        searchTask?.cancel()
         selectedIndex = 0
-        guard !text.isEmpty else {
+
+        guard let repository, !text.isEmpty else {
             results = []
             return
         }
-        results = CodeDatabase.shared.search(text)
+
+        searchTask = Task {
+            let found = (try? await repository.search(SearchQuery(raw: text))) ?? []
+            guard !Task.isCancelled else { return }
+            results = found
+        }
     }
 
     private func moveSelection(_ delta: Int) {
@@ -90,7 +111,7 @@ struct SearchPanelView: View {
 
     private func copySelected() {
         guard results.indices.contains(selectedIndex) else { return }
-        copy(results[selectedIndex])
+        copy(results[selectedIndex].code)
     }
 
     private func copy(_ item: ClinicalCode) {
