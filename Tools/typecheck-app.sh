@@ -10,8 +10,15 @@
 set -eu
 
 ROOT="${0:a:h}/.."
-BIN=$(cd "$ROOT/Packages/CodeStore" && swift build --show-bin-path)
 SDK=$(xcrun --show-sdk-path --sdk macosx)
+
+# Each package builds into its own .build, so every module directory the app
+# imports from has to be on the search path.
+MODULE_ARGS=()
+for package in CodeStore CodeBarUI; do
+  bin=$(cd "$ROOT/Packages/$package" && swift build --show-bin-path)
+  MODULE_ARGS+=(-I "$bin/Modules")
+done
 
 cd "$ROOT"
 
@@ -22,7 +29,7 @@ swiftc -typecheck \
   -swift-version 6 \
   -target arm64-apple-macos14.0 \
   -sdk "$SDK" \
-  -I "$BIN/Modules" \
+  "${MODULE_ARGS[@]}" \
   "${APP_SOURCES[@]}"
 
 echo "app sources typecheck clean"

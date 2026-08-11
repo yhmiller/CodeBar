@@ -1,6 +1,9 @@
 import CodeCore
 import SwiftUI
 
+private let BADGE_COLUMN_WIDTH: CGFloat = 72
+private let CODE_COLUMN_WIDTH: CGFloat = 92
+
 struct ResultRow: View {
     let code: ClinicalCode
     let isSelected: Bool
@@ -14,11 +17,11 @@ struct ResultRow: View {
                 .background(badgeColor.opacity(0.15))
                 .foregroundStyle(badgeColor)
                 .clipShape(Capsule())
-                .frame(width: 72, alignment: .leading)
+                .frame(width: BADGE_COLUMN_WIDTH, alignment: .leading)
 
             Text(code.code)
                 .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(width: 92, alignment: .leading)
+                .frame(width: CODE_COLUMN_WIDTH, alignment: .leading)
 
             Text(code.display)
                 .lineLimit(1)
@@ -41,10 +44,10 @@ struct ResultRow: View {
 
     private var badgeColor: Color {
         switch code.system {
-        case .icd10cm: return .blue
-        case .loinc: return .purple
-        case .snomed: return .green
-        case .cpt: return .orange
+        case .icd10cm: .blue
+        case .loinc: .purple
+        case .snomed: .green
+        case .cpt: .orange
         }
     }
 }
