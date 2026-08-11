@@ -56,4 +56,4 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         # Menu-bar-only: no Dock icon, no Cmd-Tab entry.
         LSUIElement: true
-        NSHumanReadableCopyright: ""
+        NSHumanReadableCopyright: "© 2026 Prince Miller"
