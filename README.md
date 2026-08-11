@@ -51,7 +51,9 @@ make layering    # asserts the module boundaries hold
 - Type a term ("diabetes") or a code prefix ("E11") — both search at once.
 - ↑ / ↓ to move the selection, **Return** to copy the highlighted code,
   **Esc** to dismiss.
-- Clicking a result also copies it.
+- **Shift+Return** copies `ICD-10-CM E11.9 — Type 2 diabetes mellitus without
+  complications` instead of just the code, for pasting into a note.
+- Clicking a result also copies it. The pin icon keeps a code in the empty state.
 
 ## Importing full code sets
 
@@ -116,12 +118,26 @@ Because the app is sandboxed, its database lives in
 Because storage sits behind `CodeRepository`, the search UI never imports
 `CodeStore` — which is what makes both sides testable.
 
-## Ideas for v2
+## Pinned and recent codes
+
+Pin a code from any result row, and it waits for you in the empty state next
+time you open the panel — ⌥⌘C then Return, no typing.
+
+This is more than a shortcut. Full-text relevance ranks by how well the text
+matches, which is not the same as how often a code is used: typing "diabetes"
+against the real 98k-code set surfaces obscure specific codes above E11.9. No
+structural property of the data fixes that, and
+[the alternatives were measured and rejected](docs/ROADMAP.md#open-ranking-does-not-match-clinical-frequency).
+Your own pins are the one signal that reflects what you actually mean.
+
+Pins and recents are stored outside the code database, so re-importing a code
+set never costs you them.
+
+## Still to come
 
 Tracked as [phase 6](docs/ROADMAP.md#phase-6--settings-pins-copy-formats).
 
-- Pinned/recent codes list at the top of empty-query state
-- Cmd+Return to copy `"SYSTEM code — description"` instead of just the code
 - Per-system toggle in a settings window (hide code systems you don't use)
-- Configurable hotkey (currently hardcoded to ⌥⌘C)
+- Code-set management: see installed releases, remove a set
+- Configurable hotkey (currently fixed at ⌥⌘C)
 - iCloud sync of pinned codes across machines

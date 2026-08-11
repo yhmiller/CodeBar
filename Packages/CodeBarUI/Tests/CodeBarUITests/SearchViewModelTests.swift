@@ -18,9 +18,11 @@ struct SearchViewModelTests {
     private func makeModel(
         repository: (any CodeRepository)?,
         pasteboard: FakePasteboard = FakePasteboard(),
+        usage: FakeUsageStore = FakeUsageStore(),
         debounce: Duration = TEST_DEBOUNCE
     ) -> SearchViewModel {
-        SearchViewModel(repository: repository, pasteboard: pasteboard, debounce: debounce)
+        SearchViewModel(repository: repository, pasteboard: pasteboard,
+                        usage: usage, debounce: debounce)
     }
 
     /// Types each fragment with a real pause between them, so an absent debounce
