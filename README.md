@@ -14,37 +14,44 @@ diabetes mellitus", for instance, which needs a further character before it can
 go on a claim — are labelled as such and ranked below their billable children.
 Almost a quarter of the official file is these.
 
-## Setup
+## Install it
 
 ```bash
-make bootstrap        # installs XcodeGen if needed, generates CodeBar.xcodeproj
-open CodeBar.xcodeproj
+make install
 ```
 
-Then build and run (⌘R). Everything that used to be a manual Xcode step —
-deployment target, `LSUIElement`, SQLite linking, bundle resources — lives in
-[project.yml](project.yml), so the project file is generated and never
-committed.
+That builds a Release copy, puts it in `/Applications`, and launches it. First
+run takes a minute or two; after that it's seconds.
 
-No permission prompts, and the app runs inside the App Sandbox. The global
-shortcut is registered with `RegisterEventHotKey`, which needs no Accessibility
-grant and does not observe anything except the one combination it claims.
+You'll need [Homebrew](https://brew.sh). If [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+isn't installed yet, run `make bootstrap` once first — it installs XcodeGen and
+generates the Xcode project.
 
-Look for the stethoscope icon in your menu bar. Click it, or press **⌥⌘C**
-from anywhere, to open search.
+Then:
 
-If another app already owns ⌥⌘C, CodeBar says so at launch rather than failing
-silently, and the menu bar icon keeps working.
+1. Look for the **stethoscope icon** in your menu bar.
+2. Open the menu and tick **Open at Login**, so it's there after a restart.
+3. Press **⌥⌘C** from any app.
 
-### Working on it
+No permission prompts, and it runs inside the App Sandbox. The shortcut uses
+`RegisterEventHotKey`, which needs no Accessibility grant and watches nothing
+except the one combination it claims. If another app already owns ⌥⌘C, CodeBar
+says so at launch instead of failing silently — the menu bar icon still works.
+
+`make uninstall` removes it. Your codes and pins are kept.
+
+## Working on it
 
 ```bash
-make check       # everything below, in one go
-make test        # 122 Swift tests across the four packages
-make test-scripts # 32 Python tests for the converters
-make typecheck   # Swift 6 strict-concurrency check of the app target
-make layering    # asserts the module boundaries hold
+make            # list every command
+make run        # build a Debug copy and launch it, without installing
+make check      # tests, typecheck, and module-boundary checks
 ```
+
+`make check` is the gate: 144 Swift tests, 32 Python tests, a Swift 6
+strict-concurrency typecheck of the app target, and an assertion that the module
+boundaries hold. It does **not** cover the SwiftUI layer — see
+[the roadmap](docs/ROADMAP.md#known-gaps) for why that matters.
 
 ## Using it
 
