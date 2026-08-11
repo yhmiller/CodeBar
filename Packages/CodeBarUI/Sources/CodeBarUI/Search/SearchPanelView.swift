@@ -35,6 +35,12 @@ public struct SearchPanelView: View {
         .frame(width: PANEL_WIDTH)
         .background(.ultraThinMaterial)
         .onAppear { isFocused = true }
+        .onChange(of: model.displaySessionID) { _, _ in
+            // The view survives between showings now, so each appearance has to
+            // clear the field and reclaim focus explicitly.
+            text = ""
+            isFocused = true
+        }
         .onKeyPress(.escape) { onDismiss(); return .handled }
         .onKeyPress(.downArrow) { model.moveSelection(1); return .handled }
         .onKeyPress(.upArrow) { model.moveSelection(-1); return .handled }

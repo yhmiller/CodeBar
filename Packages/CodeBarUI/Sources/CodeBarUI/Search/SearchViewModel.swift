@@ -20,6 +20,14 @@ public final class SearchViewModel {
     public private(set) var results: [SearchResult] = []
     public private(set) var selectedIndex: Int = 0
 
+    /// Bumped each time the panel is about to be shown.
+    ///
+    /// Deliberately a bare counter rather than the model handing the view a
+    /// string: the model must never drive the text field's contents. Doing that
+    /// is what made the query walk backwards in phase 2. The view watches this
+    /// and clears its own field.
+    public private(set) var displaySessionID = 0
+
     private let repository: (any CodeRepository)?
     private let pasteboard: any PasteboardWriting
     private let debounce: Duration
@@ -69,6 +77,15 @@ public final class SearchViewModel {
             results = found
             selectedIndex = 0
         }
+    }
+
+    /// Resets for a fresh appearance of the panel.
+    ///
+    /// The panel and its view are now built once and reused, so state does not
+    /// clear itself by the view being thrown away.
+    public func prepareForDisplay() {
+        displaySessionID += 1
+        setQuery("")
     }
 
     // MARK: - Selection
