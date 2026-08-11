@@ -58,15 +58,23 @@ enum SearchSQL {
 
         // GROUP BY collapses a code that matched both passes onto its best tier,
         // which is what de-duplicates the merged result set.
+        //
+        // Codes the publisher marks as not submittable sort last within a tier.
+        // They are still shown — a clinician searching for a category deserves to
+        // find it — but a billable code wins a tie, because the billable one is
+        // almost always what belongs on the claim. Unknown billability (NULL)
+        // ranks with the billable codes rather than being penalised.
         return """
         WITH \(commonTables.joined(separator: ",\n")),
         hits AS (\(unions.joined(separator: "\n UNION ALL ")))
-        SELECT c.system, c.code, c.display, c.synonyms_json, MIN(h.tier) AS tier
+        SELECT c.system, c.code, c.display, c.synonyms_json, c.is_billable,
+               MIN(h.tier) AS tier,
+               CASE WHEN c.is_billable = 0 THEN 1 ELSE 0 END AS header_last
           FROM hits h
           JOIN codes c ON c.id = h.id
         \(systemFilter)
          GROUP BY c.id
-         ORDER BY tier, MIN(h.score), LENGTH(c.code), c.code
+         ORDER BY tier, header_last, MIN(h.score), LENGTH(c.code), c.code
          LIMIT :limit;
         """
     }

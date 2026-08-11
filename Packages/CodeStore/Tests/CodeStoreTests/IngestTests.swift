@@ -24,7 +24,7 @@ struct IngestTests {
 
         let summary = try await store.ingest(CodeSetImport(codes: Fixtures.icd10))
 
-        #expect(summary.netAdded == 0)
+        #expect(summary.isUnchanged)
     }
 
     @Test("should update the display text when a code is re-imported with a new description")
@@ -76,8 +76,8 @@ struct IngestTests {
         #expect(try await store.codeCount() == Fixtures.icd10.count)
     }
 
-    @Test("should report the number of rows removed by a replace import")
-    func replaceModeReportsRemovedCount() async throws {
+    @Test("should report the net number of codes retired by a replace import")
+    func replaceModeReportsNetRetired() async throws {
         let store = try Fixtures.store()
         try await store.ingest(CodeSetImport(codes: Fixtures.icd10))
 
@@ -85,7 +85,42 @@ struct IngestTests {
             CodeSetImport(codes: Array(Fixtures.icd10.prefix(2)), mode: .replace)
         )
 
-        #expect(summary.removed == Fixtures.icd10.count)
+        #expect(summary.retired == Fixtures.icd10.count - 2)
+    }
+
+    @Test("should never report a negative number of additions")
+    func neverReportsNegativeAdditions() async throws {
+        let store = try Fixtures.store()
+        try await store.ingest(CodeSetImport(codes: Fixtures.icd10))
+
+        let summary = try await store.ingest(
+            CodeSetImport(codes: Array(Fixtures.icd10.prefix(2)), mode: .replace)
+        )
+
+        #expect(summary.added == 0)
+    }
+
+    @Test("should report how many codes are installed after a replace import")
+    func reportsInstalledCountAfterReplace() async throws {
+        let store = try Fixtures.store()
+        try await store.ingest(CodeSetImport(codes: Fixtures.icd10))
+
+        let summary = try await store.ingest(
+            CodeSetImport(codes: Array(Fixtures.icd10.prefix(2)), mode: .replace)
+        )
+
+        #expect(summary.installed == 2)
+    }
+
+    @Test("should scope its counts to the systems the file touches")
+    func scopesCountsToAffectedSystems() async throws {
+        let store = try await Fixtures.seededStore()
+
+        let summary = try await store.ingest(
+            CodeSetImport(codes: Array(Fixtures.icd10.prefix(1)), mode: .replace)
+        )
+
+        #expect(summary.installed == 1)
     }
 
     @Test("should decode the bare-array JSON format emitted by the import scripts")

@@ -1,9 +1,13 @@
 PACKAGES := Packages/CodeCore Packages/CodeStore Packages/CodeBarUI Packages/CodePlatform
 
-.PHONY: bootstrap project build test typecheck layering check clean
+.PHONY: bootstrap project build test test-scripts typecheck layering check clean
 
 ## Everything CI would run.
-check: test typecheck layering
+check: test test-scripts typecheck layering
+
+## Tests for the Python code-set converters.
+test-scripts:
+	@python3 -m unittest discover -s Scripts/tests
 
 ## Install XcodeGen if missing, then generate CodeBar.xcodeproj.
 bootstrap:
