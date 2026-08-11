@@ -8,6 +8,12 @@ import SwiftUI
 /// beneath it, and what the publisher says about coding it.
 public struct MainWindowView: View {
     @State private var model: BrowseViewModel
+
+    /// The field owns its text and pushes one way into the model — the same rule
+    /// the panel follows. Letting the model drive a text field is what made the
+    /// query walk backwards in phase 2.
+    @State private var searchText = ""
+
     @State private var isCreatingList = false
     @State private var newListName = ""
     @State private var renaming: CodeList?
@@ -48,7 +54,9 @@ public struct MainWindowView: View {
                 onRemoveFromList: { model.removeSelectedCodeFromCurrentList() }
             )
         }
-        .navigationTitle(model.selectedList?.name ?? "CodeBar")
+        .navigationTitle(model.isSearching
+                         ? "Search"
+                         : (model.selectedList?.name ?? "CodeBar"))
         .task { await model.load() }
         .alert("New List", isPresented: $isCreatingList) {
             TextField("Name", text: $newListName)
@@ -152,9 +160,18 @@ public struct MainWindowView: View {
         }
     }
 
-    @ViewBuilder
     private var codeTree: some View {
-        if let list = model.selectedList {
+        contentColumn
+            .searchable(text: $searchText, placement: .toolbar,
+                        prompt: "Search all \(model.installedCodeCount) codes")
+            .onChange(of: searchText) { _, text in model.search(text) }
+    }
+
+    @ViewBuilder
+    private var contentColumn: some View {
+        if model.isSearching {
+            searchResults
+        } else if let list = model.selectedList {
             listContents(list)
         } else {
             List(selection: Binding(
@@ -166,6 +183,34 @@ public struct MainWindowView: View {
                 }
             }
             .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        }
+    }
+
+    /// Search covers the whole code set, so a result carries its chapter — the
+    /// tree that would otherwise give it context is not on screen.
+    private var searchResults: some View {
+        List(selection: Binding(
+            get: { model.selectedCode?.id },
+            set: { id in model.selectedCode = model.searchResults.first { $0.id == id }?.code }
+        )) {
+            ForEach(model.searchResults) { result in
+                VStack(alignment: .leading, spacing: 2) {
+                    CodeRowLabel(code: result.code)
+                    if let chapter = result.code.chapter {
+                        Text(chapter)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+                .tag(result.id)
+            }
+        }
+        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .overlay {
+            if model.searchResults.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+            }
         }
     }
 

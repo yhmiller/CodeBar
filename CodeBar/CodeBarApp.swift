@@ -17,7 +17,8 @@ struct CodeBarApp: App {
             MainWindowView(
                 model: BrowseViewModel(
                     repository: appDelegate.environment.repository,
-                    library: appDelegate.environment.library
+                    library: appDelegate.environment.library,
+                    preferences: SearchPanelController.shared.preferences
                 ),
                 isPinned: { appDelegate.actions.isPinned($0) },
                 onCopy: { code, format in appDelegate.actions.copy(code, format: format) },

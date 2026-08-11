@@ -42,10 +42,14 @@ public final class SearchViewModel {
     private let preferences: any PreferencesStoring
     private let debounce: Duration
 
-    /// Retained so a new keystroke can cancel the previous search.
-    /// Tests await it to settle deterministically rather than sleeping.
     @ObservationIgnored
-    private(set) var pendingSearch: Task<Void, Never>?
+    private lazy var searchRunner = DebouncedSearchRunner(
+        repository: repository, debounce: debounce
+    )
+
+    /// Tests await this to settle deterministically rather than sleeping.
+    @ObservationIgnored
+    var pendingSearch: Task<Void, Never>? { searchRunner.pending }
 
     /// Writes to the library are fire-and-forget from the view's point of view.
     /// Retained so tests can await them, exactly as `pendingSearch` is.
@@ -115,37 +119,18 @@ public final class SearchViewModel {
     public func setQuery(_ text: String) {
         query = text
         selectedIndex = 0
-        pendingSearch?.cancel()
-
-        guard let repository, !text.isEmpty else {
-            results = []
-            pendingSearch = nil
-            return
-        }
 
         // Read at search time rather than at init, so toggling a system in
         // Settings takes effect on the next keystroke without a restart.
-        let systems = preferences.enabledSystems
-        let preferred = preferredIDs
+        let query = SearchQuery(
+            raw: text,
+            systems: preferences.enabledSystems,
+            preferredCodes: preferredIDs
+        )
 
-        pendingSearch = Task { [debounce] in
-            // Cancellation during the debounce is the common case — it is what
-            // collapses a burst of keystrokes into a single query.
-            do {
-                try await Task.sleep(for: debounce)
-            } catch {
-                return
-            }
-
-            let found = (try? await repository.search(
-                SearchQuery(raw: text, systems: systems, preferredCodes: preferred)
-            )) ?? []
-
-            // Re-checked after the await: a query already in flight when the
-            // user kept typing must not overwrite the newer results.
-            guard !Task.isCancelled else { return }
-            results = found
-            selectedIndex = 0
+        searchRunner.run(query) { [weak self] found in
+            self?.results = found
+            self?.selectedIndex = 0
         }
     }
 
