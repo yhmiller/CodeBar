@@ -20,13 +20,15 @@ deployment target, `LSUIElement`, SQLite linking, bundle resources — lives in
 [project.yml](project.yml), so the project file is generated and never
 committed.
 
-On first launch macOS prompts for **Accessibility** permission (System
-Settings → Privacy & Security → Accessibility). That's what lets the global
-hotkey work from any app. It goes away in phase 3 of the
-[roadmap](docs/ROADMAP.md), which switches to an API that doesn't need it.
+No permission prompts, and the app runs inside the App Sandbox. The global
+shortcut is registered with `RegisterEventHotKey`, which needs no Accessibility
+grant and does not observe anything except the one combination it claims.
 
 Look for the stethoscope icon in your menu bar. Click it, or press **⌥⌘C**
 from anywhere, to open search.
+
+If another app already owns ⌥⌘C, CodeBar says so at launch rather than failing
+silently, and the menu bar icon keeps working.
 
 ### Working on it
 
@@ -92,8 +94,15 @@ Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); progress in
   normalized code; an external-content FTS5 index is kept in sync by triggers.
   Search is one statement with explicit match tiers: exact code, then code
   prefix, then BM25 over display text and synonyms.
-- **`CodeBar/`** — the app: `MenuBarExtra`, the floating `NSPanel`, and the
-  SwiftUI search view. Moves into its own packages in phase 5.
+- **`Packages/CodeBarUI`** — the search panel view and its view model. Depends on
+  `CodeCore` only, so it never sees the concrete store.
+- **`Packages/CodePlatform`** — AppKit and Carbon glue: the global hotkey and the
+  pasteboard.
+- **`CodeBar/`** — what's left of the app: `MenuBarExtra`, the floating `NSPanel`,
+  and the composition root.
+
+Because the app is sandboxed, its database lives in
+`~/Library/Containers/com.princemiller.CodeBar/Data/Library/Application Support/CodeBar/`.
 
 Because storage sits behind `CodeRepository`, the search UI never imports
 `CodeStore` — which is what makes both sides testable.

@@ -13,10 +13,6 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     PRODUCT_BUNDLE_IDENTIFIER: com.princemiller.CodeBar
     ENABLE_USER_SCRIPT_SANDBOXING: YES
-    # App Sandbox stays off until phase 3 replaces the global event monitor
-    # with RegisterEventHotKey; the monitor needs Accessibility, which needs
-    # an unsandboxed process. See docs/ARCHITECTURE.md §5.4.
-    ENABLE_APP_SANDBOX: NO
 
 packages:
   CodeCore:
@@ -25,6 +21,8 @@ packages:
     path: Packages/CodeStore
   CodeBarUI:
     path: Packages/CodeBarUI
+  CodePlatform:
+    path: Packages/CodePlatform
 
 targets:
   CodeBar:
@@ -38,6 +36,15 @@ targets:
       - package: CodeCore
       - package: CodeStore
       - package: CodeBarUI
+      - package: CodePlatform
+    # RegisterEventHotKey needs no entitlement and works sandboxed, which is what
+    # made turning the sandbox on possible. NSOpenPanel keeps working because
+    # Powerbox grants access to whatever file the user picks.
+    entitlements:
+      path: CodeBar/CodeBar.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
     info:
       path: CodeBar/Info.plist
       properties:

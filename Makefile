@@ -1,4 +1,4 @@
-PACKAGES := Packages/CodeCore Packages/CodeStore Packages/CodeBarUI
+PACKAGES := Packages/CodeCore Packages/CodeStore Packages/CodeBarUI Packages/CodePlatform
 
 .PHONY: bootstrap project build test typecheck layering check clean
 
