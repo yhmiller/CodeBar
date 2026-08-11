@@ -16,7 +16,12 @@ enum SearchSQL {
     private static let displayWeight = 2.0
     private static let synonymWeight = 1.0
 
-    static func build(codePass: Bool, textPass: Bool, systemCount: Int) -> String {
+    /// Enough to cover what one clinician actually reuses without turning the
+    /// query into hundreds of bind parameters.
+    static let preferredLimit = 50
+
+    static func build(codePass: Bool, textPass: Bool, systemCount: Int,
+                      preferredCount: Int = 0) -> String {
         var commonTables: [String] = []
         var unions: [String] = []
 
@@ -52,9 +57,36 @@ enum SearchSQL {
             unions.append("SELECT id, tier, score FROM text_hits")
         }
 
+        // A preferred code has to be able to *enter* the result set, not merely
+        // be reordered once inside it. E11.9 scores well below the codes that
+        // repeat "diabetes"/"diabetic", so it never reached the inner passes'
+        // top 50 and preference could not rescue it. This pass admits any
+        // preferred code that matches the query at all.
+        if textPass && preferredCount > 0 {
+            let placeholders = (0..<preferredCount).map { ":pref\($0)" }.joined(separator: ", ")
+            commonTables.append("""
+            preferred_hits AS (
+                SELECT c.id, 2 AS tier, 0.0 AS score
+                  FROM codes c
+                 WHERE (c.system || '-' || c.code) IN (\(placeholders))
+                   AND c.id IN (SELECT rowid FROM codes_fts WHERE codes_fts MATCH :match)
+            )
+            """)
+            unions.append("SELECT id, tier, score FROM preferred_hits")
+        }
+
         let systemFilter = systemCount > 0
             ? "WHERE c.system IN (\((0..<systemCount).map { ":sys\($0)" }.joined(separator: ", ")))"
             : ""
+
+        // Applied *within* a tier, never across one. An exact code match still
+        // wins outright: someone typing E11 means E11, however often they have
+        // used something else.
+        let preference = preferredCount > 0
+            ? "CASE WHEN (c.system || '-' || c.code) IN "
+              + "(\((0..<preferredCount).map { ":pref\($0)" }.joined(separator: ", ")))"
+              + " THEN 0 ELSE 1 END"
+            : "0"
 
         // GROUP BY collapses a code that matched both passes onto its best tier,
         // which is what de-duplicates the merged result set.
@@ -69,12 +101,13 @@ enum SearchSQL {
         hits AS (\(unions.joined(separator: "\n UNION ALL ")))
         SELECT c.system, c.code, c.display, c.synonyms_json, c.is_billable,
                MIN(h.tier) AS tier,
-               CASE WHEN c.is_billable = 0 THEN 1 ELSE 0 END AS header_last
+               CASE WHEN c.is_billable = 0 THEN 1 ELSE 0 END AS header_last,
+               \(preference) AS not_preferred
           FROM hits h
           JOIN codes c ON c.id = h.id
         \(systemFilter)
          GROUP BY c.id
-         ORDER BY tier, header_last, MIN(h.score), LENGTH(c.code), c.code
+         ORDER BY tier, not_preferred, header_last, MIN(h.score), LENGTH(c.code), c.code
          LIMIT :limit;
         """
     }

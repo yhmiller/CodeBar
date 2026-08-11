@@ -11,6 +11,10 @@ public let DEFAULT_SEARCH_DEBOUNCE = Duration.milliseconds(120)
 /// clinic session, few enough to stay scannable.
 public let EMPTY_STATE_RECENT_LIMIT = 8
 
+/// How many of the user's own codes influence ranking. Matches the store's own
+/// cap; beyond this the query becomes mostly bind parameters.
+public let PREFERRED_CODE_LIMIT = 50
+
 /// Owns the search panel's state.
 ///
 /// Two guarantees it exists to provide: a burst of keystrokes issues one query,
@@ -76,6 +80,11 @@ public final class SearchViewModel {
     public private(set) var recentCodes: [ClinicalCode] = []
     private var pinnedIDs: Set<String> = []
 
+    /// Codes this person uses, ranked ahead of equally-relevant ones they have
+    /// never touched. Pins count too: pinning is an explicit statement that a
+    /// code matters, and waiting for usage to accumulate would ignore it.
+    private var preferredIDs: Set<String> = []
+
     public var hasEmptyStateSuggestions: Bool {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
@@ -96,6 +105,9 @@ public final class SearchViewModel {
         pinnedCodes = (try? await library.pinnedCodes()) ?? []
         recentCodes = (try? await library.recentCodes(limit: EMPTY_STATE_RECENT_LIMIT)) ?? []
         pinnedIDs = Set(pinnedCodes.map(\.id))
+
+        let mostUsed = (try? await library.mostUsedCodes(limit: PREFERRED_CODE_LIMIT)) ?? []
+        preferredIDs = pinnedIDs.union(mostUsed.map(\.id))
     }
 
     // MARK: - Querying
@@ -114,6 +126,7 @@ public final class SearchViewModel {
         // Read at search time rather than at init, so toggling a system in
         // Settings takes effect on the next keystroke without a restart.
         let systems = preferences.enabledSystems
+        let preferred = preferredIDs
 
         pendingSearch = Task { [debounce] in
             // Cancellation during the debounce is the common case — it is what
@@ -125,7 +138,7 @@ public final class SearchViewModel {
             }
 
             let found = (try? await repository.search(
-                SearchQuery(raw: text, systems: systems)
+                SearchQuery(raw: text, systems: systems, preferredCodes: preferred)
             )) ?? []
 
             // Re-checked after the await: a query already in flight when the
