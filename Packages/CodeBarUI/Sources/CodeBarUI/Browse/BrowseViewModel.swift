@@ -42,21 +42,38 @@ public final class BrowseNode: Identifiable {
     }
 }
 
+/// What the sidebar is showing: a chapter of the code tree, or one of the
+/// user's own lists.
+public enum SidebarSelection: Hashable, Sendable {
+    case chapter(String)
+    case list(Int)
+}
+
 /// Drives the main window's browse column.
 @MainActor
 @Observable
 public final class BrowseViewModel {
 
     public private(set) var chapters: [String] = []
+    public private(set) var lists: [CodeList] = []
     public private(set) var roots: [BrowseNode] = []
+    /// Members of the selected list. Empty while a chapter is selected.
+    public private(set) var listCodes: [ClinicalCode] = []
     public private(set) var detail: CodeDetail?
     public private(set) var isLoading = false
 
-    public var selectedChapter: String? {
+    public var selection: SidebarSelection? {
         didSet {
-            guard selectedChapter != oldValue else { return }
-            Task { await loadRoots() }
+            guard selection != oldValue else { return }
+            pendingWork = Task { await loadSelection() }
         }
+    }
+
+    /// The list currently being viewed, if any — so the detail pane can offer to
+    /// remove a code from the list it was reached through.
+    public var selectedList: CodeList? {
+        guard case .list(let id) = selection else { return nil }
+        return lists.first { $0.id == id }
     }
 
     public var selectedCode: ClinicalCode? {
@@ -109,18 +126,94 @@ public final class BrowseViewModel {
         defer { isLoading = false }
 
         chapters = (try? await repository.chapters(in: system)) ?? []
-        if selectedChapter == nil {
-            selectedChapter = chapters.first
+        await reloadLists()
+
+        if selection == nil, let first = chapters.first {
+            selection = .chapter(first)
         }
     }
 
-    private func loadRoots() async {
-        guard let repository, let chapter = selectedChapter else {
+    public func reloadLists() async {
+        lists = (try? await library?.lists()).flatMap { $0 } ?? []
+    }
+
+    private func loadSelection() async {
+        switch selection {
+        case .chapter(let chapter):
+            listCodes = []
+            await loadRoots(inChapter: chapter)
+        case .list(let id):
+            roots = []
+            listCodes = (try? await library?.codes(inList: id)).flatMap { $0 } ?? []
+        case nil:
+            roots = []
+            listCodes = []
+        }
+    }
+
+    private func loadRoots(inChapter chapter: String) async {
+        guard let repository else {
             roots = []
             return
         }
         let found = (try? await repository.roots(inChapter: chapter, of: system)) ?? []
         roots = found.map { BrowseNode(code: $0, repository: repository) }
+    }
+
+    // MARK: - Lists
+
+    public func createList(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let library else { return }
+
+        pendingWork = Task {
+            let created = try? await library.createList(named: trimmed, detail: nil)
+            await reloadLists()
+            if let created { selection = .list(created.id) }
+        }
+    }
+
+    public func renameList(_ id: Int, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let library else { return }
+
+        pendingWork = Task {
+            try? await library.renameList(id, to: trimmed)
+            await reloadLists()
+        }
+    }
+
+    public func deleteList(_ id: Int) {
+        guard let library else { return }
+        pendingWork = Task {
+            try? await library.deleteList(id)
+            await reloadLists()
+            // Falling back to the first chapter, rather than leaving the window
+            // pointed at something that no longer exists.
+            if case .list(id) = selection {
+                selection = chapters.first.map { SidebarSelection.chapter($0) }
+            }
+        }
+    }
+
+    public func addSelectedCode(toList id: Int) {
+        guard let library, let code = selectedCode else { return }
+        pendingWork = Task {
+            try? await library.addCode(code, toList: id)
+            await reloadLists()
+            if case .list(id) = selection {
+                listCodes = (try? await library.codes(inList: id)) ?? []
+            }
+        }
+    }
+
+    public func removeSelectedCodeFromCurrentList() {
+        guard let library, let code = selectedCode, case .list(let id) = selection else { return }
+        pendingWork = Task {
+            try? await library.removeCode(code, fromList: id)
+            await reloadLists()
+            listCodes = (try? await library.codes(inList: id)) ?? []
+        }
     }
 
     private func loadDetail() async {
