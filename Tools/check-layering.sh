@@ -21,6 +21,9 @@ FORBIDDEN=(
   "CodeStore:CodeBarUI"
   "CodeStore:AppKit"
   "CodeStore:SwiftUI"
+  "CodeCore:CodePlatform"
+  "CodePlatform:CodeStore"
+  "CodePlatform:CodeBarUI"
 )
 
 for rule in $FORBIDDEN; do

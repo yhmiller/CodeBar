@@ -15,7 +15,7 @@ SDK=$(xcrun --show-sdk-path --sdk macosx)
 # Each package builds into its own .build, so every module directory the app
 # imports from has to be on the search path.
 MODULE_ARGS=()
-for package in CodeStore CodeBarUI; do
+for package in CodeStore CodeBarUI CodePlatform; do
   bin=$(cd "$ROOT/Packages/$package" && swift build --show-bin-path)
   MODULE_ARGS+=(-I "$bin/Modules")
 done
