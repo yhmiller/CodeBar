@@ -12,9 +12,24 @@ enum SearchSQL {
     static let codePassLimit = 25
     static let textPassLimit = 50
 
-    /// A hit in the display text outranks a hit in a synonym.
-    private static let displayWeight = 2.0
-    private static let synonymWeight = 1.0
+    /// BM25 column weights: description, then synonyms.
+    ///
+    /// Equal, and measured rather than chosen. The original 2:1 was a guess made
+    /// before there was anything to measure against. Once the alphabetic index
+    /// was imported, sweeping 1 / 2 / 4 / 6 / 10 against the real 98k set over
+    /// fifteen queries showed equal weighting best on every metric — total rank
+    /// 41 versus 65 at 2:1 and 154 at 10:1 — and rising weights monotonically
+    /// worse.
+    ///
+    /// The reason is that the index is what makes many codes findable at all.
+    /// "Chalasia" appears in no description; weighting descriptions above
+    /// synonyms buries exactly the phrasings the index was imported to provide.
+    ///
+    /// Not swept below 1.0: that would say a synonym match counts for more than
+    /// the publisher's own description, which is hard to justify however it
+    /// scores on fifteen queries.
+    static let displayWeight = 1.0
+    static let synonymWeight = 1.0
 
     /// Enough to cover what one clinician actually reuses without turning the
     /// query into hundreds of bind parameters.
