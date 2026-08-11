@@ -126,6 +126,29 @@ struct MigrationTests {
         #expect(try await store.search(SearchQuery(raw: "hypertension")).first?.code.code == "I10")
     }
 
+    @Test("should add hierarchy columns when migrating a v3 database")
+    func migratesV3ToV4() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        // V2 fixture migrates all the way forward through the ladder.
+        _ = try SQLiteCodeStore(location: .file(fixture.url))
+
+        let database = try Database(path: fixture.url.path)
+        #expect(try database.tableExists("code_notes"))
+    }
+
+    @Test("should report no parent for rows that predate the hierarchy columns")
+    func preV4RowsHaveNoParent() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        let store = try SQLiteCodeStore(location: .file(fixture.url))
+        let roots = try await store.children(of: nil, in: .icd10cm)
+
+        #expect(roots.count == Fixtures.icd10.count)
+    }
+
     @Test("should refuse to open a database written by a newer schema")
     func rejectsNewerSchema() async throws {
         let fixture = try LegacyDatabaseFixture(rows: [])
