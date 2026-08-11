@@ -31,20 +31,34 @@ public struct CodeSetImport: Sendable, Equatable {
     }
 }
 
-/// What an import actually did.
+/// What an import actually did, in terms a user can act on.
+///
+/// Counts are net effects on what is installed, not internal operations. A
+/// replace import deletes the old set and writes the new one, but reporting that
+/// raw delete would tell someone 100 codes were retired when 8 of them came
+/// straight back. `added` and `retired` are therefore both non-negative and at
+/// most one of them is non-zero.
 public struct IngestSummary: Sendable, Equatable {
-    /// Rows read from the batch.
+    /// Rows read from the file.
     public let processed: Int
-    /// Net change in stored row count. Re-importing an identical set gives `0`.
-    public let netAdded: Int
-    /// Rows deleted by `.replace` mode.
-    public let removed: Int
+    /// Codes installed for the affected systems once the import finished.
+    public let installed: Int
+    /// Net increase. Zero when the set shrank or stayed the same.
+    public let added: Int
+    /// Net decrease. Zero when the set grew or stayed the same.
+    public let retired: Int
     public let systems: Set<CodeSystem>
 
-    public init(processed: Int, netAdded: Int, removed: Int, systems: Set<CodeSystem>) {
+    public init(processed: Int, installedBefore: Int, installedAfter: Int, systems: Set<CodeSystem>) {
         self.processed = processed
-        self.netAdded = netAdded
-        self.removed = removed
+        self.installed = installedAfter
+        self.added = max(0, installedAfter - installedBefore)
+        self.retired = max(0, installedBefore - installedAfter)
         self.systems = systems
+    }
+
+    /// True when the import left the installed set exactly as it found it.
+    public var isUnchanged: Bool {
+        added == 0 && retired == 0
     }
 }

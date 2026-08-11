@@ -29,7 +29,7 @@ actor CountingRepository: CodeRepository {
     func manifests() async throws -> [CodeSetManifest] { [] }
     func codeCount() async throws -> Int { 0 }
     @discardableResult func ingest(_ codeSet: CodeSetImport) async throws -> IngestSummary {
-        IngestSummary(processed: 0, netAdded: 0, removed: 0, systems: [])
+        IngestSummary(processed: 0, installedBefore: 0, installedAfter: 0, systems: [])
     }
     @discardableResult func removeCodeSet(_ system: CodeSystem) async throws -> Int { 0 }
 }
@@ -74,7 +74,7 @@ actor GatedRepository: CodeRepository {
     func manifests() async throws -> [CodeSetManifest] { [] }
     func codeCount() async throws -> Int { 0 }
     @discardableResult func ingest(_ codeSet: CodeSetImport) async throws -> IngestSummary {
-        IngestSummary(processed: 0, netAdded: 0, removed: 0, systems: [])
+        IngestSummary(processed: 0, installedBefore: 0, installedAfter: 0, systems: [])
     }
     @discardableResult func removeCodeSet(_ system: CodeSystem) async throws -> Int { 0 }
 }

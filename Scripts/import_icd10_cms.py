@@ -16,8 +16,13 @@ truncated or offset, open the source file in a text editor, check the byte
 offsets against the layout described in the file's own header/readme, and
 adjust CODE_START/CODE_END/etc. below accordingly.
 """
-import json
+import argparse
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from codebar_import import CodeSetWriter  # noqa: E402
 
 ORDER_END = 5
 CODE_START = 6
@@ -39,6 +44,13 @@ def parse_icd10_order_file(path):
             short_desc = line[SHORT_DESC_START:SHORT_DESC_END].strip()
             long_desc = line[SHORT_DESC_END:].strip() or short_desc
 
+            # Column 14 is CMS's "valid for submission" flag: 1 for a billable
+            # code, 0 for a category header such as E11, which requires a further
+            # character before it can go on a claim. Carrying this through is a
+            # safety matter — the code text alone does not reveal it, and a
+            # header submitted on a claim is a denial.
+            billable = line[BILLABLE_COL:BILLABLE_COL + 1].strip() == "1"
+
             # Re-insert the decimal point after the 3rd character, per
             # ICD-10-CM convention (raw file stores codes without the dot).
             code = code_raw if len(code_raw) <= 3 else f"{code_raw[:3]}.{code_raw[3:]}"
@@ -49,21 +61,29 @@ def parse_icd10_order_file(path):
                 "display": long_desc,
                 "system": "ICD-10-CM",
                 "synonyms": synonyms,
+                "billable": billable,
             })
     return codes
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("order_file", help="icd10cm_order_YYYY.txt from CMS")
+    parser.add_argument("output", nargs="?", default="icd10cm_full.json")
+    parser.add_argument("--release", help="release year, e.g. 2026")
+    # A CMS order file is the complete code set for its year, so replacing is
+    # the correct default: codes retired that year should stop being searchable.
+    parser.add_argument("--mode", default="replace", choices=["merge", "replace"])
+    args = parser.parse_args()
+
+    writer = CodeSetWriter("ICD-10-CM", release=args.release, mode=args.mode)
+    for entry in parse_icd10_order_file(args.order_file):
+        writer.add(entry["code"], entry["display"],
+                   synonyms=entry["synonyms"], billable=entry["billable"])
+
+    print(writer.write(args.output))
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 import_icd10_cms.py <order_file.txt> [output.json]")
-        sys.exit(1)
-
-    src = sys.argv[1]
-    out = sys.argv[2] if len(sys.argv) > 2 else "icd10cm_full.json"
-
-    codes = parse_icd10_order_file(src)
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(codes, f, indent=2)
-
-    print(f"Wrote {len(codes)} codes to {out}")
-    print("In CodeBar: click the menu bar icon → Import Code Set… → select this file.")
+    main()

@@ -12,9 +12,14 @@ Expects the standard LOINC table columns, in particular LOINC_NUM,
 LONG_COMMON_NAME, and SHORTNAME. If your export uses different column
 headers, adjust the .get(...) keys below.
 """
+import argparse
 import csv
-import json
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from codebar_import import CodeSetWriter  # noqa: E402
 
 
 def parse_loinc_csv(path):
@@ -36,17 +41,23 @@ def parse_loinc_csv(path):
     return codes
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("csv_file", help="Loinc.csv from the full table download")
+    parser.add_argument("output", nargs="?", default="loinc_full.json")
+    parser.add_argument("--release", help="LOINC version, e.g. 2.78")
+    parser.add_argument("--mode", default="replace", choices=["merge", "replace"])
+    args = parser.parse_args()
+
+    # LOINC has no billability concept, so the flag is left absent rather than
+    # guessed at — absent means "unknown", which is honest here.
+    writer = CodeSetWriter("LOINC", release=args.release, mode=args.mode)
+    for entry in parse_loinc_csv(args.csv_file):
+        writer.add(entry["code"], entry["display"], synonyms=entry["synonyms"])
+
+    print(writer.write(args.output))
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 import_loinc_csv.py <Loinc.csv> [output.json]")
-        sys.exit(1)
-
-    src = sys.argv[1]
-    out = sys.argv[2] if len(sys.argv) > 2 else "loinc_full.json"
-
-    codes = parse_loinc_csv(src)
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(codes, f, indent=2)
-
-    print(f"Wrote {len(codes)} codes to {out}")
-    print("In CodeBar: click the menu bar icon → Import Code Set… → select this file.")
+    main()

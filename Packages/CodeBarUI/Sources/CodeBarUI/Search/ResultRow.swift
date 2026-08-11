@@ -27,6 +27,10 @@ struct ResultRow: View {
                 .lineLimit(1)
                 .foregroundStyle(.primary)
 
+            if code.isBillable == false {
+                headerBadge
+            }
+
             Spacer()
 
             if isSelected {
@@ -40,6 +44,24 @@ struct ResultRow: View {
         .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .padding(.horizontal, 6)
+    }
+
+    /// Marks a code the publisher says cannot go on a claim.
+    ///
+    /// Shown as text rather than colour alone: this is the one piece of
+    /// information in the row that can turn a correct-looking lookup into a
+    /// denied claim, so it must survive being glanced at, and must not depend on
+    /// the reader distinguishing two shades of grey.
+    private var headerBadge: some View {
+        Text("category - not billable")
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.18))
+            .foregroundStyle(Color.orange)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .fixedSize()
+            .accessibilityLabel("Category header, not valid for submission")
     }
 
     private var badgeColor: Color {

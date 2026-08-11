@@ -83,6 +83,48 @@ struct MigrationTests {
         #expect(try database.userVersion() == Schema.version)
     }
 
+    @Test("should migrate a v2 database to the current schema")
+    func migratesV2ToCurrent() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        _ = try SQLiteCodeStore(location: .file(fixture.url))
+
+        let database = try Database(path: fixture.url.path)
+        #expect(try database.userVersion() == Schema.version)
+    }
+
+    @Test("should keep every v2 row when adding the billability column")
+    func v2MigrationPreservesRows() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        let store = try SQLiteCodeStore(location: .file(fixture.url))
+
+        #expect(try await store.codeCount() == Fixtures.icd10.count)
+    }
+
+    @Test("should report unknown billability for rows that predate the column")
+    func v2RowsReportUnknownBillability() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        let store = try SQLiteCodeStore(location: .file(fixture.url))
+        let results = try await store.search(SearchQuery(raw: "E11.9"))
+
+        #expect(results.first?.code.isBillable == nil)
+    }
+
+    @Test("should leave migrated v2 rows searchable")
+    func v2MigratedRowsAreSearchable() async throws {
+        let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
+        defer { fixture.cleanUp() }
+
+        let store = try SQLiteCodeStore(location: .file(fixture.url))
+
+        #expect(try await store.search(SearchQuery(raw: "hypertension")).first?.code.code == "I10")
+    }
+
     @Test("should refuse to open a database written by a newer schema")
     func rejectsNewerSchema() async throws {
         let fixture = try LegacyDatabaseFixture(rows: [])
