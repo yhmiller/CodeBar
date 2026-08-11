@@ -24,6 +24,8 @@ packages:
     path: Packages/CodeBarUI
   CodePlatform:
     path: Packages/CodePlatform
+  CodeLibrary:
+    path: Packages/CodeLibrary
 
 targets:
   CodeBar:
@@ -38,6 +40,7 @@ targets:
       - package: CodeStore
       - package: CodeBarUI
       - package: CodePlatform
+      - package: CodeLibrary
     # RegisterEventHotKey needs no entitlement and works sandboxed, which is what
     # made turning the sandbox on possible. NSOpenPanel keeps working because
     # Powerbox grants access to whatever file the user picks.

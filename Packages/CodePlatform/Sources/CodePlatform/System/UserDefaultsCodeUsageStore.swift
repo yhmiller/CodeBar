@@ -4,16 +4,18 @@ import Foundation
 private let PINNED_KEY = "CodeBar.pinnedCodes"
 private let RECENT_KEY = "CodeBar.recentCodes"
 
-/// How many recently-copied codes to remember. Long enough to cover a clinic
-/// session, short enough that the empty state stays scannable.
-private let RECENT_LIMIT = 8
-
-/// Pins and recents, persisted in `UserDefaults`.
+/// The pre-`CodeLibrary` home for pins and recents.
 ///
-/// Deliberately not in `codes.sqlite`: that file is a rebuildable index, and
-/// re-importing a code set must never cost someone their pins.
+/// Superseded by `library.sqlite`, and kept only so an existing install's data
+/// can be handed across on first launch. `UserDefaults` was fine for a capped
+/// list of pins; it cannot carry lists, notes or a full usage history, and its
+/// eight-item recents cap discarded exactly the data personal-frequency ranking
+/// needs. See docs/ARCHITECTURE.md §11.
+///
+/// TODO(yhmiller): delete once enough time has passed that no install is still
+/// carrying data here.
 @MainActor
-public final class UserDefaultsCodeUsageStore: CodeUsageTracking {
+public final class LegacyUserDefaultsUsageStore {
     private let defaults: UserDefaults
 
     public private(set) var pinnedCodes: [ClinicalCode]
@@ -25,26 +27,12 @@ public final class UserDefaultsCodeUsageStore: CodeUsageTracking {
         recentCodes = Self.load(RECENT_KEY, from: defaults)
     }
 
-    public func isPinned(_ code: ClinicalCode) -> Bool {
-        pinnedCodes.contains { $0.id == code.id }
-    }
-
-    public func togglePin(_ code: ClinicalCode) {
-        if let index = pinnedCodes.firstIndex(where: { $0.id == code.id }) {
-            pinnedCodes.remove(at: index)
-        } else {
-            pinnedCodes.insert(code, at: 0)
-        }
-        save(pinnedCodes, to: PINNED_KEY)
-    }
-
-    public func recordUse(of code: ClinicalCode) {
-        recentCodes.removeAll { $0.id == code.id }
-        recentCodes.insert(code, at: 0)
-        if recentCodes.count > RECENT_LIMIT {
-            recentCodes.removeLast(recentCodes.count - RECENT_LIMIT)
-        }
-        save(recentCodes, to: RECENT_KEY)
+    /// Clears what was handed over, so the old keys do not linger.
+    public func clear() {
+        pinnedCodes = []
+        recentCodes = []
+        defaults.removeObject(forKey: PINNED_KEY)
+        defaults.removeObject(forKey: RECENT_KEY)
     }
 
     // MARK: - Persistence
@@ -59,8 +47,4 @@ public final class UserDefaultsCodeUsageStore: CodeUsageTracking {
         return codes
     }
 
-    private func save(_ codes: [ClinicalCode], to key: String) {
-        guard let data = try? JSONEncoder().encode(codes) else { return }
-        defaults.set(data, forKey: key)
-    }
 }

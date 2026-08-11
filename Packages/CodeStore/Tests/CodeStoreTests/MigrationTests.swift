@@ -1,4 +1,5 @@
 import CodeCore
+import SQLiteKit
 import Testing
 @testable import CodeStore
 
