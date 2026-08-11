@@ -79,28 +79,79 @@ public final class BrowseViewModel {
     public var selectedCode: ClinicalCode? {
         didSet {
             guard selectedCode?.id != oldValue?.id else { return }
-            Task { await loadDetail() }
+            // Tracked rather than fire-and-forget, so tests can await it and a
+            // later selection cannot be overtaken by an earlier one's load.
+            pendingWork = Task { await loadDetail() }
         }
     }
 
     /// The user's own note on the selected code, if any.
     public private(set) var note: String = ""
 
+    /// Results for the window's own search. Empty while browsing.
+    public private(set) var searchResults: [SearchResult] = []
+    /// True once there is a query, so the column shows results instead of the tree.
+    public private(set) var isSearching = false
+
+    /// Shown in the search placeholder, so the scope of the search is visible.
+    public private(set) var installedCodeCount = 0
+
     private let repository: (any CodeRepository)?
     private let library: (any CodeLibraryStoring)?
+    private let preferences: (any PreferencesStoring)?
     private let system: CodeSystem
+
+    /// Codes this person uses, ranked ahead of equally-relevant ones.
+    private var preferredIDs: Set<String> = []
 
     @ObservationIgnored
     public private(set) var pendingWork: Task<Void, Never>?
 
+    @ObservationIgnored
+    private lazy var searchRunner = DebouncedSearchRunner(
+        repository: repository, debounce: debounce
+    )
+
+    /// Tests await this rather than sleeping.
+    @ObservationIgnored
+    public var pendingSearch: Task<Void, Never>? { searchRunner.pending }
+
+    private let debounce: Duration
+
     public init(
         repository: (any CodeRepository)?,
         library: (any CodeLibraryStoring)? = nil,
-        system: CodeSystem = .icd10cm
+        preferences: (any PreferencesStoring)? = nil,
+        system: CodeSystem = .icd10cm,
+        debounce: Duration = DEFAULT_SEARCH_DEBOUNCE
     ) {
         self.repository = repository
         self.library = library
+        self.preferences = preferences
         self.system = system
+        self.debounce = debounce
+    }
+
+    // MARK: - Searching
+
+    /// The window searches the whole code set, not the selected chapter.
+    ///
+    /// Browsing is for when you know roughly where a code sits; searching is for
+    /// when you do not, and constraining it to the current chapter would make it
+    /// useless in exactly that case.
+    public func search(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        isSearching = !trimmed.isEmpty
+
+        let query = SearchQuery(
+            raw: trimmed,
+            systems: preferences?.enabledSystems ?? [],
+            preferredCodes: preferredIDs
+        )
+
+        searchRunner.run(query) { [weak self] found in
+            self?.searchResults = found
+        }
     }
 
     /// Saved on demand rather than on every keystroke: a note is prose, and
@@ -127,6 +178,8 @@ public final class BrowseViewModel {
 
         chapters = (try? await repository.chapters(in: system)) ?? []
         await reloadLists()
+        await reloadPreferredCodes()
+        installedCodeCount = (try? await repository.codeCount()) ?? 0
 
         if selection == nil, let first = chapters.first {
             selection = .chapter(first)
@@ -135,6 +188,13 @@ public final class BrowseViewModel {
 
     public func reloadLists() async {
         lists = (try? await library?.lists()).flatMap { $0 } ?? []
+    }
+
+    private func reloadPreferredCodes() async {
+        let pinned = (try? await library?.pinnedCodes()).flatMap { $0 } ?? []
+        let used = (try? await library?.mostUsedCodes(limit: PREFERRED_CODE_LIMIT))
+            .flatMap { $0 } ?? []
+        preferredIDs = Set((pinned + used).map(\.id))
     }
 
     private func loadSelection() async {

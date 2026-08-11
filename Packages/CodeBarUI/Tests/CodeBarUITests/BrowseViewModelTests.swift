@@ -57,12 +57,55 @@ actor TreeRepository: CodeRepository {
     }
 }
 
+/// A tree repository that also answers searches, for the window's search column.
+actor SearchableTreeRepository: CodeRepository {
+    private let tree = TreeRepository()
+    private(set) var searchCount = 0
+    private(set) var lastSystems: Set<CodeSystem>?
+
+    private let codes: [ClinicalCode] = [
+        ClinicalCode(code: "E11.9", display: "Type 2 diabetes mellitus without complications",
+                     system: .icd10cm, isBillable: true, chapter: "Endocrine"),
+        ClinicalCode(code: "I10", display: "Essential hypertension",
+                     system: .icd10cm, isBillable: true, chapter: "Circulatory")
+    ]
+
+    func search(_ query: SearchQuery) async throws -> [SearchResult] {
+        searchCount += 1
+        lastSystems = query.systems
+        let needle = query.raw.lowercased()
+        return codes
+            .filter { $0.display.lowercased().contains(needle) }
+            .map { SearchResult(code: $0, matchTier: .text) }
+    }
+
+    func manifests() async throws -> [CodeSetManifest] { [] }
+    func codeCount() async throws -> Int { codes.count }
+    @discardableResult func ingest(_ codeSet: CodeSetImport) async throws -> IngestSummary {
+        IngestSummary(processed: 0, installedBefore: 0, installedAfter: 0, systems: [])
+    }
+    @discardableResult func removeCodeSet(_ system: CodeSystem) async throws -> Int { 0 }
+    func detail(for code: ClinicalCode) async throws -> CodeDetail? {
+        try await tree.detail(for: code)
+    }
+    func children(of parent: String?, in system: CodeSystem) async throws -> [ClinicalCode] {
+        try await tree.children(of: parent, in: system)
+    }
+    func chapters(in system: CodeSystem) async throws -> [String] {
+        try await tree.chapters(in: system)
+    }
+    func roots(inChapter chapter: String, of system: CodeSystem) async throws -> [ClinicalCode] {
+        try await tree.roots(inChapter: chapter, of: system)
+    }
+}
+
 @Suite("BrowseViewModel")
 @MainActor
 struct BrowseViewModelTests {
 
     private func loaded(library: FakeLibrary = FakeLibrary()) async -> BrowseViewModel {
-        let model = BrowseViewModel(repository: TreeRepository(), library: library)
+        let model = BrowseViewModel(repository: TreeRepository(), library: library,
+                                    debounce: .milliseconds(10))
         await model.load()
         return model
     }
