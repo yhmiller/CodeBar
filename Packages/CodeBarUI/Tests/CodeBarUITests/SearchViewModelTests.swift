@@ -132,6 +132,52 @@ struct SearchViewModelTests {
         #expect(model.results.isEmpty)
     }
 
+    // MARK: - Preparing to display
+
+    @Test("should clear results when the panel is prepared for display")
+    func prepareForDisplayClearsResults() async throws {
+        let model = try await seededModel()
+
+        model.prepareForDisplay()
+
+        #expect(model.results.isEmpty)
+    }
+
+    @Test("should clear the query when the panel is prepared for display")
+    func prepareForDisplayClearsQuery() async throws {
+        let model = try await seededModel()
+
+        model.prepareForDisplay()
+
+        #expect(model.query.isEmpty)
+    }
+
+    @Test("should signal a new display session so the view can clear its field")
+    func prepareForDisplayAdvancesSession() async throws {
+        let model = try await seededModel()
+        let before = model.displaySessionID
+
+        model.prepareForDisplay()
+
+        #expect(model.displaySessionID == before + 1)
+    }
+
+    @Test("should not let a search from a previous showing land after reopening")
+    func prepareForDisplayCancelsPendingSearch() async throws {
+        let repository = GatedRepository(resultsByQuery: ["diabetes": [Samples.diabetes]])
+        let model = makeModel(repository: repository)
+
+        model.setQuery("diabetes")
+        await repository.waitForSearchToStart("diabetes")
+        let staleSearch = model.pendingSearch
+
+        model.prepareForDisplay()
+        await repository.release("diabetes")
+        await staleSearch?.value
+
+        #expect(model.results.isEmpty)
+    }
+
     // MARK: - Selection
 
     @Test("should move the selection down")
