@@ -12,22 +12,30 @@ public struct SettingsView: View {
     @State private var codeSets: CodeSetsViewModel
     private let isOpenAtLoginEnabled: () -> Bool
     private let setOpenAtLogin: (Bool) -> Bool
+    private let isDockIconShown: () -> Bool
+    private let setDockIconShown: (Bool) -> Void
 
     public init(
         codeSets: CodeSetsViewModel,
         isOpenAtLoginEnabled: @escaping () -> Bool,
-        setOpenAtLogin: @escaping (Bool) -> Bool
+        setOpenAtLogin: @escaping (Bool) -> Bool,
+        isDockIconShown: @escaping () -> Bool,
+        setDockIconShown: @escaping (Bool) -> Void
     ) {
         _codeSets = State(initialValue: codeSets)
         self.isOpenAtLoginEnabled = isOpenAtLoginEnabled
         self.setOpenAtLogin = setOpenAtLogin
+        self.isDockIconShown = isDockIconShown
+        self.setDockIconShown = setDockIconShown
     }
 
     public var body: some View {
         TabView {
             GeneralSettingsView(
                 isOpenAtLoginEnabled: isOpenAtLoginEnabled,
-                setOpenAtLogin: setOpenAtLogin
+                setOpenAtLogin: setOpenAtLogin,
+                isDockIconShown: isDockIconShown,
+                setDockIconShown: setDockIconShown
             )
             .tabItem { Label("General", systemImage: "gearshape") }
 
@@ -42,8 +50,11 @@ public struct SettingsView: View {
 struct GeneralSettingsView: View {
     let isOpenAtLoginEnabled: () -> Bool
     let setOpenAtLogin: (Bool) -> Bool
+    let isDockIconShown: () -> Bool
+    let setDockIconShown: (Bool) -> Void
 
     @State private var opensAtLogin = false
+    @State private var showsDockIcon = false
 
     var body: some View {
         Form {
@@ -63,6 +74,15 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Appearance") {
+                Toggle("Show CodeBar in the Dock", isOn: $showsDockIcon)
+                    .onChange(of: showsDockIcon) { _, shows in setDockIconShown(shows) }
+                Text("Off keeps CodeBar in the menu bar only. Clicking the Dock icon "
+                     + "opens search for now; a full window is on the way.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Shortcut") {
                 LabeledContent("Open search", value: "⌥⌘C")
                 Text("Fixed for now. Making it configurable is tracked in the roadmap.")
@@ -71,6 +91,9 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onAppear { opensAtLogin = isOpenAtLoginEnabled() }
+        .onAppear {
+            opensAtLogin = isOpenAtLoginEnabled()
+            showsDockIcon = isDockIconShown()
+        }
     }
 }

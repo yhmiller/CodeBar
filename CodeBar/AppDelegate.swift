@@ -12,6 +12,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         SearchPanelController.shared.repository = environment.repository
         SearchPanelController.shared.library = environment.library
+
+        // The bundle is LSUIElement, so the app always launches menu-bar-only
+        // and promotes itself here if the preference asks. Launching .regular
+        // and demoting would flash a Dock icon on every start.
+        ActivationPolicyController.setShowsDockIcon(
+            SearchPanelController.shared.preferences.showsDockIcon
+        )
         registerHotkey()
 
         if let failure = environment.startupFailure {
@@ -31,6 +38,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         hotkeyRegistrar.unregister()
+    }
+
+    /// Clicking the Dock icon opens search. Once there is a main window
+    /// (phase 8.4) that becomes the more natural target.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        guard !hasVisibleWindows else { return true }
+        SearchPanelController.shared.show()
+        return true
     }
 
     /// A failed registration is reported rather than swallowed. The previous

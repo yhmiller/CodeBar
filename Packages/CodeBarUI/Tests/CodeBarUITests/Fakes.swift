@@ -12,6 +12,8 @@ final class FakePreferences: PreferencesStoring {
     func setSystem(_ system: CodeSystem, enabled: Bool) {
         if enabled { disabled.remove(system) } else { disabled.insert(system) }
     }
+
+    var showsDockIcon = false
 }
 
 actor FakeLibrary: CodeLibraryStoring {
