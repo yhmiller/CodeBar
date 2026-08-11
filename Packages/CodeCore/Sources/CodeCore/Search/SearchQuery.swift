@@ -17,11 +17,26 @@ public struct SearchQuery: Sendable, Equatable {
     public let systems: Set<CodeSystem>
     public let limit: Int
 
+    /// `ClinicalCode.id` values the user reaches for often, ranked ahead of
+    /// equally-relevant codes they have never used.
+    ///
+    /// Relevance and clinical frequency are different things: BM25 cannot know
+    /// that E11.9 is the diabetes code a given clinician uses daily. This is the
+    /// signal that does know, and it is the only one available that is not a
+    /// guess about what "diabetes" ought to mean.
+    public let preferredCodes: Set<String>
+
     public var isEmpty: Bool {
         normalizedCode.isEmpty && matchExpression == nil
     }
 
-    public init(raw: String, systems: Set<CodeSystem> = [], limit: Int = SearchQuery.defaultLimit) {
+    public init(
+        raw: String,
+        systems: Set<CodeSystem> = [],
+        limit: Int = SearchQuery.defaultLimit,
+        preferredCodes: Set<String> = []
+    ) {
+        self.preferredCodes = preferredCodes
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         self.raw = trimmed
         self.normalizedCode = CodeNormalizer.normalize(trimmed)
