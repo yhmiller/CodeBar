@@ -8,6 +8,10 @@ import SwiftUI
 /// beneath it, and what the publisher says about coding it.
 public struct MainWindowView: View {
     @State private var model: BrowseViewModel
+    @State private var isCreatingList = false
+    @State private var newListName = ""
+    @State private var renaming: CodeList?
+    @State private var deleting: CodeList?
     private let onCopy: (ClinicalCode, CopyFormat) -> Void
     private let onTogglePin: (ClinicalCode) -> Void
     private let isPinned: (ClinicalCode) -> Bool
@@ -34,23 +38,102 @@ public struct MainWindowView: View {
                 detail: model.detail,
                 isPinned: model.detail.map { isPinned($0.code) } ?? false,
                 note: model.note,
+                lists: model.lists,
+                currentList: model.selectedList,
                 onCopy: onCopy,
                 onTogglePin: onTogglePin,
                 onSelectCode: { model.selectedCode = $0 },
-                onSaveNote: { model.saveNote($0) }
+                onSaveNote: { model.saveNote($0) },
+                onAddToList: { model.addSelectedCode(toList: $0) },
+                onRemoveFromList: { model.removeSelectedCodeFromCurrentList() }
             )
         }
-        .navigationTitle("CodeBar")
+        .navigationTitle(model.selectedList?.name ?? "CodeBar")
         .task { await model.load() }
+        .alert("New List", isPresented: $isCreatingList) {
+            TextField("Name", text: $newListName)
+            Button("Create") {
+                model.createList(named: newListName)
+                newListName = ""
+            }
+            Button("Cancel", role: .cancel) { newListName = "" }
+        } message: {
+            Text("A problem list, an encounter template, or whatever you reach for often.")
+        }
+        .alert("Rename List", isPresented: .init(
+            get: { renaming != nil },
+            set: { if !$0 { renaming = nil } }
+        )) {
+            TextField("Name", text: $newListName)
+            Button("Rename") {
+                if let list = renaming { model.renameList(list.id, to: newListName) }
+                renaming = nil
+                newListName = ""
+            }
+            Button("Cancel", role: .cancel) { renaming = nil; newListName = "" }
+        }
+        .confirmationDialog(
+            "Delete \(deleting?.name ?? "")?",
+            isPresented: .init(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let list = deleting { model.deleteList(list.id) }
+                deleting = nil
+            }
+            Button("Cancel", role: .cancel) { deleting = nil }
+        } message: {
+            Text("The list is removed. The codes themselves, your pins and your notes "
+                 + "are not affected.")
+        }
     }
 
     private var chapterList: some View {
-        List(model.chapters, id: \.self, selection: $model.selectedChapter) { chapter in
-            Text(chapter).lineLimit(3)
+        List(selection: $model.selection) {
+            if !model.lists.isEmpty {
+                Section("Lists") {
+                    ForEach(model.lists) { list in
+                        Label {
+                            HStack {
+                                Text(list.name)
+                                Spacer()
+                                Text("\(list.count)")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        } icon: {
+                            Image(systemName: "list.bullet.rectangle")
+                        }
+                        .tag(SidebarSelection.list(list.id))
+                        .contextMenu {
+                            Button("Rename…") { renaming = list }
+                            Button("Delete", role: .destructive) { deleting = list }
+                        }
+                    }
+                }
+            }
+
+            Section("Browse") {
+                ForEach(model.chapters, id: \.self) { chapter in
+                    Text(chapter)
+                        .lineLimit(3)
+                        .tag(SidebarSelection.chapter(chapter))
+                }
+            }
         }
-        .navigationSplitViewColumnWidth(min: 220, ideal: 280)
+        .navigationSplitViewColumnWidth(min: 240, ideal: 300)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                isCreatingList = true
+            } label: {
+                Label("New List", systemImage: "plus")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderless)
+            .padding(10)
+        }
         .overlay {
-            if !model.hasHierarchy && !model.isLoading {
+            if !model.hasHierarchy && !model.isLoading && model.lists.isEmpty {
                 ContentUnavailableView(
                     "No hierarchy installed",
                     systemImage: "list.bullet.indent",
@@ -63,16 +146,44 @@ public struct MainWindowView: View {
         }
     }
 
+    @ViewBuilder
     private var codeTree: some View {
+        if let list = model.selectedList {
+            listContents(list)
+        } else {
+            List(selection: Binding(
+                get: { model.selectedCode?.id },
+                set: { id in model.selectedCode = findCode(id, in: model.roots) }
+            )) {
+                ForEach(model.roots) { node in
+                    BrowseNodeRow(node: node)
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        }
+    }
+
+    private func listContents(_ list: CodeList) -> some View {
         List(selection: Binding(
             get: { model.selectedCode?.id },
-            set: { id in model.selectedCode = findCode(id, in: model.roots) }
+            set: { id in model.selectedCode = model.listCodes.first { $0.id == id } }
         )) {
-            ForEach(model.roots) { node in
-                BrowseNodeRow(node: node)
+            ForEach(model.listCodes) { code in
+                CodeRowLabel(code: code).tag(code.id)
             }
         }
         .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .overlay {
+            if model.listCodes.isEmpty {
+                ContentUnavailableView(
+                    "\(list.name) is empty",
+                    systemImage: "list.bullet.rectangle",
+                    description: Text("Find a code by browsing or searching, then use "
+                                      + "Add to List in its detail pane.")
+                )
+                .padding()
+            }
+        }
     }
 
     /// The selection binding carries an id, so the chosen node has to be found

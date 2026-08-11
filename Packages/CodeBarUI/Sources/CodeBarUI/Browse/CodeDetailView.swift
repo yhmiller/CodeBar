@@ -6,10 +6,14 @@ public struct CodeDetailView: View {
     let detail: CodeDetail?
     let isPinned: Bool
     let note: String
+    let lists: [CodeList]
+    let currentList: CodeList?
     let onCopy: (ClinicalCode, CopyFormat) -> Void
     let onTogglePin: (ClinicalCode) -> Void
     let onSelectCode: (ClinicalCode) -> Void
     let onSaveNote: (String) -> Void
+    let onAddToList: (Int) -> Void
+    let onRemoveFromList: () -> Void
 
     @State private var draft = ""
     @FocusState private var isEditingNote: Bool
@@ -77,6 +81,25 @@ public struct CodeDetailView: View {
                 Button("Copy code") { onCopy(detail.code, .codeOnly) }
                 Button("Copy with description") { onCopy(detail.code, .codeAndDisplay) }
                 Button(isPinned ? "Unpin" : "Pin") { onTogglePin(detail.code) }
+
+                if lists.isEmpty {
+                    // No menu when there is nothing to add to; the sidebar's
+                    // New List button is the way in.
+                    EmptyView()
+                } else {
+                    Menu("Add to List") {
+                        ForEach(lists) { list in
+                            Button("\(list.name)  (\(list.count))") { onAddToList(list.id) }
+                        }
+                    }
+                    .fixedSize()
+                }
+
+                if let currentList {
+                    Button("Remove from \(currentList.name)", role: .destructive) {
+                        onRemoveFromList()
+                    }
+                }
             }
             .padding(.top, 4)
         }
