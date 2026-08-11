@@ -2,6 +2,7 @@ import CodeCore
 import Foundation
 
 private let DISABLED_SYSTEMS_KEY = "CodeBar.disabledSystems"
+private let SHOWS_DOCK_ICON_KEY = "CodeBar.showsDockIcon"
 
 /// Preferences backed by `UserDefaults`.
 ///
@@ -25,6 +26,13 @@ public final class UserDefaultsPreferences: PreferencesStoring {
 
     public func isEnabled(_ system: CodeSystem) -> Bool {
         !disabledSystems.contains(system)
+    }
+
+    /// Defaults to false: a Dock icon that opens nothing is worse than none.
+    /// Flips to true in phase 8.4, when there is a window behind it.
+    public var showsDockIcon: Bool {
+        get { defaults.bool(forKey: SHOWS_DOCK_ICON_KEY) }
+        set { defaults.set(newValue, forKey: SHOWS_DOCK_ICON_KEY) }
     }
 
     public func setSystem(_ system: CodeSystem, enabled: Bool) {
