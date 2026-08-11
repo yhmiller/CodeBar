@@ -29,6 +29,11 @@ final class SearchPanelController {
     private var panel: NSPanel?
     private var viewModel: SearchViewModel?
 
+    /// Pins and recents live outside the code database on purpose: that file is
+    /// a rebuildable index, and re-importing a code set must not cost the user
+    /// their pins. See docs/ARCHITECTURE.md §5.6.
+    private let usage = UserDefaultsCodeUsageStore()
+
     func toggle() {
         if let panel, panel.isVisible {
             hide()
@@ -49,16 +54,28 @@ final class SearchPanelController {
     }
 
     private func makePanel() -> NSPanel {
-        let model = SearchViewModel(repository: repository, pasteboard: SystemPasteboard())
+        let model = SearchViewModel(
+            repository: repository,
+            pasteboard: SystemPasteboard(),
+            usage: usage
+        )
         viewModel = model
 
-        let hosting = NSHostingView(
+        // NSHostingController rather than NSHostingView: the window then tracks
+        // the SwiftUI content's preferred size, and AppKit keeps the top-left
+        // corner fixed while the height changes. That is what makes the panel
+        // grow downwards as results arrive instead of sitting in a fixed box
+        // with dead space underneath.
+        let hosting = NSHostingController(
             rootView: SearchPanelView(model: model) { [weak self] in self?.hide() }
         )
+        hosting.sizingOptions = [.preferredContentSize]
 
+        // Not .resizable: a panel that sizes itself to its content would fight a
+        // user-dragged height on every keystroke.
         let panel = FocusablePanel(
             contentRect: NSRect(origin: .zero, size: PANEL_SIZE),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .resizable],
+            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -72,8 +89,10 @@ final class SearchPanelController {
         panel.hidesOnDeactivate = true
         panel.standardWindowButtons.forEach { $0?.isHidden = true }
 
-        panel.contentView = hosting
-        hosting.layoutSubtreeIfNeeded()
+        panel.contentViewController = hosting
+        // Still laid out before the panel takes key focus, so the first
+        // keystroke has somewhere to land.
+        hosting.view.layoutSubtreeIfNeeded()
 
         // Restore where the user last put it; centre only on the very first run.
         if !panel.setFrameUsingName(PANEL_FRAME_AUTOSAVE_NAME) {

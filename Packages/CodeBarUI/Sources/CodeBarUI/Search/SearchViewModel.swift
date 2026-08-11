@@ -30,6 +30,7 @@ public final class SearchViewModel {
 
     private let repository: (any CodeRepository)?
     private let pasteboard: any PasteboardWriting
+    private let usage: any CodeUsageTracking
     private let debounce: Duration
 
     /// Retained so a new keystroke can cancel the previous search.
@@ -40,12 +41,41 @@ public final class SearchViewModel {
     public init(
         repository: (any CodeRepository)?,
         pasteboard: any PasteboardWriting,
+        usage: any CodeUsageTracking,
         debounce: Duration = DEFAULT_SEARCH_DEBOUNCE
     ) {
         self.repository = repository
         self.pasteboard = pasteboard
+        self.usage = usage
         self.debounce = debounce
     }
+
+    // MARK: - Pinned and recent
+
+    /// Shown when the field is empty. Pins first, then recents.
+    ///
+    /// This is where the ranking gap gets addressed in practice: BM25 cannot know
+    /// that E11.9 is the diabetes code someone reaches for every day, but their
+    /// own pins can.
+    public var pinnedCodes: [ClinicalCode] { usage.pinnedCodes }
+    public var recentCodes: [ClinicalCode] { usage.recentCodes }
+
+    public var hasEmptyStateSuggestions: Bool {
+        !pinnedCodes.isEmpty || !recentCodes.isEmpty
+    }
+
+    public func isPinned(_ code: ClinicalCode) -> Bool {
+        usage.isPinned(code)
+    }
+
+    public func togglePin(_ code: ClinicalCode) {
+        usage.togglePin(code)
+        pinRevision += 1
+    }
+
+    /// Bumped so SwiftUI re-reads the pin lists, which live in the usage store
+    /// rather than in observed properties of this model.
+    public private(set) var pinRevision = 0
 
     // MARK: - Querying
 
@@ -113,13 +143,19 @@ public final class SearchViewModel {
     /// Copies the highlighted result. Returns `false` when there is nothing to
     /// copy, so the caller knows whether to dismiss.
     @discardableResult
-    public func copySelected() -> Bool {
+    public func copySelected(format: CopyFormat = .codeOnly) -> Bool {
         guard results.indices.contains(selectedIndex) else { return false }
-        copy(results[selectedIndex])
+        copy(results[selectedIndex].code, format: format)
         return true
     }
 
-    public func copy(_ result: SearchResult) {
-        pasteboard.write(result.code.code)
+    public func copy(_ result: SearchResult, format: CopyFormat = .codeOnly) {
+        copy(result.code, format: format)
+    }
+
+    public func copy(_ code: ClinicalCode, format: CopyFormat = .codeOnly) {
+        pasteboard.write(format.string(for: code))
+        usage.recordUse(of: code)
+        pinRevision += 1
     }
 }
