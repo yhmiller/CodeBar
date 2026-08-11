@@ -31,6 +31,7 @@ public final class SearchViewModel {
     private let repository: (any CodeRepository)?
     private let pasteboard: any PasteboardWriting
     private let usage: any CodeUsageTracking
+    private let preferences: any PreferencesStoring
     private let debounce: Duration
 
     /// Retained so a new keystroke can cancel the previous search.
@@ -42,11 +43,13 @@ public final class SearchViewModel {
         repository: (any CodeRepository)?,
         pasteboard: any PasteboardWriting,
         usage: any CodeUsageTracking,
+        preferences: any PreferencesStoring,
         debounce: Duration = DEFAULT_SEARCH_DEBOUNCE
     ) {
         self.repository = repository
         self.pasteboard = pasteboard
         self.usage = usage
+        self.preferences = preferences
         self.debounce = debounce
     }
 
@@ -90,6 +93,10 @@ public final class SearchViewModel {
             return
         }
 
+        // Read at search time rather than at init, so toggling a system in
+        // Settings takes effect on the next keystroke without a restart.
+        let systems = preferences.enabledSystems
+
         pendingSearch = Task { [debounce] in
             // Cancellation during the debounce is the common case — it is what
             // collapses a burst of keystrokes into a single query.
@@ -99,7 +106,9 @@ public final class SearchViewModel {
                 return
             }
 
-            let found = (try? await repository.search(SearchQuery(raw: text))) ?? []
+            let found = (try? await repository.search(
+                SearchQuery(raw: text, systems: systems)
+            )) ?? []
 
             // Re-checked after the await: a query already in flight when the
             // user kept typing must not overwrite the newer results.

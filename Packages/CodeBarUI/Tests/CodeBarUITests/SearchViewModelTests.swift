@@ -19,10 +19,11 @@ struct SearchViewModelTests {
         repository: (any CodeRepository)?,
         pasteboard: FakePasteboard = FakePasteboard(),
         usage: FakeUsageStore = FakeUsageStore(),
+        preferences: FakePreferences = FakePreferences(),
         debounce: Duration = TEST_DEBOUNCE
     ) -> SearchViewModel {
         SearchViewModel(repository: repository, pasteboard: pasteboard,
-                        usage: usage, debounce: debounce)
+                        usage: usage, preferences: preferences, debounce: debounce)
     }
 
     /// Types each fragment with a real pause between them, so an absent debounce
