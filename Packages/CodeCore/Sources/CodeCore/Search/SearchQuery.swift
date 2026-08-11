@@ -51,14 +51,35 @@ public struct SearchQuery: Sendable, Equatable {
     /// legitimately type — `-` in "non-hodgkin", `:` , `(`, `*` — are treated as
     /// text instead of syntax. Tokens with no alphanumeric content are dropped,
     /// since FTS5 rejects a quoted string that tokenizes to nothing.
+    ///
+    /// A token that is known clinical shorthand also matches its expansion, so
+    /// `uti` finds codes whose description says "urinary tract infection". The
+    /// abbreviation is kept in the expression rather than replaced: a code set
+    /// that does spell out `GERD` should still match someone typing it.
     static func matchExpression(for text: String) -> String? {
-        let tokens = text
+        let clauses = text
             .split(whereSeparator: \.isWhitespace)
             .filter { $0.contains(where: { $0.isLetter || $0.isNumber }) }
-            .map { token -> String in
-                let escaped = token.replacingOccurrences(of: "\"", with: "\"\"")
-                return "\"\(escaped)\"*"
-            }
-        return tokens.isEmpty ? nil : tokens.joined(separator: " ")
+            .map(clause(for:))
+
+        return clauses.isEmpty ? nil : clauses.joined(separator: " ")
+    }
+
+    private static func clause(for token: some StringProtocol) -> String {
+        let literal = prefixTerm(token)
+        guard let expansion = ClinicalAbbreviations.expansion(for: token) else {
+            return literal
+        }
+
+        let expanded = expansion
+            .split(whereSeparator: \.isWhitespace)
+            .map(prefixTerm)
+            .joined(separator: " ")
+
+        return "(\(literal) OR (\(expanded)))"
+    }
+
+    private static func prefixTerm(_ token: some StringProtocol) -> String {
+        "\"\(token.replacingOccurrences(of: "\"", with: "\"\""))\"*"
     }
 }
