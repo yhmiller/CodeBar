@@ -123,14 +123,20 @@ public struct MainWindowView: View {
         }
         .navigationSplitViewColumnWidth(min: 240, ideal: 300)
         .safeAreaInset(edge: .bottom) {
-            Button {
-                isCreatingList = true
-            } label: {
-                Label("New List", systemImage: "plus")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            // The bar needs its own ground and a divider: without them the list
+            // scrolls *underneath* a transparent button and the two overlap.
+            VStack(spacing: 0) {
+                Divider()
+                Button {
+                    isCreatingList = true
+                } label: {
+                    Label("New List", systemImage: "plus")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.borderless)
+                .padding(10)
             }
-            .buttonStyle(.borderless)
-            .padding(10)
+            .background(.bar)
         }
         .overlay {
             if !model.hasHierarchy && !model.isLoading && model.lists.isEmpty {
