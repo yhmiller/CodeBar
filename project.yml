@@ -1,0 +1,48 @@
+name: CodeBar
+
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    PRODUCT_BUNDLE_IDENTIFIER: com.princemiller.CodeBar
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # App Sandbox stays off until phase 3 replaces the global event monitor
+    # with RegisterEventHotKey; the monitor needs Accessibility, which needs
+    # an unsandboxed process. See docs/ARCHITECTURE.md §5.4.
+    ENABLE_APP_SANDBOX: NO
+
+packages:
+  CodeCore:
+    path: Packages/CodeCore
+  CodeStore:
+    path: Packages/CodeStore
+
+targets:
+  CodeBar:
+    type: application
+    platform: macOS
+    sources:
+      - path: CodeBar
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - package: CodeCore
+      - package: CodeStore
+    info:
+      path: CodeBar/Info.plist
+      properties:
+        CFBundleName: CodeBar
+        CFBundleDisplayName: CodeBar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # Menu-bar-only: no Dock icon, no Cmd-Tab entry.
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
