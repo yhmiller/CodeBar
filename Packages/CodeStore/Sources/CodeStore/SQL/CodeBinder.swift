@@ -1,4 +1,5 @@
 import CodeCore
+import SQLiteKit
 import Foundation
 
 /// Translates a `ClinicalCode` to and from its stored column form.

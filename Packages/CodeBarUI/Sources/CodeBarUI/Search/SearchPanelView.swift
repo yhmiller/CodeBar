@@ -80,7 +80,6 @@ public struct SearchPanelView: View {
                 },
                 onTogglePin: { model.togglePin($0) }
             )
-            .id(model.pinRevision)
         } else if model.results.isEmpty {
             Text("No matches")
                 .foregroundStyle(.secondary)

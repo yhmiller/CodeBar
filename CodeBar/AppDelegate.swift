@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         SearchPanelController.shared.repository = environment.repository
+        SearchPanelController.shared.library = environment.library
         registerHotkey()
 
         if let failure = environment.startupFailure {
@@ -22,7 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        Task { await environment.loadSeedIfNeeded() }
+        Task {
+            await environment.adoptLegacyLibraryData()
+            await environment.loadSeedIfNeeded()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

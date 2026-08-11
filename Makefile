@@ -5,7 +5,8 @@ RELEASE_APP := $(BUILD_DIR)/Build/Products/Release/$(APP_NAME).app
 DEBUG_APP   := $(BUILD_DIR)/Build/Products/Debug/$(APP_NAME).app
 INSTALL_DIR := /Applications
 INSTALLED   := $(INSTALL_DIR)/$(APP_NAME).app
-PACKAGES    := Packages/CodeCore Packages/CodeStore Packages/CodeBarUI Packages/CodePlatform
+PACKAGES    := Packages/SQLiteKit Packages/CodeCore Packages/CodeStore \
+               Packages/CodeLibrary Packages/CodeBarUI Packages/CodePlatform
 
 .DEFAULT_GOAL := help
 

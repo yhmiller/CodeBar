@@ -11,12 +11,12 @@ private var sqliteTransient: sqlite3_destructor_type {
 ///
 /// Not `Sendable` by design — instances are created and consumed entirely
 /// inside `SQLiteCodeStore`'s actor isolation.
-final class Statement {
+public final class Statement {
     private var handle: OpaquePointer?
     private let databaseHandle: OpaquePointer?
     private let sql: String
 
-    init(database: OpaquePointer?, sql: String) throws {
+    public init(database: OpaquePointer?, sql: String) throws {
         var handle: OpaquePointer?
         let result = sqlite3_prepare_v2(database, sql, -1, &handle, nil)
         guard result == SQLITE_OK, let handle else {
@@ -33,11 +33,11 @@ final class Statement {
 
     // MARK: - Binding
 
-    func bind(_ value: String, to name: String) throws {
+    public func bind(_ value: String, to name: String) throws {
         try check(sqlite3_bind_text(handle, try index(of: name), value, -1, sqliteTransient))
     }
 
-    func bind(_ value: String?, to name: String) throws {
+    public func bind(_ value: String?, to name: String) throws {
         if let value {
             try bind(value, to: name)
         } else {
@@ -45,11 +45,11 @@ final class Statement {
         }
     }
 
-    func bind(_ value: Int, to name: String) throws {
+    public func bind(_ value: Int, to name: String) throws {
         try check(sqlite3_bind_int64(handle, try index(of: name), Int64(value)))
     }
 
-    func bind(_ value: Int?, to name: String) throws {
+    public func bind(_ value: Int?, to name: String) throws {
         if let value {
             try bind(value, to: name)
         } else {
@@ -69,7 +69,7 @@ final class Statement {
 
     /// Advances the statement. Returns `true` when a row is available.
     @discardableResult
-    func step() throws -> Bool {
+    public func step() throws -> Bool {
         let result = sqlite3_step(handle)
         switch result {
         case SQLITE_ROW: return true
@@ -81,24 +81,24 @@ final class Statement {
     /// Rewinds for reuse. Return codes are intentionally ignored: `sqlite3_reset`
     /// re-reports the error from the previous execution, which `step()` has
     /// already thrown.
-    func reset() {
+    public func reset() {
         sqlite3_reset(handle)
         sqlite3_clear_bindings(handle)
     }
 
     // MARK: - Reading
 
-    func string(at column: Int32) -> String? {
+    public func string(at column: Int32) -> String? {
         guard let text = sqlite3_column_text(handle, column) else { return nil }
         return String(cString: text)
     }
 
-    func int(at column: Int32) -> Int {
+    public func int(at column: Int32) -> Int {
         Int(sqlite3_column_int64(handle, column))
     }
 
     /// `nil` when the column holds SQL NULL, which is distinct from `0`.
-    func optionalBool(at column: Int32) -> Bool? {
+    public func optionalBool(at column: Int32) -> Bool? {
         guard sqlite3_column_type(handle, column) != SQLITE_NULL else { return nil }
         return sqlite3_column_int64(handle, column) != 0
     }

@@ -1,4 +1,6 @@
 import CodeCore
+import CodeLibrary
+import CodePlatform
 import CodeStore
 import Foundation
 
@@ -15,15 +17,49 @@ final class AppEnvironment {
     /// `startupFailure` rather than silently returning no results, which is what
     /// the previous implementation did on a failed open.
     let repository: (any CodeRepository)?
+
+    /// The user's own data. Separate from the index on purpose: a yearly release
+    /// replaces `codes.sqlite` wholesale, and none of this can be rebuilt from a
+    /// downloaded file. See docs/ARCHITECTURE.md §11.
+    let library: (any CodeLibraryStoring)?
+
     let startupFailure: String?
 
     init() {
+        var failures: [String] = []
+
         do {
             repository = try SQLiteCodeStore()
-            startupFailure = nil
         } catch {
             repository = nil
-            startupFailure = String(describing: error)
+            failures.append("Code index: \(error)")
+        }
+
+        do {
+            library = try SQLiteCodeLibrary()
+        } catch {
+            library = nil
+            failures.append("Library: \(error)")
+        }
+
+        startupFailure = failures.isEmpty ? nil : failures.joined(separator: "\n")
+    }
+
+    /// Hands pins and recents from the old `UserDefaults` store to the library,
+    /// once. Runs before the panel is first shown so nothing appears to vanish.
+    func adoptLegacyLibraryData() async {
+        guard let library else { return }
+        let legacy = LegacyUserDefaultsUsageStore()
+        guard !legacy.pinnedCodes.isEmpty || !legacy.recentCodes.isEmpty else { return }
+
+        do {
+            let adopted = try await library.adoptLegacyData(
+                pinned: legacy.pinnedCodes,
+                recent: legacy.recentCodes
+            )
+            if adopted { legacy.clear() }
+        } catch {
+            NSLog("CodeBar: could not adopt legacy pins — \(error)")
         }
     }
 
