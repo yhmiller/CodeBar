@@ -3,9 +3,13 @@
 Scope: the whole repo — build system, module layout, storage schema, concurrency,
 hotkey mechanism, and the JSON interchange format.
 
-Status: phases 0 and 1 are implemented; 2–7 are still proposals. **[ROADMAP.md](ROADMAP.md)
-tracks what has actually landed** and logs every deviation from this document.
-Sections below describe the target design, not necessarily today's code.
+Status: phases 0–4 and 7 are implemented, 5 was skipped, 6 is in progress.
+**[ROADMAP.md](ROADMAP.md) tracks what has actually landed** and logs every
+deviation from this document. Sections below describe the target design, not
+necessarily today's code.
+
+**§11 supersedes the scope of §3–4**: CodeBar is becoming a full native app that
+keeps the menu bar panel. Read it before making structural decisions.
 
 ---
 
@@ -583,3 +587,113 @@ win. Four gets the compiler to enforce it. Start with two if phase 5 feels like 
   would be abstraction for its own sake.
 - **Touching the search UX.** The two-pass ranking instinct, the ⌥⌘C panel, the badge/code/
   display row are all good. This proposal changes what's underneath them, not what they do.
+
+---
+
+## 11. Growing into a full app
+
+**Direction (2026-08-11):** CodeBar becomes a full native macOS app with a real
+main window, *keeping* the menu bar panel, and gains a substantial feature set.
+
+The menu bar panel stays the fast path — hotkey, type, copy, gone in two seconds.
+The window is for everything that does not fit that: browsing a hierarchy,
+reading a code's full context, curating lists. Two front doors onto one domain.
+
+### What today's design cannot carry
+
+| Today | Why it breaks | What it becomes |
+|---|---|---|
+| `LSUIElement: true` | No Dock icon, no app menu, no main window | `.regular` activation with `MenuBarExtra` alongside `WindowGroup`. The Dock icon can still be hidden as a *preference*, rather than being baked into the bundle |
+| `SearchPanelController.shared` | A singleton owns the one panel; multi-window and multi-scene fight it | Environment-injected controller. Scenes get what they need; nothing reaches for a global |
+| `AppEnvironment` built in `AppDelegate` | Fine for one panel; SwiftUI scenes cannot see it | Composition root injected through `@Environment`, so any scene resolves its dependencies |
+| Everything user-owned in `UserDefaults` | Pins fit. Notes, lists, annotations and history do not | A second **user database**, see below |
+| `CodeBarUI` as one module | Will accumulate search, browse, detail, settings, lists | Feature modules under a shared design system |
+| `CodeRepository` as the only service | It is search + ingest. Browsing, crosswalks and lists are different concerns | Additional protocols in `CodeCore`, each narrow |
+
+### The decision worth making now: two databases, not one
+
+[§5.6](#56-data-ownership--one-boundary-worth-drawing) drew a line between
+derived and user data, and so far `UserDefaults` has held the user side. That
+stops working the moment features accumulate — notes, saved lists, encounter
+templates, usage history and annotations are relational, queryable, and worth
+far more than the code index itself.
+
+```
+~/Library/…/CodeBar/
+├── codes.sqlite       DERIVED. Rebuildable from seed + imports. Safe to delete.
+│                      Schema owned by CodeStore. Replaced wholesale on import.
+└── library.sqlite     USER. Irreplaceable. Backed up, and eventually synced.
+                       Pins, lists, notes, history. Never touched by an import.
+```
+
+Two stores rather than two tables in one file, because their lifecycles are
+opposite: the index is disposable and gets replaced by a yearly release, while
+the library must survive every one of those replacements untouched. A
+`DELETE FROM codes` must never be able to reach a note.
+
+The library references codes by `(system, code)` rather than by row id — the
+same key the index is unique on. A code retired by the publisher then leaves a
+note pointing at something no longer in the index, which is **correct**: the
+note should survive, and the UI should mark it as referring to a retired code.
+That is exactly the situation a clinician needs to see, not one to hide.
+
+Doing this before features land is cheap. Retrofitting it after notes and lists
+have been written into `UserDefaults` blobs is not.
+
+### Module shape
+
+```
+                    ┌──────────────────────────┐
+                    │      CodeBar (app)       │  scenes, composition root
+                    └────────────┬─────────────┘
+        ┌──────────────┬─────────┴───────┬──────────────┐
+        ▼              ▼                 ▼              ▼
+  ┌───────────┐  ┌───────────┐   ┌────────────┐  ┌────────────┐
+  │ SearchUI  │  │ BrowseUI  │   │ LibraryUI  │  │ SettingsUI │   feature modules
+  └─────┬─────┘  └─────┬─────┘   └─────┬──────┘  └─────┬──────┘
+        └──────────────┴────────┬──────┴───────────────┘
+                                ▼
+                       ┌─────────────────┐
+                       │  CodeBarKit     │  shared design system + view helpers
+                       └────────┬────────┘
+                                ▼
+        ┌──────────────┬────────┴────────┬──────────────┐
+        ▼              ▼                 ▼              ▼
+  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────┐
+  │ CodeCore │  │ CodeStore  │  │ CodeLibrary  │  │CodePlatform│
+  │ domain   │  │ the index  │  │ user data    │  │ AppKit    │
+  └──────────┘  └────────────┘  └──────────────┘  └──────────┘
+```
+
+`CodeLibrary` is new and mirrors `CodeStore`: same actor-over-SQLite shape, same
+migration discipline, opposite lifecycle. Feature modules never import either —
+they see protocols in `CodeCore`, exactly as `CodeBarUI` does today, and
+`make layering` keeps it that way.
+
+**Do not create these modules until a feature needs one.** Every package so far
+was created at the moment a phase needed a test target, and that timing worked;
+inventing four empty modules now would be the premature abstraction this
+document has argued against throughout.
+
+### Schema implications worth knowing early
+
+- **Hierarchy is not stored.** `E11.9` is a child of `E11`, but nothing records
+  that; the code-prefix search only makes it look that way. Real browsing needs
+  parent/child edges, which come from the CMS *tabular* file, not the order file
+  currently imported. New import path, new table, same converter discipline.
+- **Includes/excludes notes are not stored.** Clinically these are the difference
+  between the right code and a denial, and they live only in the tabular file.
+- **No crosswalks.** ICD-10 ↔ SNOMED mappings are separate licensed releases with
+  their own cardinality rules; that is a code set of its own, not a column.
+
+None of these block the current app. All three change what `ingest` means, so
+they are worth knowing before the import path is treated as settled.
+
+### Order of work
+
+1. **Settings scene** — the first real window, and the shell later panes plug into
+2. **Activation policy** — `.regular` plus `MenuBarExtra`, Dock icon as a preference
+3. **`CodeLibrary`** — before any feature writes user data that is not a pin
+4. **Main window** — browse and detail, once hierarchy import exists
+5. **Feature modules** — split when a module gets uncomfortable, not before
+
