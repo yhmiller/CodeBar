@@ -10,7 +10,8 @@ struct CopyAndPinTests {
         pasteboard: FakePasteboard = FakePasteboard(),
         usage: FakeUsageStore = FakeUsageStore()
     ) -> SearchViewModel {
-        SearchViewModel(repository: CountingRepository(), pasteboard: pasteboard, usage: usage)
+        SearchViewModel(repository: CountingRepository(), pasteboard: pasteboard,
+                        usage: usage, preferences: FakePreferences())
     }
 
     @Test("should copy just the code by default")
@@ -74,6 +75,51 @@ struct CopyAndPinTests {
         model.togglePin(Samples.asthma.code)
 
         #expect(model.hasEmptyStateSuggestions)
+    }
+
+    @Test("should search every system when none are disabled")
+    func searchesAllSystemsByDefault() async throws {
+        let repository = CountingRepository()
+        let model = SearchViewModel(repository: repository, pasteboard: FakePasteboard(),
+                                    usage: FakeUsageStore(), preferences: FakePreferences(),
+                                    debounce: .milliseconds(10))
+
+        model.setQuery("diabetes")
+        await model.pendingSearch?.value
+
+        #expect(await repository.receivedSystems.first == Set(CodeSystem.allCases))
+    }
+
+    @Test("should exclude a system the user turned off in settings")
+    func excludesDisabledSystem() async throws {
+        let repository = CountingRepository()
+        let preferences = FakePreferences()
+        preferences.setSystem(.loinc, enabled: false)
+        let model = SearchViewModel(repository: repository, pasteboard: FakePasteboard(),
+                                    usage: FakeUsageStore(), preferences: preferences,
+                                    debounce: .milliseconds(10))
+
+        model.setQuery("creatinine")
+        await model.pendingSearch?.value
+
+        #expect(await repository.receivedSystems.first?.contains(.loinc) == false)
+    }
+
+    @Test("should pick up a settings change without needing a restart")
+    func picksUpPreferenceChangeImmediately() async throws {
+        let repository = CountingRepository()
+        let preferences = FakePreferences()
+        let model = SearchViewModel(repository: repository, pasteboard: FakePasteboard(),
+                                    usage: FakeUsageStore(), preferences: preferences,
+                                    debounce: .milliseconds(10))
+        model.setQuery("first")
+        await model.pendingSearch?.value
+
+        preferences.setSystem(.cpt, enabled: false)
+        model.setQuery("second")
+        await model.pendingSearch?.value
+
+        #expect(await repository.receivedSystems.last?.contains(.cpt) == false)
     }
 
     @Test("should advance the pin revision so the view refreshes")

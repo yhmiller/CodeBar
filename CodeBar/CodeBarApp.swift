@@ -1,10 +1,10 @@
+import CodeBarUI
 import CodePlatform
 import SwiftUI
 
 @main
 struct CodeBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var opensAtLogin = LoginItem.isEnabled
 
     var body: some Scene {
         MenuBarExtra("CodeBar", systemImage: "stethoscope") {
@@ -16,15 +16,8 @@ struct CodeBarApp: App {
             Button("Import Code Set…") {
                 CodeImporter.presentImportPanel(repository: appDelegate.environment.repository)
             }
-            Toggle("Open at Login", isOn: $opensAtLogin)
-                .onChange(of: opensAtLogin) { _, enabled in
-                    guard LoginItem.setEnabled(enabled) else {
-                        // Revert the tick if macOS refused, rather than showing
-                        // a state the system does not actually have.
-                        opensAtLogin = LoginItem.isEnabled
-                        return
-                    }
-                }
+            SettingsLink { Text("Settings…") }
+                .keyboardShortcut(",", modifiers: .command)
 
             Divider()
             Button("About CodeBar") {
@@ -35,5 +28,19 @@ struct CodeBarApp: App {
             }
         }
         .menuBarExtraStyle(.menu)
+
+        // The app's first real window. docs/ARCHITECTURE.md §11 — CodeBar is
+        // growing into a full app that keeps the menu bar panel, and later panes
+        // plug in here.
+        Settings {
+            SettingsView(
+                codeSets: CodeSetsViewModel(
+                    repository: appDelegate.environment.repository,
+                    preferences: SearchPanelController.shared.preferences
+                ),
+                isOpenAtLoginEnabled: { LoginItem.isEnabled },
+                setOpenAtLogin: { LoginItem.setEnabled($0) }
+            )
+        }
     }
 }

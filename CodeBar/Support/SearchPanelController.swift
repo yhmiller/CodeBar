@@ -33,6 +33,7 @@ final class SearchPanelController {
     /// a rebuildable index, and re-importing a code set must not cost the user
     /// their pins. See docs/ARCHITECTURE.md §5.6.
     private let usage = UserDefaultsCodeUsageStore()
+    let preferences = UserDefaultsPreferences()
 
     func toggle() {
         if let panel, panel.isVisible {
@@ -57,7 +58,8 @@ final class SearchPanelController {
         let model = SearchViewModel(
             repository: repository,
             pasteboard: SystemPasteboard(),
-            usage: usage
+            usage: usage,
+            preferences: preferences
         )
         viewModel = model
 

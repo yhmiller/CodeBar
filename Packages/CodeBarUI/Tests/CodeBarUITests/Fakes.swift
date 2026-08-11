@@ -2,6 +2,19 @@ import CodeCore
 import Foundation
 
 @MainActor
+final class FakePreferences: PreferencesStoring {
+    private var disabled: Set<CodeSystem> = []
+
+    var enabledSystems: Set<CodeSystem> {
+        Set(CodeSystem.allCases).subtracting(disabled)
+    }
+
+    func setSystem(_ system: CodeSystem, enabled: Bool) {
+        if enabled { disabled.remove(system) } else { disabled.insert(system) }
+    }
+}
+
+@MainActor
 final class FakeUsageStore: CodeUsageTracking {
     private(set) var pinnedCodes: [ClinicalCode] = []
     private(set) var recentCodes: [ClinicalCode] = []
@@ -37,6 +50,7 @@ final class FakePasteboard: PasteboardWriting {
 actor CountingRepository: CodeRepository {
     private(set) var searchCount = 0
     private(set) var receivedQueries: [String] = []
+    private(set) var receivedSystems: [Set<CodeSystem>] = []
     private var stubbed: [SearchResult] = []
 
     init(stubbed: [SearchResult] = []) {
@@ -46,6 +60,7 @@ actor CountingRepository: CodeRepository {
     func search(_ query: SearchQuery) async throws -> [SearchResult] {
         searchCount += 1
         receivedQueries.append(query.raw)
+        receivedSystems.append(query.systems)
         return stubbed
     }
 
