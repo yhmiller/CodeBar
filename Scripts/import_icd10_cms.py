@@ -22,7 +22,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from codebar_import import CodeSetWriter, infer_missing_parents, parse_tabular  # noqa: E402
+from codebar_import import (  # noqa: E402
+    CodeSetWriter, infer_missing_parents, parse_index, parse_tabular
+)
 
 ORDER_END = 5
 CODE_START = 6
@@ -76,6 +78,11 @@ def main():
     # the correct default: codes retired that year should stop being searchable.
     parser.add_argument("--mode", default="replace", choices=["merge", "replace"])
     parser.add_argument(
+        "--index",
+        help="icd10cm_index_YYYY.xml — adds the phrasings clinicians look codes "
+             "up by, which the descriptions do not contain",
+    )
+    parser.add_argument(
         "--tabular",
         help="icd10cm_tabular_YYYY.xml — adds the code hierarchy and the "
              "includes/excludes notes, which the order file does not carry",
@@ -91,11 +98,14 @@ def main():
         tabular = parse_tabular(args.tabular)
         tabular = infer_missing_parents(tabular, [e["code"] for e in entries])
 
+    index = parse_index(args.index) if args.index else {}
+
     writer = CodeSetWriter("ICD-10-CM", release=args.release, mode=args.mode)
     for entry in entries:
         extra = tabular.get(entry["code"], {})
         writer.add(entry["code"], entry["display"],
-                   synonyms=entry["synonyms"], billable=entry["billable"],
+                   synonyms=entry["synonyms"] + index.get(entry["code"], []),
+                   billable=entry["billable"],
                    parent=extra.get("parent"), chapter=extra.get("chapter"),
                    notes=extra.get("notes"))
 

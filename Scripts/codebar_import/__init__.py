@@ -1,6 +1,10 @@
 """Shared helpers for CodeBar's code-set converters."""
 
 from .envelope import CodeSetWriter, write_code_set
+from .index_terms import parse_index
 from .tabular import infer_missing_parents, parse_tabular
 
-__all__ = ["CodeSetWriter", "write_code_set", "parse_tabular", "infer_missing_parents"]
+__all__ = [
+    "CodeSetWriter", "write_code_set",
+    "parse_tabular", "infer_missing_parents", "parse_index",
+]

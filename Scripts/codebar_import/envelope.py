@@ -74,6 +74,10 @@ class CodeSetWriter:
         if self.release:
             lines.append(f"  release {self.release}")
 
+        synonym_count = sum(len(c.get("synonyms", [])) for c in self.codes)
+        if synonym_count:
+            lines.append(f"  {synonym_count} search synonyms")
+
         with_parent = sum(1 for c in self.codes if c.get("parent"))
         note_count = sum(len(c.get("notes", [])) for c in self.codes)
         if with_parent or note_count:
