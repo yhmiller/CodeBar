@@ -177,7 +177,7 @@ actor GatedRepository: CodeRepository {
 enum Samples {
     static func result(_ code: String, _ display: String) -> SearchResult {
         SearchResult(
-            code: ClinicalCode(code: code, display: display, system: .icd10cm),
+            code: ClinicalCode(code: code, display: display, system: .icd10cm, isBillable: true),
             matchTier: .text
         )
     }
@@ -185,4 +185,11 @@ enum Samples {
     static let diabetes = result("E11.9", "Type 2 diabetes mellitus without complications")
     static let hypertension = result("I10", "Essential (primary) hypertension")
     static let asthma = result("J45.909", "Unspecified asthma, uncomplicated")
+
+    /// A category header — the badge case worth keeping an eye on.
+    static let header = SearchResult(
+        code: ClinicalCode(code: "E11", display: "Type 2 diabetes mellitus",
+                           system: .icd10cm, isBillable: false),
+        matchTier: .exactCode
+    )
 }

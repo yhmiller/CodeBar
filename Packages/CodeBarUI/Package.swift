@@ -1,8 +1,8 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Deliberately does not depend on CodeStore: the UI sees storage only through
-// the CodeRepository protocol in CodeCore. See docs/ARCHITECTURE.md §3.
+// Deliberately does not depend on CodeStore or CodeLibrary: the UI sees storage
+// only through the protocols in CodeCore. See docs/ARCHITECTURE.md §3.
 let package = Package(
     name: "CodeBarUI",
     platforms: [.macOS(.v14)],
@@ -10,13 +10,22 @@ let package = Package(
         .library(name: "CodeBarUI", targets: ["CodeBarUI"])
     ],
     dependencies: [
-        .package(path: "../CodeCore")
+        .package(path: "../CodeCore"),
+        // Test-only. Renders a view and diffs it against a stored reference,
+        // which is the class of bug the view-model tests cannot see.
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.4")
     ],
     targets: [
         .target(
             name: "CodeBarUI",
             dependencies: [.product(name: "CodeCore", package: "CodeCore")]
         ),
-        .testTarget(name: "CodeBarUITests", dependencies: ["CodeBarUI"])
+        .testTarget(
+            name: "CodeBarUITests",
+            dependencies: [
+                "CodeBarUI",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing")
+            ]
+        )
     ]
 )

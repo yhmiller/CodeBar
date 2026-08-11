@@ -160,7 +160,9 @@ public struct CodeDetailView: View {
 
     private func children(_ detail: CodeDetail) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("\(detail.children.count) codes beneath this")
+            Text(detail.children.count == 1
+                 ? "1 code beneath this"
+                 : "\(detail.children.count) codes beneath this")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             ForEach(detail.children) { child in
