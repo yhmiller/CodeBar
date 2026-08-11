@@ -170,6 +170,31 @@ struct SearchViewModelTests {
         #expect(model.selectedIndex == 0)
     }
 
+    @Test("should expose the highlighted result's identity")
+    func exposesSelectedResultIdentity() async throws {
+        let model = try await seededModel()
+
+        model.moveSelection(1)
+
+        #expect(model.selectedResultID == Samples.hypertension.id)
+    }
+
+    @Test("should have no selected identity when there are no results")
+    func noSelectedIdentityWithoutResults() async throws {
+        let model = makeModel(repository: CountingRepository())
+
+        #expect(model.selectedResultID == nil)
+    }
+
+    @Test("should mark only the highlighted result as selected")
+    func marksOnlyHighlightedResult() async throws {
+        let model = try await seededModel()
+
+        model.moveSelection(1)
+
+        #expect(model.results.filter { model.isSelected($0) } == [Samples.hypertension])
+    }
+
     @Test("should reset the selection when the query changes")
     func resetsSelectionOnNewQuery() async throws {
         let model = try await seededModel()

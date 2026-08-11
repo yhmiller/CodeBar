@@ -78,8 +78,17 @@ public final class SearchViewModel {
         selectedIndex = max(0, min(results.count - 1, selectedIndex + delta))
     }
 
-    public func isSelected(_ index: Int) -> Bool {
-        index == selectedIndex
+    /// Identity of the highlighted result, for selection and scrolling.
+    ///
+    /// Exposed by identity rather than by index so the list can key its rows on
+    /// something stable: keying a row on its position makes every row a new view
+    /// whenever the result set changes, which leaves stale rows on screen.
+    public var selectedResultID: SearchResult.ID? {
+        results.indices.contains(selectedIndex) ? results[selectedIndex].id : nil
+    }
+
+    public func isSelected(_ result: SearchResult) -> Bool {
+        result.id == selectedResultID
     }
 
     // MARK: - Copying

@@ -54,7 +54,14 @@ final class SearchPanelController {
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
         panel.standardWindowButtons.forEach { $0?.isHidden = true }
-        panel.contentView = NSHostingView(rootView: contentView)
+
+        // Lay the SwiftUI content out before the panel takes key focus. Ordering
+        // front first leaves a window where the panel is key but the text field
+        // has not yet become first responder, and keystrokes typed in that gap
+        // are dropped — which is why the first character often went missing.
+        let hosting = NSHostingView(rootView: contentView)
+        panel.contentView = hosting
+        hosting.layoutSubtreeIfNeeded()
         panel.center()
 
         self.panel = panel
