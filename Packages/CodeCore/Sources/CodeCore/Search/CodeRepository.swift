@@ -38,4 +38,11 @@ public protocol CodeRepository: Sendable {
     /// Codes directly beneath `parent`. Passing `nil` gives the roots of
     /// `system` — the codes with no parent of their own.
     func children(of parent: String?, in system: CodeSystem) async throws -> [ClinicalCode]
+
+    /// Chapters present in `system`, in publisher order. Empty when the
+    /// installed set carried no hierarchy.
+    func chapters(in system: CodeSystem) async throws -> [String]
+
+    /// Top-level codes within one chapter.
+    func roots(inChapter chapter: String, of system: CodeSystem) async throws -> [ClinicalCode]
 }

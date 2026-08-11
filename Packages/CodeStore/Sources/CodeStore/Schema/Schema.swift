@@ -145,6 +145,22 @@ enum Schema {
 
     static let deleteNotes = "DELETE FROM code_notes WHERE system = :system;"
 
+    /// Ordered by the lowest code in each chapter, which reproduces the
+    /// publisher's own chapter order without storing an explicit index.
+    static let selectChapters = """
+    SELECT chapter FROM codes
+     WHERE system = :system AND chapter IS NOT NULL
+     GROUP BY chapter
+     ORDER BY MIN(code);
+    """
+
+    static let selectChapterRoots = """
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+      FROM codes
+     WHERE system = :system AND chapter = :chapter AND parent_code IS NULL
+     ORDER BY code;
+    """
+
     /// `COALESCE` keeps a previously recorded release when a later merge import
     /// carries no release stamp of its own.
     static let upsertCodeSet = """

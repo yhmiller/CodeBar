@@ -153,6 +153,29 @@ public actor SQLiteCodeStore: CodeRepository {
         return codes
     }
 
+    public func chapters(in system: CodeSystem) throws -> [String] {
+        let statement = try database.prepare(Schema.selectChapters)
+        try statement.bind(system.rawValue, to: ":system")
+
+        var chapters: [String] = []
+        while try statement.step() {
+            if let chapter = statement.string(at: 0) { chapters.append(chapter) }
+        }
+        return chapters
+    }
+
+    public func roots(inChapter chapter: String, of system: CodeSystem) throws -> [ClinicalCode] {
+        let statement = try database.prepare(Schema.selectChapterRoots)
+        try statement.bind(system.rawValue, to: ":system")
+        try statement.bind(chapter, to: ":chapter")
+
+        var codes: [ClinicalCode] = []
+        while try statement.step() {
+            if let code = readCode(from: statement) { codes.append(code) }
+        }
+        return codes
+    }
+
     /// Walks up the tree, nearest parent first. Depth is bounded by the file —
     /// the real ICD-10-CM tabular nests five deep — but the loop is capped
     /// anyway so a cyclic parent in a malformed import cannot hang the app.
