@@ -23,6 +23,8 @@ packages:
     path: Packages/CodeCore
   CodeStore:
     path: Packages/CodeStore
+  CodeBarUI:
+    path: Packages/CodeBarUI
 
 targets:
   CodeBar:
@@ -35,6 +37,7 @@ targets:
     dependencies:
       - package: CodeCore
       - package: CodeStore
+      - package: CodeBarUI
     info:
       path: CodeBar/Info.plist
       properties:
