@@ -540,7 +540,7 @@ the shape of the plan.
 | **3** | Carbon hotkey, sandbox on, entitlements | bug 7, removes Accessibility prompt, unblocks App Store |
 | **4** | Panel presenter: persistent hosting view, frame autosave, hide on resign-key | bug 8 |
 | **5** | Split into the four SPM packages, move tests alongside | enforces the layering |
-| **6** | Settings scene, per-system toggles, pins/recents, `Cmd+Return` copy formats | the v2 list |
+| **6** | Settings scene, per-system toggles, pins/recents, `Shift+Return` copy formats | the v2 list |
 | **7** | Envelope format + `snomed_rf2.py` + shared `codebar_import` package | §5.5 |
 
 Phases 1 and 2 are where nearly all the value is. If you stop after those, you've fixed

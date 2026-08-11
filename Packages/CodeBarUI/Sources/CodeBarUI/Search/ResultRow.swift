@@ -7,6 +7,8 @@ private let CODE_COLUMN_WIDTH: CGFloat = 92
 struct ResultRow: View {
     let code: ClinicalCode
     let isSelected: Bool
+    var isPinned: Bool = false
+    var onTogglePin: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -32,6 +34,17 @@ struct ResultRow: View {
             }
 
             Spacer()
+
+            if let onTogglePin {
+                Button(action: onTogglePin) {
+                    Image(systemName: isPinned ? "pin.fill" : "pin")
+                        .font(.caption)
+                        .foregroundStyle(isPinned ? Color.accentColor : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(isPinned ? "Unpin this code" : "Pin this code")
+                .accessibilityLabel(isPinned ? "Unpin \(code.code)" : "Pin \(code.code)")
+            }
 
             if isSelected {
                 Text("↵ copy")

@@ -2,6 +2,29 @@ import CodeCore
 import Foundation
 
 @MainActor
+final class FakeUsageStore: CodeUsageTracking {
+    private(set) var pinnedCodes: [ClinicalCode] = []
+    private(set) var recentCodes: [ClinicalCode] = []
+
+    func isPinned(_ code: ClinicalCode) -> Bool {
+        pinnedCodes.contains { $0.id == code.id }
+    }
+
+    func togglePin(_ code: ClinicalCode) {
+        if let index = pinnedCodes.firstIndex(where: { $0.id == code.id }) {
+            pinnedCodes.remove(at: index)
+        } else {
+            pinnedCodes.insert(code, at: 0)
+        }
+    }
+
+    func recordUse(of code: ClinicalCode) {
+        recentCodes.removeAll { $0.id == code.id }
+        recentCodes.insert(code, at: 0)
+    }
+}
+
+@MainActor
 final class FakePasteboard: PasteboardWriting {
     private(set) var written: [String] = []
 
