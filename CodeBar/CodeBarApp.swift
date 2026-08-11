@@ -2,14 +2,7 @@ import SwiftUI
 
 @main
 struct CodeBarApp: App {
-
-    init() {
-        CodeDatabase.shared.loadSeedDataIfNeeded()
-        HotkeyManager.shared.onTrigger = {
-            SearchPanelController.shared.toggle()
-        }
-        HotkeyManager.shared.start()
-    }
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         MenuBarExtra("CodeBar", systemImage: "stethoscope") {
@@ -18,7 +11,7 @@ struct CodeBarApp: App {
             }
             Divider()
             Button("Import Code Set…") {
-                CodeImporter.presentImportPanel()
+                CodeImporter.presentImportPanel(repository: appDelegate.environment.repository)
             }
             Divider()
             Button("Quit CodeBar") {

@@ -1,5 +1,8 @@
 import AppKit
+import CodeCore
 import SwiftUI
+
+private let PANEL_SIZE = NSSize(width: 560, height: 420)
 
 /// NSPanel subclass that overrides canBecomeKey. Without this, a
 /// .nonactivatingPanel style window won't reliably accept keyboard focus,
@@ -10,8 +13,17 @@ private final class FocusablePanel: NSPanel {
 
 /// Owns the floating, Spotlight-style search panel: creates it lazily,
 /// centers it, and toggles visibility from the global hotkey or the menu.
+///
+/// TODO(yhmiller): phase 4 replaces the rebuild-on-show with a persistent
+/// hosting view, restores the user's saved frame instead of re-centering, and
+/// hides the panel when it resigns key.
+@MainActor
 final class SearchPanelController {
     static let shared = SearchPanelController()
+
+    /// Injected at launch by `AppDelegate`. `nil` when the database failed to open.
+    var repository: (any CodeRepository)?
+
     private var panel: NSPanel?
 
     func toggle() {
@@ -23,14 +35,12 @@ final class SearchPanelController {
     }
 
     func show() {
-        let existingPanel = panel
-        let contentView = SearchPanelView(onDismiss: { [weak self] in
+        let contentView = SearchPanelView(repository: repository) { [weak self] in
             self?.panel?.orderOut(nil)
-        })
-        let hosting = NSHostingView(rootView: contentView)
+        }
 
-        let panel = existingPanel ?? FocusablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 420),
+        let panel = self.panel ?? FocusablePanel(
+            contentRect: NSRect(origin: .zero, size: PANEL_SIZE),
             styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
@@ -42,7 +52,7 @@ final class SearchPanelController {
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
         panel.standardWindowButtons.forEach { $0?.isHidden = true }
-        panel.contentView = hosting
+        panel.contentView = NSHostingView(rootView: contentView)
         panel.center()
 
         self.panel = panel
