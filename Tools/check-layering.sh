@@ -24,6 +24,16 @@ FORBIDDEN=(
   "CodeCore:CodePlatform"
   "CodePlatform:CodeStore"
   "CodePlatform:CodeBarUI"
+  "CodeCore:CodeLibrary"
+  "CodeCore:SQLiteKit"
+  "CodeBarUI:CodeLibrary"
+  "CodeBarUI:CodeStore"
+  "CodeLibrary:CodeStore"
+  "CodeLibrary:CodeBarUI"
+  "CodeLibrary:AppKit"
+  "CodeLibrary:SwiftUI"
+  "SQLiteKit:CodeCore"
+  "SQLiteKit:AppKit"
 )
 
 for rule in $FORBIDDEN; do

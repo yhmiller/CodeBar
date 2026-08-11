@@ -1,6 +1,7 @@
 import AppKit
 import CodeBarUI
 import CodeCore
+import CodeLibrary
 import CodePlatform
 import SwiftUI
 
@@ -29,10 +30,9 @@ final class SearchPanelController {
     private var panel: NSPanel?
     private var viewModel: SearchViewModel?
 
-    /// Pins and recents live outside the code database on purpose: that file is
-    /// a rebuildable index, and re-importing a code set must not cost the user
-    /// their pins. See docs/ARCHITECTURE.md §5.6.
-    private let usage = UserDefaultsCodeUsageStore()
+    /// Injected at launch alongside the repository.
+    var library: (any CodeLibraryStoring)?
+
     let preferences = UserDefaultsPreferences()
 
     func toggle() {
@@ -58,7 +58,7 @@ final class SearchPanelController {
         let model = SearchViewModel(
             repository: repository,
             pasteboard: SystemPasteboard(),
-            usage: usage,
+            library: library ?? EmptyCodeLibrary(),
             preferences: preferences
         )
         viewModel = model

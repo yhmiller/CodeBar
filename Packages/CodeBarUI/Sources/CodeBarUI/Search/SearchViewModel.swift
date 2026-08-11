@@ -7,6 +7,10 @@ import Observation
 /// that it reads as instant. Injectable so tests do not depend on wall-clock timing.
 public let DEFAULT_SEARCH_DEBOUNCE = Duration.milliseconds(120)
 
+/// How many recently-used codes the empty state offers. Enough to cover a
+/// clinic session, few enough to stay scannable.
+public let EMPTY_STATE_RECENT_LIMIT = 8
+
 /// Owns the search panel's state.
 ///
 /// Two guarantees it exists to provide: a burst of keystrokes issues one query,
@@ -30,7 +34,7 @@ public final class SearchViewModel {
 
     private let repository: (any CodeRepository)?
     private let pasteboard: any PasteboardWriting
-    private let usage: any CodeUsageTracking
+    private let library: any CodeLibraryStoring
     private let preferences: any PreferencesStoring
     private let debounce: Duration
 
@@ -39,16 +43,21 @@ public final class SearchViewModel {
     @ObservationIgnored
     private(set) var pendingSearch: Task<Void, Never>?
 
+    /// Writes to the library are fire-and-forget from the view's point of view.
+    /// Retained so tests can await them, exactly as `pendingSearch` is.
+    @ObservationIgnored
+    public private(set) var pendingLibraryWork: Task<Void, Never>?
+
     public init(
         repository: (any CodeRepository)?,
         pasteboard: any PasteboardWriting,
-        usage: any CodeUsageTracking,
+        library: any CodeLibraryStoring,
         preferences: any PreferencesStoring,
         debounce: Duration = DEFAULT_SEARCH_DEBOUNCE
     ) {
         self.repository = repository
         self.pasteboard = pasteboard
-        self.usage = usage
+        self.library = library
         self.preferences = preferences
         self.debounce = debounce
     }
@@ -57,28 +66,37 @@ public final class SearchViewModel {
 
     /// Shown when the field is empty. Pins first, then recents.
     ///
-    /// This is where the ranking gap gets addressed in practice: BM25 cannot know
-    /// that E11.9 is the diabetes code someone reaches for every day, but their
-    /// own pins can.
-    public var pinnedCodes: [ClinicalCode] { usage.pinnedCodes }
-    public var recentCodes: [ClinicalCode] { usage.recentCodes }
+    /// This is where the ranking gap gets addressed in practice: relevance
+    /// ranking cannot know that E11.9 is the diabetes code someone reaches for
+    /// every day, but their own history can.
+    ///
+    /// Cached here rather than read through on demand: the library is an actor,
+    /// and a view cannot await.
+    public private(set) var pinnedCodes: [ClinicalCode] = []
+    public private(set) var recentCodes: [ClinicalCode] = []
+    private var pinnedIDs: Set<String> = []
 
     public var hasEmptyStateSuggestions: Bool {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
 
     public func isPinned(_ code: ClinicalCode) -> Bool {
-        usage.isPinned(code)
+        pinnedIDs.contains(code.id)
     }
 
     public func togglePin(_ code: ClinicalCode) {
-        usage.togglePin(code)
-        pinRevision += 1
+        pendingLibraryWork = Task {
+            try? await library.togglePin(code)
+            await refreshLibrary()
+        }
     }
 
-    /// Bumped so SwiftUI re-reads the pin lists, which live in the usage store
-    /// rather than in observed properties of this model.
-    public private(set) var pinRevision = 0
+    /// Reloads the cached pins and recents.
+    public func refreshLibrary() async {
+        pinnedCodes = (try? await library.pinnedCodes()) ?? []
+        recentCodes = (try? await library.recentCodes(limit: EMPTY_STATE_RECENT_LIMIT)) ?? []
+        pinnedIDs = Set(pinnedCodes.map(\.id))
+    }
 
     // MARK: - Querying
 
@@ -125,6 +143,7 @@ public final class SearchViewModel {
     public func prepareForDisplay() {
         displaySessionID += 1
         setQuery("")
+        pendingLibraryWork = Task { await refreshLibrary() }
     }
 
     // MARK: - Selection
@@ -164,7 +183,9 @@ public final class SearchViewModel {
 
     public func copy(_ code: ClinicalCode, format: CopyFormat = .codeOnly) {
         pasteboard.write(format.string(for: code))
-        usage.recordUse(of: code)
-        pinRevision += 1
+        pendingLibraryWork = Task {
+            try? await library.recordUse(of: code, format: format)
+            await refreshLibrary()
+        }
     }
 }

@@ -1,4 +1,5 @@
 import CodeCore
+import SQLiteKit
 import Foundation
 
 /// SQLite + FTS5 implementation of `CodeRepository`.

@@ -1,4 +1,5 @@
 import CodeCore
+import SQLiteKit
 import Foundation
 
 /// Brings a database up to `Schema.version`.

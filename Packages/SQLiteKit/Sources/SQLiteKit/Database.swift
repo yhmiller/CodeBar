@@ -7,10 +7,10 @@ private let BUSY_TIMEOUT_MS = 5_000
 ///
 /// Not `Sendable` by design — owned exclusively by `SQLiteCodeStore`'s actor
 /// isolation, which is what serializes access to the underlying handle.
-final class Database {
+public final class Database {
     private var handle: OpaquePointer?
 
-    init(path: String) throws {
+    public init(path: String) throws {
         var handle: OpaquePointer?
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
         let result = sqlite3_open_v2(path, &handle, flags, nil)
@@ -26,7 +26,7 @@ final class Database {
         sqlite3_close_v2(handle)
     }
 
-    func configure() throws {
+    public func configure() throws {
         try execute("PRAGMA journal_mode = WAL;")
         try execute("PRAGMA synchronous = NORMAL;")
         try execute("PRAGMA foreign_keys = ON;")
@@ -35,7 +35,7 @@ final class Database {
 
     // MARK: - Executing
 
-    func execute(_ sql: String) throws {
+    public func execute(_ sql: String) throws {
         var errorPointer: UnsafeMutablePointer<CChar>?
         let result = sqlite3_exec(handle, sql, nil, nil, &errorPointer)
         defer { sqlite3_free(errorPointer) }
@@ -45,7 +45,7 @@ final class Database {
         }
     }
 
-    func prepare(_ sql: String) throws -> Statement {
+    public func prepare(_ sql: String) throws -> Statement {
         try Statement(database: handle, sql: sql)
     }
 
@@ -53,7 +53,7 @@ final class Database {
     ///
     /// The absence of this rollback is what let a failed import commit half a
     /// code set in the previous implementation.
-    func transaction<T>(_ body: () throws -> T) throws -> T {
+    public func transaction<T>(_ body: () throws -> T) throws -> T {
         try execute("BEGIN IMMEDIATE;")
         do {
             let value = try body()
@@ -66,13 +66,13 @@ final class Database {
     }
 
     /// Rows changed by the most recent statement.
-    var changeCount: Int {
+    public var changeCount: Int {
         Int(sqlite3_changes64(handle))
     }
 
     // MARK: - Schema introspection
 
-    func userVersion() throws -> Int32 {
+    public func userVersion() throws -> Int32 {
         let statement = try prepare("PRAGMA user_version;")
         guard try statement.step() else { return 0 }
         return Int32(statement.int(at: 0))
@@ -80,11 +80,11 @@ final class Database {
 
     /// `PRAGMA` does not accept bind parameters, so the version is interpolated.
     /// Safe because it is an `Int32` this module controls.
-    func setUserVersion(_ version: Int32) throws {
+    public func setUserVersion(_ version: Int32) throws {
         try execute("PRAGMA user_version = \(version);")
     }
 
-    func tableExists(_ name: String) throws -> Bool {
+    public func tableExists(_ name: String) throws -> Bool {
         let statement = try prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = :name;")
         try statement.bind(name, to: ":name")
         return try statement.step()

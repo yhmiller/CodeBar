@@ -14,27 +14,42 @@ final class FakePreferences: PreferencesStoring {
     }
 }
 
-@MainActor
-final class FakeUsageStore: CodeUsageTracking {
-    private(set) var pinnedCodes: [ClinicalCode] = []
-    private(set) var recentCodes: [ClinicalCode] = []
+actor FakeLibrary: CodeLibraryStoring {
+    private var pinned: [ClinicalCode] = []
+    private var recent: [ClinicalCode] = []
+    private var uses: [String: Int] = [:]
 
-    func isPinned(_ code: ClinicalCode) -> Bool {
-        pinnedCodes.contains { $0.id == code.id }
-    }
+    func pinnedCodes() -> [ClinicalCode] { pinned }
+    func isPinned(_ code: ClinicalCode) -> Bool { pinned.contains { $0.id == code.id } }
 
-    func togglePin(_ code: ClinicalCode) {
-        if let index = pinnedCodes.firstIndex(where: { $0.id == code.id }) {
-            pinnedCodes.remove(at: index)
-        } else {
-            pinnedCodes.insert(code, at: 0)
+    @discardableResult
+    func togglePin(_ code: ClinicalCode) -> Bool {
+        if let index = pinned.firstIndex(where: { $0.id == code.id }) {
+            pinned.remove(at: index)
+            return false
         }
+        pinned.insert(code, at: 0)
+        return true
     }
 
-    func recordUse(of code: ClinicalCode) {
-        recentCodes.removeAll { $0.id == code.id }
-        recentCodes.insert(code, at: 0)
+    func recordUse(of code: ClinicalCode, format: CopyFormat) {
+        uses[code.id, default: 0] += 1
+        recent.removeAll { $0.id == code.id }
+        recent.insert(code, at: 0)
     }
+
+    func recentCodes(limit: Int) -> [ClinicalCode] {
+        Array(recent.filter { code in !pinned.contains { $0.id == code.id } }.prefix(limit))
+    }
+
+    func mostUsedCodes(limit: Int) -> [ClinicalCode] {
+        Array(recent.sorted { uses[$0.id, default: 0] > uses[$1.id, default: 0] }.prefix(limit))
+    }
+
+    func usageCount(for code: ClinicalCode) -> Int { uses[code.id, default: 0] }
+
+    @discardableResult
+    func adoptLegacyData(pinned: [ClinicalCode], recent: [ClinicalCode]) -> Bool { false }
 }
 
 @MainActor
