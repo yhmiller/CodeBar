@@ -89,6 +89,8 @@ actor CountingRepository: CodeRepository {
     @discardableResult func removeCodeSet(_ system: CodeSystem) async throws -> Int { 0 }
     func detail(for code: ClinicalCode) async throws -> CodeDetail? { nil }
     func children(of parent: String?, in system: CodeSystem) async throws -> [ClinicalCode] { [] }
+    func chapters(in system: CodeSystem) async throws -> [String] { [] }
+    func roots(inChapter chapter: String, of system: CodeSystem) async throws -> [ClinicalCode] { [] }
 }
 
 /// A repository whose searches suspend until the test explicitly releases them.
@@ -136,6 +138,8 @@ actor GatedRepository: CodeRepository {
     @discardableResult func removeCodeSet(_ system: CodeSystem) async throws -> Int { 0 }
     func detail(for code: ClinicalCode) async throws -> CodeDetail? { nil }
     func children(of parent: String?, in system: CodeSystem) async throws -> [ClinicalCode] { [] }
+    func chapters(in system: CodeSystem) async throws -> [String] { [] }
+    func roots(inChapter chapter: String, of system: CodeSystem) async throws -> [ClinicalCode] { [] }
 }
 
 enum Samples {
