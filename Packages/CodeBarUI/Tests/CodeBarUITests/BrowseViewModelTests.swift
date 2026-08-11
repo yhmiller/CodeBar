@@ -61,8 +61,8 @@ actor TreeRepository: CodeRepository {
 @MainActor
 struct BrowseViewModelTests {
 
-    private func loaded() async -> BrowseViewModel {
-        let model = BrowseViewModel(repository: TreeRepository())
+    private func loaded(library: FakeLibrary = FakeLibrary()) async -> BrowseViewModel {
+        let model = BrowseViewModel(repository: TreeRepository(), library: library)
         await model.load()
         return model
     }
@@ -74,7 +74,7 @@ struct BrowseViewModelTests {
 
     @Test("should select the first chapter so the window is never empty")
     func selectsFirstChapter() async {
-        #expect(await loaded().selectedChapter == "Endocrine")
+        #expect(await loaded().selection == .chapter("Endocrine"))
     }
 
     @Test("should report having a hierarchy when chapters exist")
@@ -154,9 +154,105 @@ struct BrowseViewModelTests {
     @Test("should switch the root list when the chapter changes")
     func switchesChapter() async {
         let model = await loaded()
-        model.selectedChapter = "Circulatory"
-        try? await Task.sleep(for: .milliseconds(50))
+        model.selection = .chapter("Circulatory")
+        await model.pendingWork?.value
 
         #expect(model.roots.map(\.code.code) == ["I10"])
+    }
+
+    // MARK: - Lists
+
+    @Test("should create a list and select it")
+    func createsAndSelectsList() async {
+        let model = await loaded()
+
+        model.createList(named: "Diabetes clinic")
+        await model.pendingWork?.value
+
+        #expect(model.selectedList?.name == "Diabetes clinic")
+    }
+
+    @Test("should ignore a list name that is only whitespace")
+    func ignoresBlankListName() async {
+        let model = await loaded()
+
+        model.createList(named: "   ")
+        await model.pendingWork?.value
+
+        #expect(model.lists.isEmpty)
+    }
+
+    @Test("should add the selected code to a list")
+    func addsSelectedCodeToList() async {
+        let model = await loaded()
+        model.createList(named: "Clinic")
+        await model.pendingWork?.value
+        model.selectedCode = ClinicalCode(code: "E11", display: "", system: .icd10cm)
+        await model.pendingWork?.value
+
+        model.addSelectedCode(toList: model.lists[0].id)
+        await model.pendingWork?.value
+
+        #expect(model.listCodes.map(\.code) == ["E11"])
+    }
+
+    @Test("should show a list's codes when it is selected")
+    func showsListContents() async {
+        let model = await loaded()
+        model.createList(named: "Clinic")
+        await model.pendingWork?.value
+        model.selectedCode = ClinicalCode(code: "E11", display: "", system: .icd10cm)
+        await model.pendingWork?.value
+        model.addSelectedCode(toList: model.lists[0].id)
+        await model.pendingWork?.value
+
+        model.selection = .chapter("Endocrine")
+        await model.pendingWork?.value
+        model.selection = .list(model.lists[0].id)
+        await model.pendingWork?.value
+
+        #expect(model.listCodes.count == 1)
+    }
+
+    @Test("should clear the code tree while a list is shown")
+    func listHidesTree() async {
+        let model = await loaded()
+        model.createList(named: "Clinic")
+        await model.pendingWork?.value
+
+        #expect(model.roots.isEmpty)
+    }
+
+    @Test("should remove the selected code from the list being viewed")
+    func removesFromCurrentList() async {
+        let model = await loaded()
+        model.createList(named: "Clinic")
+        await model.pendingWork?.value
+        model.selectedCode = ClinicalCode(code: "E11", display: "", system: .icd10cm)
+        await model.pendingWork?.value
+        model.addSelectedCode(toList: model.lists[0].id)
+        await model.pendingWork?.value
+
+        model.removeSelectedCodeFromCurrentList()
+        await model.pendingWork?.value
+
+        #expect(model.listCodes.isEmpty)
+    }
+
+    @Test("should fall back to a chapter when the selected list is deleted")
+    func deletingSelectedListFallsBack() async {
+        let model = await loaded()
+        model.createList(named: "Clinic")
+        await model.pendingWork?.value
+
+        model.deleteList(model.lists[0].id)
+        await model.pendingWork?.value
+
+        #expect(model.selection == .chapter("Endocrine"))
+    }
+
+    @Test("should report no current list while a chapter is selected")
+    func noCurrentListForChapter() async {
+        #expect(await loaded().selectedList == nil)
     }
 }
