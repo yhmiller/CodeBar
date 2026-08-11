@@ -49,6 +49,14 @@ final class Statement {
         try check(sqlite3_bind_int64(handle, try index(of: name), Int64(value)))
     }
 
+    func bind(_ value: Int?, to name: String) throws {
+        if let value {
+            try bind(value, to: name)
+        } else {
+            try check(sqlite3_bind_null(handle, try index(of: name)))
+        }
+    }
+
     private func index(of name: String) throws -> Int32 {
         let index = sqlite3_bind_parameter_index(handle, name)
         guard index > 0 else {
@@ -87,6 +95,12 @@ final class Statement {
 
     func int(at column: Int32) -> Int {
         Int(sqlite3_column_int64(handle, column))
+    }
+
+    /// `nil` when the column holds SQL NULL, which is distinct from `0`.
+    func optionalBool(at column: Int32) -> Bool? {
+        guard sqlite3_column_type(handle, column) != SQLITE_NULL else { return nil }
+        return sqlite3_column_int64(handle, column) != 0
     }
 
     // MARK: - Errors

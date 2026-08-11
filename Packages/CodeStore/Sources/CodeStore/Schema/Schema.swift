@@ -7,9 +7,9 @@
 /// scan. See docs/ARCHITECTURE.md §5.1.
 enum Schema {
 
-    static let version: Int32 = 2
+    static let version: Int32 = 3
 
-    static let createV2 = """
+    static let createSchema = """
     CREATE TABLE code_sets (
         system      TEXT PRIMARY KEY,
         release     TEXT,
@@ -24,6 +24,9 @@ enum Schema {
         display       TEXT NOT NULL,
         synonyms_json TEXT NOT NULL DEFAULT '[]',
         synonyms_text TEXT NOT NULL DEFAULT '',
+        -- NULL when the source does not say. 0 marks a category header that
+        -- must not be submitted on a claim.
+        is_billable   INTEGER,
         UNIQUE(system, code)
     );
 
@@ -59,14 +62,21 @@ enum Schema {
     /// Upsert keyed on `(system, code)`. This is what makes importing the same
     /// file twice a no-op instead of doubling every row.
     static let upsertCode = """
-    INSERT INTO codes (system, code, code_norm, display, synonyms_json, synonyms_text)
-    VALUES (:system, :code, :code_norm, :display, :synonyms_json, :synonyms_text)
+    INSERT INTO codes (system, code, code_norm, display, synonyms_json, synonyms_text, is_billable)
+    VALUES (:system, :code, :code_norm, :display, :synonyms_json, :synonyms_text, :is_billable)
     ON CONFLICT(system, code) DO UPDATE SET
         code_norm     = excluded.code_norm,
         display       = excluded.display,
         synonyms_json = excluded.synonyms_json,
-        synonyms_text = excluded.synonyms_text;
+        synonyms_text = excluded.synonyms_text,
+        -- COALESCE so re-importing from a source that omits billability does
+        -- not erase a flag an earlier, richer import established.
+        is_billable   = COALESCE(excluded.is_billable, codes.is_billable);
     """
+
+    /// v2 -> v3. A nullable column needs no table rebuild, so existing rows keep
+    /// their data and simply report "unknown" until they are re-imported.
+    static let migrateV2ToV3 = "ALTER TABLE codes ADD COLUMN is_billable INTEGER;"
 
     /// `COALESCE` keeps a previously recorded release when a later merge import
     /// carries no release stamp of its own.

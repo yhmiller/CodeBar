@@ -17,6 +17,7 @@ enum CodeBinder {
         try statement.bind(code.display, to: ":display")
         try statement.bind(encodeSynonyms(code.synonyms), to: ":synonyms_json")
         try statement.bind(code.synonyms.joined(separator: " "), to: ":synonyms_text")
+        try statement.bind(code.isBillable.map { $0 ? 1 : 0 }, to: ":is_billable")
     }
 
     static func encodeSynonyms(_ synonyms: [String]) -> String {

@@ -69,9 +69,10 @@ public actor SQLiteCodeStore: CodeRepository {
                         code: code,
                         display: display,
                         system: system,
-                        synonyms: CodeBinder.decodeSynonyms(statement.string(at: 3))
+                        synonyms: CodeBinder.decodeSynonyms(statement.string(at: 3)),
+                        isBillable: statement.optionalBool(at: 4)
                     ),
-                    matchTier: SearchResult.MatchTier(rawValue: statement.int(at: 4)) ?? .text
+                    matchTier: SearchResult.MatchTier(rawValue: statement.int(at: 5)) ?? .text
                 )
             )
         }
@@ -82,6 +83,21 @@ public actor SQLiteCodeStore: CodeRepository {
 
     public func codeCount() throws -> Int {
         let statement = try database.prepare("SELECT COUNT(*) FROM codes;")
+        guard try statement.step() else { return 0 }
+        return statement.int(at: 0)
+    }
+
+    /// Codes installed for the given systems. An empty set counts everything.
+    private func codeCount(in systems: Set<CodeSystem>) throws -> Int {
+        guard !systems.isEmpty else { return try codeCount() }
+
+        let placeholders = (0..<systems.count).map { ":sys\($0)" }.joined(separator: ", ")
+        let statement = try database.prepare(
+            "SELECT COUNT(*) FROM codes WHERE system IN (\(placeholders));"
+        )
+        for (offset, system) in systems.map(\.rawValue).sorted().enumerated() {
+            try statement.bind(system, to: ":sys\(offset)")
+        }
         guard try statement.step() else { return 0 }
         return statement.int(at: 0)
     }
@@ -112,13 +128,14 @@ public actor SQLiteCodeStore: CodeRepository {
     @discardableResult
     public func ingest(_ codeSet: CodeSetImport) throws -> IngestSummary {
         let systems = codeSet.systems
-        let countBefore = try codeCount()
-        var removed = 0
+        // Scoped to the systems this file touches: importing LOINC should not
+        // report a change in how many ICD-10 codes are installed.
+        let installedBefore = try codeCount(in: systems)
 
         try database.transaction {
             if codeSet.mode == .replace {
                 for system in systems.sorted(by: { $0.rawValue < $1.rawValue }) {
-                    removed += try deleteCodes(in: system)
+                    _ = try deleteCodes(in: system)
                 }
             }
 
@@ -136,8 +153,8 @@ public actor SQLiteCodeStore: CodeRepository {
 
         return IngestSummary(
             processed: codeSet.codes.count,
-            netAdded: try codeCount() - countBefore,
-            removed: removed,
+            installedBefore: installedBefore,
+            installedAfter: try codeCount(in: systems),
             systems: systems
         )
     }
