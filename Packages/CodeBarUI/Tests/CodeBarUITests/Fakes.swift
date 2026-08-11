@@ -48,6 +48,8 @@ actor FakeLibrary: CodeLibraryStoring {
         Array(recent.sorted { uses[$0.id, default: 0] > uses[$1.id, default: 0] }.prefix(limit))
     }
 
+    private(set) var lastPreferred: Set<String> = []
+
     func usageCount(for code: ClinicalCode) -> Int { uses[code.id, default: 0] }
 
     @discardableResult
@@ -96,6 +98,7 @@ actor CountingRepository: CodeRepository {
     private(set) var searchCount = 0
     private(set) var receivedQueries: [String] = []
     private(set) var receivedSystems: [Set<CodeSystem>] = []
+    private(set) var receivedPreferred: [Set<String>] = []
     private var stubbed: [SearchResult] = []
 
     init(stubbed: [SearchResult] = []) {
@@ -106,6 +109,7 @@ actor CountingRepository: CodeRepository {
         searchCount += 1
         receivedQueries.append(query.raw)
         receivedSystems.append(query.systems)
+        receivedPreferred.append(query.preferredCodes)
         return stubbed
     }
 

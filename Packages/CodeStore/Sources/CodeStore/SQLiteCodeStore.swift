@@ -42,8 +42,10 @@ public actor SQLiteCodeStore: CodeRepository {
         guard hasCodePass || hasTextPass else { return [] }
 
         let systems = query.systems.map(\.rawValue).sorted()
+        let preferred = Array(query.preferredCodes.sorted().prefix(SearchSQL.preferredLimit))
         let statement = try database.prepare(
-            SearchSQL.build(codePass: hasCodePass, textPass: hasTextPass, systemCount: systems.count)
+            SearchSQL.build(codePass: hasCodePass, textPass: hasTextPass,
+                            systemCount: systems.count, preferredCount: preferred.count)
         )
 
         if hasCodePass, let upperBound {
@@ -57,6 +59,9 @@ public actor SQLiteCodeStore: CodeRepository {
         }
         for (offset, system) in systems.enumerated() {
             try statement.bind(system, to: ":sys\(offset)")
+        }
+        for (offset, id) in preferred.enumerated() {
+            try statement.bind(id, to: ":pref\(offset)")
         }
         try statement.bind(query.limit, to: ":limit")
 
