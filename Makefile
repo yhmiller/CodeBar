@@ -1,9 +1,9 @@
-PACKAGES := Packages/CodeCore Packages/CodeStore
+PACKAGES := Packages/CodeCore Packages/CodeStore Packages/CodeBarUI
 
-.PHONY: bootstrap project build test typecheck check clean
+.PHONY: bootstrap project build test typecheck layering check clean
 
 ## Everything CI would run.
-check: test typecheck
+check: test typecheck layering
 
 ## Install XcodeGen if missing, then generate CodeBar.xcodeproj.
 bootstrap:
@@ -31,6 +31,10 @@ test:
 ## Typecheck the app target without generating an Xcode project.
 typecheck: build
 	@zsh Tools/typecheck-app.sh
+
+## Assert the module dependency rules from docs/ARCHITECTURE.md §3.
+layering:
+	@zsh Tools/check-layering.sh
 
 clean:
 	@for pkg in $(PACKAGES); do rm -rf $$pkg/.build; done

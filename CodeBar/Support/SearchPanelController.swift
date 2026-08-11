@@ -1,4 +1,5 @@
 import AppKit
+import CodeBarUI
 import CodeCore
 import SwiftUI
 
@@ -35,7 +36,8 @@ final class SearchPanelController {
     }
 
     func show() {
-        let contentView = SearchPanelView(repository: repository) { [weak self] in
+        let model = SearchViewModel(repository: repository, pasteboard: SystemPasteboard())
+        let contentView = SearchPanelView(model: model) { [weak self] in
             self?.panel?.orderOut(nil)
         }
 
