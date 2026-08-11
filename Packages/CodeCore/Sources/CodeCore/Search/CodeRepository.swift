@@ -28,4 +28,14 @@ public protocol CodeRepository: Sendable {
     /// Returns the number of rows deleted.
     @discardableResult
     func removeCodeSet(_ system: CodeSystem) async throws -> Int
+
+    // MARK: - Hierarchy
+
+    /// Everything known about one code: where it sits in the tree, and the
+    /// publisher's notes. `nil` when the code is not installed.
+    func detail(for code: ClinicalCode) async throws -> CodeDetail?
+
+    /// Codes directly beneath `parent`. Passing `nil` gives the roots of
+    /// `system` — the codes with no parent of their own.
+    func children(of parent: String?, in system: CodeSystem) async throws -> [ClinicalCode]
 }

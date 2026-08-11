@@ -16,11 +16,24 @@ public struct CodeSetImport: Sendable, Equatable {
     }
 
     public let codes: [ClinicalCode]
+
+    /// Clinical notes keyed by `ClinicalCode.id`.
+    ///
+    /// Kept beside the codes rather than inside them: a search result has no use
+    /// for them, and threading 24,000 notes through every query would be waste.
+    public let notes: [String: [CodeNote]]
+
     public let release: String?
     public let mode: Mode
 
-    public init(codes: [ClinicalCode], release: String? = nil, mode: Mode = .merge) {
+    public init(
+        codes: [ClinicalCode],
+        notes: [String: [CodeNote]] = [:],
+        release: String? = nil,
+        mode: Mode = .merge
+    ) {
         self.codes = codes
+        self.notes = notes
         self.release = release
         self.mode = mode
     }

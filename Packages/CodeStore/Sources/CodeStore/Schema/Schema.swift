@@ -7,7 +7,7 @@
 /// scan. See docs/ARCHITECTURE.md §5.1.
 enum Schema {
 
-    static let version: Int32 = 3
+    static let version: Int32 = 4
 
     static let createSchema = """
     CREATE TABLE code_sets (
@@ -27,11 +27,29 @@ enum Schema {
         -- NULL when the source does not say. 0 marks a category header that
         -- must not be submitted on a claim.
         is_billable   INTEGER,
+        -- Read from the publisher's tabular file, never derived. E11.21's parent
+        -- is E11.2, not E11, so trimming characters would build a wrong tree.
+        parent_code   TEXT,
+        chapter       TEXT,
         UNIQUE(system, code)
     );
 
     CREATE INDEX idx_codes_code_norm ON codes(code_norm);
     CREATE INDEX idx_codes_system    ON codes(system);
+    CREATE INDEX idx_codes_parent    ON codes(system, parent_code);
+
+    -- Publisher notes. excludes1 and excludes2 mean opposite things and are
+    -- stored distinctly for that reason; see CodeNote.Kind.
+    CREATE TABLE code_notes (
+        id         INTEGER PRIMARY KEY,
+        system     TEXT NOT NULL,
+        code       TEXT NOT NULL,
+        kind       TEXT NOT NULL,
+        text       TEXT NOT NULL,
+        sort_order INTEGER NOT NULL
+    );
+
+    CREATE INDEX idx_code_notes ON code_notes(system, code, sort_order);
 
     CREATE VIRTUAL TABLE codes_fts USING fts5(
         display,
@@ -62,21 +80,70 @@ enum Schema {
     /// Upsert keyed on `(system, code)`. This is what makes importing the same
     /// file twice a no-op instead of doubling every row.
     static let upsertCode = """
-    INSERT INTO codes (system, code, code_norm, display, synonyms_json, synonyms_text, is_billable)
-    VALUES (:system, :code, :code_norm, :display, :synonyms_json, :synonyms_text, :is_billable)
+    INSERT INTO codes (system, code, code_norm, display, synonyms_json, synonyms_text,
+                       is_billable, parent_code, chapter)
+    VALUES (:system, :code, :code_norm, :display, :synonyms_json, :synonyms_text,
+            :is_billable, :parent_code, :chapter)
     ON CONFLICT(system, code) DO UPDATE SET
         code_norm     = excluded.code_norm,
         display       = excluded.display,
         synonyms_json = excluded.synonyms_json,
         synonyms_text = excluded.synonyms_text,
-        -- COALESCE so re-importing from a source that omits billability does
-        -- not erase a flag an earlier, richer import established.
-        is_billable   = COALESCE(excluded.is_billable, codes.is_billable);
+        -- COALESCE throughout so re-importing from a thinner source does not
+        -- erase what a richer earlier import established.
+        is_billable   = COALESCE(excluded.is_billable, codes.is_billable),
+        parent_code   = COALESCE(excluded.parent_code, codes.parent_code),
+        chapter       = COALESCE(excluded.chapter, codes.chapter);
     """
 
     /// v2 -> v3. A nullable column needs no table rebuild, so existing rows keep
     /// their data and simply report "unknown" until they are re-imported.
     static let migrateV2ToV3 = "ALTER TABLE codes ADD COLUMN is_billable INTEGER;"
+
+    /// v3 -> v4. Hierarchy and publisher notes. Existing rows keep their data
+    /// and report no parent until re-imported from a set carrying the tabular.
+    static let migrateV3ToV4 = """
+    ALTER TABLE codes ADD COLUMN parent_code TEXT;
+    ALTER TABLE codes ADD COLUMN chapter TEXT;
+
+    CREATE INDEX idx_codes_parent ON codes(system, parent_code);
+
+    CREATE TABLE code_notes (
+        id         INTEGER PRIMARY KEY,
+        system     TEXT NOT NULL,
+        code       TEXT NOT NULL,
+        kind       TEXT NOT NULL,
+        text       TEXT NOT NULL,
+        sort_order INTEGER NOT NULL
+    );
+
+    CREATE INDEX idx_code_notes ON code_notes(system, code, sort_order);
+    """
+
+    static let selectChildren = """
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+      FROM codes
+     WHERE system = :system AND parent_code IS :parent
+     ORDER BY LENGTH(code), code;
+    """
+
+    static let selectNotes = """
+    SELECT kind, text FROM code_notes
+     WHERE system = :system AND code = :code
+     ORDER BY sort_order;
+    """
+
+    static let selectCode = """
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+      FROM codes WHERE system = :system AND code = :code;
+    """
+
+    static let insertNote = """
+    INSERT INTO code_notes (system, code, kind, text, sort_order)
+    VALUES (:system, :code, :kind, :text, :sort_order);
+    """
+
+    static let deleteNotes = "DELETE FROM code_notes WHERE system = :system;"
 
     /// `COALESCE` keeps a previously recorded release when a later merge import
     /// carries no release stamp of its own.

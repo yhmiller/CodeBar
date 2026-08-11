@@ -44,6 +44,29 @@ public enum CodeSetDecoder {
         let release: String?
         let mode: CodeSetImport.Mode?
         let codes: [ClinicalCode]
+        let noteGroups: [[CodeNote]?]
+
+        private enum CodingKeys: String, CodingKey {
+            case formatVersion, system, release, mode, codes
+        }
+
+        /// Notes are written inline per code in the file, but held beside the
+        /// codes in memory. Decoding the array twice is the simplest way to
+        /// split them without giving `ClinicalCode` a field it does not want.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            formatVersion = try container.decode(Int.self, forKey: .formatVersion)
+            system = try container.decodeIfPresent(CodeSystem.self, forKey: .system)
+            release = try container.decodeIfPresent(String.self, forKey: .release)
+            mode = try container.decodeIfPresent(CodeSetImport.Mode.self, forKey: .mode)
+            codes = try container.decode([ClinicalCode].self, forKey: .codes)
+            noteGroups = try container.decode([NoteCarrier].self, forKey: .codes).map(\.notes)
+        }
+    }
+
+    /// Reads only the notes from a code entry, ignoring everything else.
+    private struct NoteCarrier: Decodable {
+        let notes: [CodeNote]?
     }
 
     public static func decode(_ data: Data) throws -> CodeSetImport {
@@ -75,8 +98,14 @@ public enum CodeSetDecoder {
             throw DecodingError.systemMismatch(declared: declared, found: mismatch.system)
         }
 
+        var notes: [String: [CodeNote]] = [:]
+        for (code, group) in zip(envelope.codes, envelope.noteGroups) {
+            if let group, !group.isEmpty { notes[code.id] = group }
+        }
+
         return CodeSetImport(
             codes: envelope.codes,
+            notes: notes,
             release: envelope.release,
             mode: envelope.mode ?? .merge
         )

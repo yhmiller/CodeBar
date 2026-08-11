@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from codebar_import import CodeSetWriter  # noqa: E402
+from codebar_import import CodeSetWriter, infer_missing_parents, parse_tabular  # noqa: E402
 
 ORDER_END = 5
 CODE_START = 6
@@ -75,12 +75,29 @@ def main():
     # A CMS order file is the complete code set for its year, so replacing is
     # the correct default: codes retired that year should stop being searchable.
     parser.add_argument("--mode", default="replace", choices=["merge", "replace"])
+    parser.add_argument(
+        "--tabular",
+        help="icd10cm_tabular_YYYY.xml — adds the code hierarchy and the "
+             "includes/excludes notes, which the order file does not carry",
+    )
     args = parser.parse_args()
 
+    # Both files describe the same release, and importing them together avoids
+    # a second replace-mode import wiping the billability the first established.
+    entries = parse_icd10_order_file(args.order_file)
+
+    tabular = {}
+    if args.tabular:
+        tabular = parse_tabular(args.tabular)
+        tabular = infer_missing_parents(tabular, [e["code"] for e in entries])
+
     writer = CodeSetWriter("ICD-10-CM", release=args.release, mode=args.mode)
-    for entry in parse_icd10_order_file(args.order_file):
+    for entry in entries:
+        extra = tabular.get(entry["code"], {})
         writer.add(entry["code"], entry["display"],
-                   synonyms=entry["synonyms"], billable=entry["billable"])
+                   synonyms=entry["synonyms"], billable=entry["billable"],
+                   parent=extra.get("parent"), chapter=extra.get("chapter"),
+                   notes=extra.get("notes"))
 
     print(writer.write(args.output))
 

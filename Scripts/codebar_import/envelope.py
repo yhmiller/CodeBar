@@ -26,8 +26,10 @@ class CodeSetWriter:
         self.mode = mode
         self.codes = []
 
-    def add(self, code, display, synonyms=None, billable=None):
-        """Adds one code. `billable` stays absent when the source cannot say."""
+    def add(self, code, display, synonyms=None, billable=None,
+            parent=None, chapter=None, notes=None):
+        """Adds one code. Optional fields stay absent when the source is silent,
+        so "unknown" is never confused with "none"."""
         if not code or not display:
             return
 
@@ -39,6 +41,12 @@ class CodeSetWriter:
         }
         if billable is not None:
             entry["billable"] = bool(billable)
+        if parent:
+            entry["parent"] = parent
+        if chapter:
+            entry["chapter"] = chapter
+        if notes:
+            entry["notes"] = notes
         self.codes.append(entry)
 
     def envelope(self):
@@ -65,6 +73,12 @@ class CodeSetWriter:
                          f"(not valid for submission)")
         if self.release:
             lines.append(f"  release {self.release}")
+
+        with_parent = sum(1 for c in self.codes if c.get("parent"))
+        note_count = sum(len(c.get("notes", [])) for c in self.codes)
+        if with_parent or note_count:
+            lines.append(f"  {with_parent} codes have a parent, "
+                         f"{note_count} clinical notes")
         if self.mode == "replace":
             lines.append("  mode: replace — codes missing from this file will be removed on import")
         lines.append("In CodeBar: menu bar icon → Import Code Set… → select this file.")

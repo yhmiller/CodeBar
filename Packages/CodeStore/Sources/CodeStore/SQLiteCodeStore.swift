@@ -2,6 +2,10 @@ import CodeCore
 import SQLiteKit
 import Foundation
 
+/// Guards the ancestor walk against a cyclic parent in a malformed import. The
+/// real ICD-10-CM tabular nests five deep.
+private let MAX_HIERARCHY_DEPTH = 16
+
 /// SQLite + FTS5 implementation of `CodeRepository`.
 ///
 /// An actor rather than a shared singleton: search runs off the main thread, and
@@ -124,6 +128,90 @@ public actor SQLiteCodeStore: CodeRepository {
         return manifests
     }
 
+    // MARK: - Hierarchy
+
+    public func detail(for code: ClinicalCode) throws -> CodeDetail? {
+        guard let stored = try readCode(code.code, in: code.system) else { return nil }
+
+        return CodeDetail(
+            code: stored,
+            ancestors: try ancestors(of: stored),
+            children: try children(of: stored.code, in: stored.system),
+            notes: try notes(for: stored)
+        )
+    }
+
+    public func children(of parent: String?, in system: CodeSystem) throws -> [ClinicalCode] {
+        let statement = try database.prepare(Schema.selectChildren)
+        try statement.bind(system.rawValue, to: ":system")
+        try statement.bind(parent, to: ":parent")
+
+        var codes: [ClinicalCode] = []
+        while try statement.step() {
+            if let code = readCode(from: statement) { codes.append(code) }
+        }
+        return codes
+    }
+
+    /// Walks up the tree, nearest parent first. Depth is bounded by the file —
+    /// the real ICD-10-CM tabular nests five deep — but the loop is capped
+    /// anyway so a cyclic parent in a malformed import cannot hang the app.
+    private func ancestors(of code: ClinicalCode) throws -> [ClinicalCode] {
+        var ancestors: [ClinicalCode] = []
+        var seen: Set<String> = [code.code]
+        var next = code.parent
+
+        while let parent = next, !seen.contains(parent), ancestors.count < MAX_HIERARCHY_DEPTH {
+            guard let found = try readCode(parent, in: code.system) else { break }
+            ancestors.append(found)
+            seen.insert(parent)
+            next = found.parent
+        }
+        return ancestors
+    }
+
+    private func notes(for code: ClinicalCode) throws -> [CodeNote] {
+        let statement = try database.prepare(Schema.selectNotes)
+        try statement.bind(code.system.rawValue, to: ":system")
+        try statement.bind(code.code, to: ":code")
+
+        var notes: [CodeNote] = []
+        while try statement.step() {
+            guard let rawKind = statement.string(at: 0),
+                  let kind = CodeNote.Kind(rawValue: rawKind),
+                  let text = statement.string(at: 1)
+            else { continue }
+            notes.append(CodeNote(kind: kind, text: text))
+        }
+        return notes
+    }
+
+    private func readCode(_ code: String, in system: CodeSystem) throws -> ClinicalCode? {
+        let statement = try database.prepare(Schema.selectCode)
+        try statement.bind(system.rawValue, to: ":system")
+        try statement.bind(code, to: ":code")
+        guard try statement.step() else { return nil }
+        return readCode(from: statement)
+    }
+
+    private func readCode(from statement: Statement) -> ClinicalCode? {
+        guard let systemRaw = statement.string(at: 0),
+              let system = CodeSystem(rawValue: systemRaw),
+              let code = statement.string(at: 1),
+              let display = statement.string(at: 2)
+        else { return nil }
+
+        return ClinicalCode(
+            code: code,
+            display: display,
+            system: system,
+            synonyms: CodeBinder.decodeSynonyms(statement.string(at: 3)),
+            isBillable: statement.optionalBool(at: 4),
+            parent: statement.string(at: 5),
+            chapter: statement.string(at: 6)
+        )
+    }
+
     // MARK: - Mutating
 
     @discardableResult
@@ -147,6 +235,7 @@ public actor SQLiteCodeStore: CodeRepository {
                 try upsert.step()
             }
 
+            try replaceNotes(from: codeSet, systems: systems)
             try recordManifests(for: systems, release: codeSet.release)
         }
 
@@ -177,7 +266,40 @@ public actor SQLiteCodeStore: CodeRepository {
         let statement = try database.prepare("DELETE FROM codes WHERE system = :system;")
         try statement.bind(system.rawValue, to: ":system")
         try statement.step()
-        return database.changeCount
+        let deleted = database.changeCount
+
+        let notes = try database.prepare(Schema.deleteNotes)
+        try notes.bind(system.rawValue, to: ":system")
+        try notes.step()
+
+        return deleted
+    }
+
+    /// Notes are rewritten wholesale for each system the file covers, rather
+    /// than merged. They are publisher content, so the incoming file is the
+    /// authority; merging would accumulate notes from superseded releases.
+    private func replaceNotes(from codeSet: CodeSetImport, systems: Set<CodeSystem>) throws {
+        guard !codeSet.notes.isEmpty else { return }
+
+        for system in systems.sorted(by: { $0.rawValue < $1.rawValue }) {
+            let delete = try database.prepare(Schema.deleteNotes)
+            try delete.bind(system.rawValue, to: ":system")
+            try delete.step()
+        }
+
+        let insert = try database.prepare(Schema.insertNote)
+        for code in codeSet.codes {
+            guard let notes = codeSet.notes[code.id] else { continue }
+            for (offset, note) in notes.enumerated() {
+                insert.reset()
+                try insert.bind(code.system.rawValue, to: ":system")
+                try insert.bind(code.code, to: ":code")
+                try insert.bind(note.kind.rawValue, to: ":kind")
+                try insert.bind(note.text, to: ":text")
+                try insert.bind(offset, to: ":sort_order")
+                try insert.step()
+            }
+        }
     }
 
     private func recordManifests(for systems: Set<CodeSystem>, release: String?) throws {
