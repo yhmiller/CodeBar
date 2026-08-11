@@ -27,6 +27,9 @@ struct CodeBarApp: App {
                 }
 
             Divider()
+            Button("About CodeBar") {
+                AboutPanel.present(repository: appDelegate.environment.repository)
+            }
             Button("Quit CodeBar") {
                 NSApplication.shared.terminate(nil)
             }
