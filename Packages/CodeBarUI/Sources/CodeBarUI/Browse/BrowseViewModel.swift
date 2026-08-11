@@ -66,12 +66,34 @@ public final class BrowseViewModel {
         }
     }
 
+    /// The user's own note on the selected code, if any.
+    public private(set) var note: String = ""
+
     private let repository: (any CodeRepository)?
+    private let library: (any CodeLibraryStoring)?
     private let system: CodeSystem
 
-    public init(repository: (any CodeRepository)?, system: CodeSystem = .icd10cm) {
+    @ObservationIgnored
+    public private(set) var pendingWork: Task<Void, Never>?
+
+    public init(
+        repository: (any CodeRepository)?,
+        library: (any CodeLibraryStoring)? = nil,
+        system: CodeSystem = .icd10cm
+    ) {
         self.repository = repository
+        self.library = library
         self.system = system
+    }
+
+    /// Saved on demand rather than on every keystroke: a note is prose, and
+    /// writing to disk per character would be pointless churn.
+    public func saveNote(_ body: String) {
+        guard let library, let code = selectedCode else { return }
+        note = body
+        pendingWork = Task {
+            try? await library.setNote(body, for: code)
+        }
     }
 
     /// True when the installed set carried no hierarchy — an older import, or
@@ -104,8 +126,10 @@ public final class BrowseViewModel {
     private func loadDetail() async {
         guard let repository, let code = selectedCode else {
             detail = nil
+            note = ""
             return
         }
         detail = try? await repository.detail(for: code)
+        note = (try? await library?.note(for: code)) .flatMap { $0 } ?? ""
     }
 }
