@@ -52,6 +52,34 @@ actor FakeLibrary: CodeLibraryStoring {
 
     @discardableResult
     func adoptLegacyData(pinned: [ClinicalCode], recent: [ClinicalCode]) -> Bool { false }
+
+    private var storedLists: [CodeList] = []
+    private var members: [Int: [ClinicalCode]] = [:]
+    private var storedNotes: [String: String] = [:]
+
+    func lists() -> [CodeList] { storedLists }
+
+    @discardableResult
+    func createList(named name: String, detail: String?) -> CodeList {
+        let list = CodeList(id: storedLists.count + 1, name: name, detail: detail,
+                            createdAt: Date(), count: 0)
+        storedLists.append(list)
+        return list
+    }
+
+    func renameList(_ id: Int, to name: String) {}
+    func deleteList(_ id: Int) { storedLists.removeAll { $0.id == id } }
+    func codes(inList id: Int) -> [ClinicalCode] { members[id] ?? [] }
+    func addCode(_ code: ClinicalCode, toList id: Int) { members[id, default: []].append(code) }
+    func removeCode(_ code: ClinicalCode, fromList id: Int) {
+        members[id]?.removeAll { $0.id == code.id }
+    }
+
+    func note(for code: ClinicalCode) -> String? { storedNotes[code.id] }
+    func setNote(_ body: String, for code: ClinicalCode) {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        storedNotes[code.id] = trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 @MainActor

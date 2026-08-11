@@ -33,9 +33,11 @@ public struct MainWindowView: View {
             CodeDetailView(
                 detail: model.detail,
                 isPinned: model.detail.map { isPinned($0.code) } ?? false,
+                note: model.note,
                 onCopy: onCopy,
                 onTogglePin: onTogglePin,
-                onSelectCode: { model.selectedCode = $0 }
+                onSelectCode: { model.selectedCode = $0 },
+                onSaveNote: { model.saveNote($0) }
             )
         }
         .navigationTitle("CodeBar")

@@ -27,12 +27,25 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
         let version = try database.userVersion()
         guard version != LibrarySchema.version else { return }
 
-        switch version {
-        case 0:
-            try database.transaction { try database.execute(LibrarySchema.create) }
-            try database.setUserVersion(LibrarySchema.version)
-        default:
-            throw LibraryError.unsupportedSchemaVersion(version)
+        // Steps forward one version at a time, so a library from any earlier
+        // build arrives intact rather than only the immediately previous one.
+        var current = version
+        while current < LibrarySchema.version {
+            switch current {
+            case 0:
+                try database.transaction { try database.execute(LibrarySchema.create) }
+                try database.setUserVersion(LibrarySchema.version)
+            case 1:
+                try database.transaction { try database.execute(LibrarySchema.createV2) }
+                try database.setUserVersion(2)
+            default:
+                throw LibraryError.unsupportedSchemaVersion(current)
+            }
+            current = try database.userVersion()
+        }
+
+        guard current == LibrarySchema.version else {
+            throw LibraryError.unsupportedSchemaVersion(current)
         }
     }
 
@@ -116,6 +129,133 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
         try statement.bind(code.code, to: ":code")
         guard try statement.step() else { return 0 }
         return statement.int(at: 0)
+    }
+
+    // MARK: - Lists
+
+    public func lists() throws -> [CodeList] {
+        let statement = try database.prepare(LibrarySchema.selectLists)
+        var lists: [CodeList] = []
+        while try statement.step() {
+            guard let name = statement.string(at: 1) else { continue }
+            lists.append(CodeList(
+                id: statement.int(at: 0),
+                name: name,
+                detail: statement.string(at: 2),
+                createdAt: Date(timeIntervalSince1970: TimeInterval(statement.int(at: 3))),
+                count: statement.int(at: 4)
+            ))
+        }
+        return lists
+    }
+
+    @discardableResult
+    public func createList(named name: String, detail: String?) throws -> CodeList {
+        let now = Int(Date().timeIntervalSince1970)
+        let insert = try database.prepare("""
+        INSERT INTO lists (name, detail, created_at, sort_order)
+        VALUES (:name, :detail, :now,
+                COALESCE((SELECT MAX(sort_order) FROM lists), 0) + 1);
+        """)
+        try insert.bind(name, to: ":name")
+        try insert.bind(detail, to: ":detail")
+        try insert.bind(now, to: ":now")
+        try insert.step()
+
+        guard let created = try lists().last(where: { $0.name == name }) else {
+            throw LibraryError.saveFailed(name)
+        }
+        return created
+    }
+
+    public func renameList(_ id: Int, to name: String) throws {
+        let update = try database.prepare("UPDATE lists SET name = :name WHERE id = :id;")
+        try update.bind(name, to: ":name")
+        try update.bind(id, to: ":id")
+        try update.step()
+    }
+
+    public func deleteList(_ id: Int) throws {
+        try database.transaction {
+            let delete = try database.prepare("DELETE FROM lists WHERE id = :id;")
+            try delete.bind(id, to: ":id")
+            try delete.step()
+            // Members cascade; the codes themselves may now be leftovers.
+            try database.execute(LibrarySchema.pruneOrphans)
+        }
+    }
+
+    public func codes(inList id: Int) throws -> [ClinicalCode] {
+        let statement = try database.prepare(LibrarySchema.selectListMembers)
+        try statement.bind(id, to: ":list_id")
+        return try readCodes(from: statement)
+    }
+
+    public func addCode(_ code: ClinicalCode, toList id: Int) throws {
+        try database.transaction {
+            let savedID = try saveCode(code)
+            let insert = try database.prepare("""
+            INSERT INTO list_members (list_id, saved_code_id, sort_order)
+            VALUES (:list_id, :code_id,
+                    COALESCE((SELECT MAX(sort_order) FROM list_members
+                               WHERE list_id = :list_id), 0) + 1)
+            ON CONFLICT(list_id, saved_code_id) DO NOTHING;
+            """)
+            try insert.bind(id, to: ":list_id")
+            try insert.bind(savedID, to: ":code_id")
+            try insert.step()
+        }
+    }
+
+    public func removeCode(_ code: ClinicalCode, fromList id: Int) throws {
+        try database.transaction {
+            let delete = try database.prepare("""
+            DELETE FROM list_members
+             WHERE list_id = :list_id
+               AND saved_code_id IN (SELECT id FROM saved_codes
+                                      WHERE system = :system AND code = :code);
+            """)
+            try delete.bind(id, to: ":list_id")
+            try delete.bind(code.system.rawValue, to: ":system")
+            try delete.bind(code.code, to: ":code")
+            try delete.step()
+            try database.execute(LibrarySchema.pruneOrphans)
+        }
+    }
+
+    // MARK: - Notes
+
+    public func note(for code: ClinicalCode) throws -> String? {
+        let statement = try database.prepare(LibrarySchema.selectNote)
+        try statement.bind(code.system.rawValue, to: ":system")
+        try statement.bind(code.code, to: ":code")
+        guard try statement.step() else { return nil }
+        return statement.string(at: 0)
+    }
+
+    public func setNote(_ body: String, for code: ClinicalCode) throws {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        try database.transaction {
+            if trimmed.isEmpty {
+                let delete = try database.prepare("""
+                DELETE FROM notes WHERE saved_code_id IN
+                    (SELECT id FROM saved_codes WHERE system = :system AND code = :code);
+                """)
+                try delete.bind(code.system.rawValue, to: ":system")
+                try delete.bind(code.code, to: ":code")
+                try delete.step()
+                try database.execute(LibrarySchema.pruneOrphans)
+                return
+            }
+
+            let savedID = try saveCode(code)
+            let upsert = try database.prepare(LibrarySchema.upsertNote)
+            try upsert.bind(savedID, to: ":id")
+            try upsert.bind(trimmed, to: ":body")
+            try upsert.bind(Int(Date().timeIntervalSince1970), to: ":now")
+            try upsert.step()
+        }
     }
 
     // MARK: - Migration from UserDefaults

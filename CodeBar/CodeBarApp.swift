@@ -15,7 +15,10 @@ struct CodeBarApp: App {
         // coding it. The panel stays the fast path. See ARCHITECTURE.md §11.
         WindowGroup("CodeBar") {
             MainWindowView(
-                model: BrowseViewModel(repository: appDelegate.environment.repository),
+                model: BrowseViewModel(
+                    repository: appDelegate.environment.repository,
+                    library: appDelegate.environment.library
+                ),
                 isPinned: { appDelegate.actions.isPinned($0) },
                 onCopy: { code, format in appDelegate.actions.copy(code, format: format) },
                 onTogglePin: { appDelegate.actions.togglePin($0) }
