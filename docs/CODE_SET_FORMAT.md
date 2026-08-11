@@ -89,11 +89,20 @@ than being penalised for an unknown.
 
 ## Size
 
-Measured on a full-scale ICD-10-CM set (74,000 codes, 11 MB of JSON): decoding
-takes ~165 ms at ~52 MB peak, and ingest ~235 ms, producing an 11 MB database.
-The whole file is held in memory during import.
+Measured on the real CMS ICD-10-CM FY2026 order file — 98,186 codes, of which
+74,719 are billable and 23,467 are category headers:
 
-That is comfortable for ICD-10-CM and LOINC. SNOMED CT is roughly five times
-larger, which would land near 250 MB peak — survivable, but the point at which
-streaming the file rather than decoding it whole starts to be worth building.
-Measure before assuming it is needed.
+| Step | Result |
+|---|---|
+| `import_icd10_cms.py` | 0.9 s, 28 MB of JSON |
+| Decode | 382 ms, peak RSS 112 MB |
+| Ingest | 218 ms |
+| Database on disk | 33 MB |
+| Search | 0.1–64 ms |
+
+The whole file is held in memory during import, which is comfortable at this
+scale and at LOINC's. SNOMED CT is several times larger and would push peak
+memory well past this, which is the point at which streaming the file rather
+than decoding it whole starts to be worth building. Measure before assuming it
+is needed — an earlier estimate built on synthetic data was out by a factor of
+two in both code count and memory.

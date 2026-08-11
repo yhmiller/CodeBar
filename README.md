@@ -6,7 +6,13 @@ anywhere to summon a Spotlight-style search panel, type a term or a code,
 hit Return to copy it.
 
 Ships with a 100-code ICD-10-CM starter set so it's useful immediately.
-Import the full official code sets whenever you're ready (see below).
+Import the full official code sets whenever you're ready (see below) — the real
+CMS FY2026 release is 98,186 codes and imports in well under a second.
+
+Codes that CMS marks as category headers rather than billable — `E11` "Type 2
+diabetes mellitus", for instance, which needs a further character before it can
+go on a claim — are labelled as such and ranked below their billable children.
+Almost a quarter of the official file is these.
 
 ## Setup
 
@@ -33,8 +39,11 @@ silently, and the menu bar icon keeps working.
 ### Working on it
 
 ```bash
-make check       # package tests + Swift 6 typecheck of the app target
-make test        # 58 tests across CodeCore and CodeStore
+make check       # everything below, in one go
+make test        # 122 Swift tests across the four packages
+make test-scripts # 32 Python tests for the converters
+make typecheck   # Swift 6 strict-concurrency check of the app target
+make layering    # asserts the module boundaries hold
 ```
 
 ## Using it
@@ -57,30 +66,30 @@ the full official sets:
 | **SNOMED CT** | Requires a [UMLS](https://www.nlm.nih.gov/research/umls/index.html) account / national release center | Licensed — check your institution's affiliate status |
 | **CPT** | AMA | Proprietary, licensed separately — cannot be bundled or freely redistributed |
 
-Two converter scripts are in `Scripts/`:
+The converters are in `Scripts/`:
 
 ```bash
-python3 Scripts/import_icd10_cms.py icd10cm_order_2026.txt icd10cm_full.json
-python3 Scripts/import_loinc_csv.py Loinc.csv loinc_full.json
+python3 Scripts/import_icd10_cms.py icd10cm_order_2026.txt out.json --release 2026
+python3 Scripts/import_loinc_csv.py Loinc.csv out.json --release 2.78
+python3 Scripts/import_snomed_rf2.py sct2_Description_Snapshot-en_*.txt out.json
 ```
 
+The output format, including why `billable` is three-state and why a yearly
+release should replace rather than merge, is documented in
+[docs/CODE_SET_FORMAT.md](docs/CODE_SET_FORMAT.md).
+
 Then in CodeBar: menu bar icon → **Import Code Set…** → pick the generated
-JSON file. Codes are merged into the existing index, keyed on system + code:
-importing the same file twice is a no-op, and re-importing a newer release
-updates the descriptions in place.
+JSON file. Codes are keyed on system + code, so importing the same file twice
+is a no-op and re-importing a newer release updates descriptions in place.
 
-Note that merging never *removes* anything, so a code retired by the publisher
-stays searchable. Replace semantics — which fix that — need the versioned file
-format from [phase 7](docs/ROADMAP.md#phase-7--versioned-interchange-format);
-the store already supports them.
+The converters write `"mode": "replace"`, because an official release is the
+complete set for its year — anything the publisher retired should stop being
+searchable. CodeBar asks for confirmation before acting on that, showing how
+many codes are installed against how many the file contains.
 
-For SNOMED CT, there's no script yet since RF2 release file structure
-varies by distribution — you'd map the `sct2_Description` file's
-`conceptId` and `term` columns (filtering to `active=1` and the fully
-specified name or preferred synonym typeId) into the same JSON shape:
-`{"code": ..., "display": ..., "system": "SNOMED CT", "synonyms": [...]}`.
-Happy to write that converter once you've got a sample file in hand — the
-exact columns depend on which release you're pulling from.
+The SNOMED converter is written against the published RF2 layout but has only
+been exercised against constructed rows, not a real distribution. Column
+positions vary between releases, so check its output on your first real file.
 
 ## Architecture
 
