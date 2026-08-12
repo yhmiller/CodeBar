@@ -3,11 +3,6 @@
 Scope: the whole repo — build system, module layout, storage schema, concurrency,
 hotkey mechanism, and the JSON interchange format.
 
-Status: phases 0–4 and 7 are implemented, 5 was skipped, 6 is in progress.
-**[ROADMAP.md](ROADMAP.md) tracks what has actually landed** and logs every
-deviation from this document. Sections below describe the target design, not
-necessarily today's code.
-
 **§11 supersedes the scope of §3–4**: CodeBar is now a full native app that keeps
 the menu bar panel. Read it before making structural decisions.
 
@@ -531,30 +526,14 @@ sitting in the tree.
 
 ---
 
-## 8. Migration path
+## 8. How this document relates to the code
 
-Each phase is independently shippable. Deliberately, the file-moving phase comes *after*
-the substance — reorganizing directories first would be busywork that makes the real fixes
-harder to review.
+The restructure described above is implemented: the packages, the schema, the
+sandboxed hotkey and the interchange format are all in the tree. Section 11 is
+the part that is still directional — it describes CodeBar growing into a full
+app around the menu bar panel, and supersedes the scope of sections 3 and 4.
 
-Live status and per-task detail live in [ROADMAP.md](ROADMAP.md); this table is
-the shape of the plan.
-
-| Phase | Work | Fixes |
-|---|---|---|
-| **0** ✅ | `git init`, `.gitignore`, `project.yml`, `Makefile`, test target scaffold | reproducible build, reviewable config |
-| **1** ✅ | Schema v2 + migration + throwing SQL wrapper + `CodeStoreTests` | bugs 1, 2, 3, 5, 6, 9 and the README's known limitation |
-| **2** | Debounce + cancel in a `SearchViewModel` (the actor and async `CodeRepository` landed early, in phase 1) | bug 4 |
-| **3** | Carbon hotkey, sandbox on, entitlements | bug 7, removes Accessibility prompt, unblocks App Store |
-| **4** | Panel presenter: persistent hosting view, frame autosave, hide on resign-key | bug 8 |
-| **5** | Split into the four SPM packages, move tests alongside | enforces the layering |
-| **6** | Settings scene, per-system toggles, pins/recents, `Shift+Return` copy formats | the v2 list |
-| **7** | Envelope format + `snomed_rf2.py` + shared `codebar_import` package | §5.5 |
-
-Phases 1 and 2 are where nearly all the value is. If you stop after those, you've fixed
-every live bug except the hotkey behavior and the app is genuinely production-shaped.
-
----
+Where a section describes a target rather than today's code, it says so.
 
 ## 9. Two forks in the road
 

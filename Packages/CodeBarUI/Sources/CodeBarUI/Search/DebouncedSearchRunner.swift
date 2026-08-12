@@ -4,9 +4,9 @@ import CodeCore
 ///
 /// Extracted rather than duplicated once the main window needed searching too.
 /// The two cancellation points below are the difference between correct results
-/// and the stale-result bug from phase 2 — a slow query for "dia" landing on top
-/// of a faster one for "diabetes" — and both were mutation-tested. Two copies of
-/// that would be two chances to quietly lose it.
+/// and a slow query for "dia" landing on top of a faster one for "diabetes", and
+/// both are mutation-tested. Two copies of that would be two chances to quietly
+/// lose it.
 @MainActor
 final class DebouncedSearchRunner {
     private let repository: (any CodeRepository)?

@@ -85,7 +85,7 @@ struct GeneralSettingsView: View {
 
             Section("Shortcut") {
                 LabeledContent("Open search", value: "⌥⌘C")
-                Text("Fixed for now. Making it configurable is tracked in the roadmap.")
+                Text("Fixed for now. Configurable shortcuts are planned.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
