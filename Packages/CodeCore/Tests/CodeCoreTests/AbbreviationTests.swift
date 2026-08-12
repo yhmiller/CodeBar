@@ -63,3 +63,89 @@ struct AbbreviationTests {
         #expect(codeLike.isEmpty)
     }
 }
+
+/// The clinician's own shorthand, which the built-in table deliberately stops
+/// short of. These cover the query side; storage is covered in CodeLibrary.
+@Suite("A clinician's own abbreviations")
+struct OwnAbbreviationTests {
+
+    @Test("should expand a term the built-in table does not know")
+    func expandsOwnTerm() {
+        let expression = SearchQuery.matchExpression(
+            for: "pcn", abbreviations: ["pcn": "penicillin"]
+        )
+
+        #expect(expression == #"("pcn"* OR ("penicillin"*))"#)
+    }
+
+    /// The whole point of letting people add their own: `RA` is rheumatoid
+    /// arthritis on most wards and the right atrium on some.
+    @Test("should let the user's own entry override a built-in")
+    func ownEntryWinsOverBuiltIn() {
+        let expression = SearchQuery.matchExpression(
+            for: "ra", abbreviations: ["ra": "right atrium"]
+        )
+
+        #expect(expression?.contains(#""right"* "atrium"*"#) == true)
+        #expect(expression?.contains("rheumatoid") == false)
+    }
+
+    @Test("should still expand built-ins the user has not overridden")
+    func leavesOtherBuiltInsAlone() {
+        let expression = SearchQuery.matchExpression(
+            for: "uti", abbreviations: ["pcn": "penicillin"]
+        )
+
+        #expect(expression?.contains(#""urinary"*"#) == true)
+    }
+
+    @Test("should expand the user's own term regardless of the case typed")
+    func ownTermIsCaseInsensitive() {
+        let expression = SearchQuery.matchExpression(
+            for: "PCN", abbreviations: ["pcn": "penicillin"]
+        )
+
+        #expect(expression?.contains(#""penicillin"*"#) == true)
+    }
+
+    @Test("should reach the query built by a caller, not only the helper")
+    func searchQueryCarriesOwnAbbreviations() {
+        let query = SearchQuery(raw: "pcn", abbreviations: ["pcn": "penicillin"])
+
+        #expect(query.matchExpression?.contains(#""penicillin"*"#) == true)
+    }
+}
+
+@Suite("Abbreviation")
+struct AbbreviationValueTests {
+
+    @Test("should lowercase the term so lookup finds it")
+    func lowercasesTerm() {
+        #expect(Abbreviation(term: "PCN", expansion: "penicillin").term == "pcn")
+    }
+
+    @Test("should trim surrounding whitespace from a typed term")
+    func trimsTerm() {
+        #expect(Abbreviation(term: "  pcn  ", expansion: "penicillin").term == "pcn")
+    }
+
+    @Test("should reject an entry with no term")
+    func rejectsBlankTerm() {
+        #expect(Abbreviation(term: "   ", expansion: "penicillin").isUsable == false)
+    }
+
+    @Test("should reject an entry with no expansion")
+    func rejectsBlankExpansion() {
+        #expect(Abbreviation(term: "pcn", expansion: " ").isUsable == false)
+    }
+
+    @Test("should drop unusable entries when collapsing to a lookup table")
+    func skipsUnusableWhenCollapsing() {
+        let table = [
+            Abbreviation(term: "pcn", expansion: "penicillin"),
+            Abbreviation(term: "", expansion: "nonsense")
+        ].expansionsByTerm
+
+        #expect(table == ["pcn": "penicillin"])
+    }
+}

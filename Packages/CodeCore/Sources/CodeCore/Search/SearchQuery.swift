@@ -30,17 +30,21 @@ public struct SearchQuery: Sendable, Equatable {
         normalizedCode.isEmpty && matchExpression == nil
     }
 
+    /// `abbreviations` are the user's own, keyed by lowercase term. They are not
+    /// stored on the query: they are folded into `matchExpression` here, which is
+    /// what equality and the store both work from.
     public init(
         raw: String,
         systems: Set<CodeSystem> = [],
         limit: Int = SearchQuery.defaultLimit,
-        preferredCodes: Set<String> = []
+        preferredCodes: Set<String> = [],
+        abbreviations: [String: String] = [:]
     ) {
         self.preferredCodes = preferredCodes
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         self.raw = trimmed
         self.normalizedCode = CodeNormalizer.normalize(trimmed)
-        self.matchExpression = Self.matchExpression(for: trimmed)
+        self.matchExpression = Self.matchExpression(for: trimmed, abbreviations: abbreviations)
         self.systems = systems
         self.limit = limit
     }
@@ -56,18 +60,25 @@ public struct SearchQuery: Sendable, Equatable {
     /// `uti` finds codes whose description says "urinary tract infection". The
     /// abbreviation is kept in the expression rather than replaced: a code set
     /// that does spell out `GERD` should still match someone typing it.
-    static func matchExpression(for text: String) -> String? {
+    static func matchExpression(
+        for text: String,
+        abbreviations: [String: String] = [:]
+    ) -> String? {
         let clauses = text
             .split(whereSeparator: \.isWhitespace)
             .filter { $0.contains(where: { $0.isLetter || $0.isNumber }) }
-            .map(clause(for:))
+            .map { clause(for: $0, abbreviations: abbreviations) }
 
         return clauses.isEmpty ? nil : clauses.joined(separator: " ")
     }
 
-    private static func clause(for token: some StringProtocol) -> String {
+    private static func clause(
+        for token: some StringProtocol,
+        abbreviations: [String: String]
+    ) -> String {
         let literal = prefixTerm(token)
-        guard let expansion = ClinicalAbbreviations.expansion(for: token) else {
+        guard let expansion = ClinicalAbbreviations.expansion(for: token, adding: abbreviations)
+        else {
             return literal
         }
 

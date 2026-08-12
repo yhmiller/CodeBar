@@ -77,6 +77,19 @@ actor FakeLibrary: CodeLibraryStoring {
         members[id]?.removeAll { $0.id == code.id }
     }
 
+    var storedAbbreviations: [Abbreviation] = []
+
+    func abbreviations() -> [Abbreviation] { storedAbbreviations.sorted { $0.term < $1.term } }
+
+    func saveAbbreviation(_ abbreviation: Abbreviation) {
+        storedAbbreviations.removeAll { $0.term == abbreviation.term }
+        storedAbbreviations.append(abbreviation)
+    }
+
+    func removeAbbreviation(term: String) {
+        storedAbbreviations.removeAll { $0.term == term.lowercased() }
+    }
+
     func note(for code: ClinicalCode) -> String? { storedNotes[code.id] }
     func setNote(_ body: String, for code: ClinicalCode) {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -99,6 +112,8 @@ actor CountingRepository: CodeRepository {
     private(set) var receivedQueries: [String] = []
     private(set) var receivedSystems: [Set<CodeSystem>] = []
     private(set) var receivedPreferred: [Set<String>] = []
+    /// The FTS expression, which is where abbreviation expansion ends up.
+    private(set) var receivedExpressions: [String?] = []
     private var stubbed: [SearchResult] = []
 
     init(stubbed: [SearchResult] = []) {
@@ -110,6 +125,7 @@ actor CountingRepository: CodeRepository {
         receivedQueries.append(query.raw)
         receivedSystems.append(query.systems)
         receivedPreferred.append(query.preferredCodes)
+        receivedExpressions.append(query.matchExpression)
         return stubbed
     }
 

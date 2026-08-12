@@ -8,9 +8,17 @@
 /// the hub was designed — new tables rather than a reshape.
 enum LibrarySchema {
 
-    static let version: Int32 = 2
+    static let version: Int32 = 3
 
-    static let create = """
+    /// Everything a fresh database needs, in version order.
+    static let create = createV1 + createV2 + createV3
+
+    /// The original schema: the hub, pins and usage.
+    ///
+    /// Named rather than left as "`create` minus the later pieces" so that a test
+    /// building a v1 database can ask for it directly. Deriving it by stripping
+    /// strings out of `create` broke the moment v3 was added.
+    static let createV1 = """
     CREATE TABLE saved_codes (
         id            INTEGER PRIMARY KEY,
         system        TEXT NOT NULL,
@@ -47,7 +55,27 @@ enum LibrarySchema {
 
     CREATE INDEX idx_usage_used_at ON usage_events(used_at DESC);
     CREATE INDEX idx_usage_code    ON usage_events(saved_code_id);
-    """ + createV2
+    """
+
+    /// The clinician's own shorthand. Split out for the same reason as `createV2`.
+    ///
+    /// The term is the key, so adding `PCN` after `pcn` replaces it rather than
+    /// storing a second row that could never be found — lookup lowercases the
+    /// query token, so only one of the two would ever win. No `COLLATE NOCASE`
+    /// is needed for that: `Abbreviation` lowercases on construction and every
+    /// write goes through it, which a mutation test confirmed by removing the
+    /// collation and changing nothing.
+    static let createV3 = """
+    CREATE TABLE abbreviations (
+        term       TEXT PRIMARY KEY,
+        expansion  TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+    """
+
+    static let selectAbbreviations = """
+    SELECT term, expansion FROM abbreviations ORDER BY term;
+    """
 
     /// Lists and notes. Split out so it can be run both on a fresh database and
     /// as the v1 -> v2 migration, from one definition.

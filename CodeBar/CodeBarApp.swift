@@ -85,6 +85,9 @@ struct CodeBarApp: App {
                     repository: appDelegate.environment.repository,
                     preferences: SearchPanelController.shared.preferences
                 ),
+                abbreviations: AbbreviationsViewModel(
+                    library: appDelegate.environment.library
+                ),
                 isOpenAtLoginEnabled: { LoginItem.isEnabled },
                 setOpenAtLogin: { LoginItem.setEnabled($0) },
                 isDockIconShown: { SearchPanelController.shared.preferences.showsDockIcon },

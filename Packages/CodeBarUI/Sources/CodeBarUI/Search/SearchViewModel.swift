@@ -89,6 +89,9 @@ public final class SearchViewModel {
     /// code matters, and waiting for usage to accumulate would ignore it.
     private var preferredIDs: Set<String> = []
 
+    /// The user's own shorthand, keyed by lowercase term.
+    private var ownAbbreviations: [String: String] = [:]
+
     public var hasEmptyStateSuggestions: Bool {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
@@ -112,6 +115,10 @@ public final class SearchViewModel {
 
         let mostUsed = (try? await library.mostUsedCodes(limit: PREFERRED_CODE_LIMIT)) ?? []
         preferredIDs = pinnedIDs.union(mostUsed.map(\.id))
+
+        // Cached rather than read per keystroke, and refreshed here so an
+        // abbreviation added in Settings takes effect without a restart.
+        ownAbbreviations = ((try? await library.abbreviations()) ?? []).expansionsByTerm
     }
 
     // MARK: - Querying
@@ -125,7 +132,8 @@ public final class SearchViewModel {
         let query = SearchQuery(
             raw: text,
             systems: preferences.enabledSystems,
-            preferredCodes: preferredIDs
+            preferredCodes: preferredIDs,
+            abbreviations: ownAbbreviations
         )
 
         searchRunner.run(query) { [weak self] found in

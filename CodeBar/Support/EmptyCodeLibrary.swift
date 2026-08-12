@@ -29,4 +29,8 @@ struct EmptyCodeLibrary: CodeLibraryStoring {
     func removeCode(_ code: ClinicalCode, fromList id: Int) async throws {}
     func note(for code: ClinicalCode) async throws -> String? { nil }
     func setNote(_ body: String, for code: ClinicalCode) async throws {}
+
+    func abbreviations() async throws -> [Abbreviation] { [] }
+    func saveAbbreviation(_ abbreviation: Abbreviation) async throws {}
+    func removeAbbreviation(term: String) async throws {}
 }

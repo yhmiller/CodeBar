@@ -52,6 +52,20 @@ public protocol CodeLibraryStoring: Sendable {
     /// An empty or whitespace-only body removes the note.
     func setNote(_ body: String, for code: ClinicalCode) async throws
 
+    // MARK: - Abbreviations
+
+    /// The clinician's own shorthand, alphabetical by term.
+    ///
+    /// Stored here rather than compiled in so that adding one does not need a
+    /// rebuild, and stored in the *library* rather than the code index so that a
+    /// yearly release replacing every code leaves them untouched.
+    func abbreviations() async throws -> [Abbreviation]
+
+    /// Adds one, replacing any existing entry for the same term.
+    func saveAbbreviation(_ abbreviation: Abbreviation) async throws
+
+    func removeAbbreviation(term: String) async throws
+
     // MARK: - Migration
 
     /// One-time adoption of data held before the library existed.

@@ -333,3 +333,53 @@ struct SearchViewModelTests {
         return model
     }
 }
+
+/// The path from the stored abbreviation to the query the store receives.
+///
+/// The pieces either side of this are covered elsewhere — CodeCore expands the
+/// expression, CodeLibrary stores the entry — so what is left to prove is that
+/// the view model carries one to the other.
+@Suite("Own abbreviations reaching search")
+@MainActor
+struct SearchAbbreviationTests {
+
+    private func makeModel(
+        repository: CountingRepository,
+        library: FakeLibrary
+    ) -> SearchViewModel {
+        SearchViewModel(repository: repository, pasteboard: FakePasteboard(),
+                        library: library, preferences: FakePreferences(),
+                        debounce: TEST_DEBOUNCE)
+    }
+
+    @Test("should expand a term the user stored in their library")
+    func expandsAStoredTerm() async throws {
+        let repository = CountingRepository()
+        let library = FakeLibrary()
+        await library.saveAbbreviation(Abbreviation(term: "pcn", expansion: "penicillin"))
+        let model = makeModel(repository: repository, library: library)
+        await model.refreshLibrary()
+
+        model.setQuery("pcn")
+        await model.pendingSearch?.value
+
+        let expression = await repository.receivedExpressions.last ?? nil
+        #expect(expression?.contains(#""penicillin"*"#) == true)
+    }
+
+    /// Guards the refresh, not just the plumbing: without reloading, a term added
+    /// in Settings would not reach search until the app restarted.
+    @Test("should not expand a term before the library has been read")
+    func doesNotExpandBeforeRefresh() async throws {
+        let repository = CountingRepository()
+        let library = FakeLibrary()
+        await library.saveAbbreviation(Abbreviation(term: "pcn", expansion: "penicillin"))
+        let model = makeModel(repository: repository, library: library)
+
+        model.setQuery("pcn")
+        await model.pendingSearch?.value
+
+        let expression = await repository.receivedExpressions.last ?? nil
+        #expect(expression?.contains("penicillin") == false)
+    }
+}

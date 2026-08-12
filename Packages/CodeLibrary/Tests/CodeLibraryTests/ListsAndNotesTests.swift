@@ -182,10 +182,10 @@ struct ListsAndNotesTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("library.sqlite")
 
-        // A v1 library: the hub, pins and usage, but no lists or notes.
+        // A v1 library: the hub, pins and usage, but no lists, notes or
+        // abbreviations.
         let database = try Database(path: url.path)
-        try database.execute(LibrarySchema.create.replacingOccurrences(
-            of: LibrarySchema.createV2, with: ""))
+        try database.execute(LibrarySchema.createV1)
         try database.setUserVersion(1)
 
         let library = try SQLiteCodeLibrary(location: .file(url))
