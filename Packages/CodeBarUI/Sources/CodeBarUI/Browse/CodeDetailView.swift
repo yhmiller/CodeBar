@@ -61,7 +61,7 @@ public struct CodeDetailView: View {
 
             HStack(spacing: Metric.s) {
                 if detail.code.isBillable == false {
-                    Label("Category — not valid for submission", systemImage: "exclamationmark.triangle.fill")
+                    Label(NOT_BILLABLE_LABEL, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption.weight(.medium))
                         .padding(.horizontal, Metric.s).padding(.vertical, Metric.xs)
                         .background(Color.warning.opacity(0.18))

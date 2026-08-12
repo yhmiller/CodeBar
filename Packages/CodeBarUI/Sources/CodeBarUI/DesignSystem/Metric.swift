@@ -34,9 +34,19 @@ public enum Metric {
     /// content is laid out here. The two used to declare this number
     /// independently — `PANEL_WIDTH` here and `PANEL_SIZE` there — and agreed
     /// only by coincidence.
-    public static let panelWidth: CGFloat = 560
+    ///
+    /// 680 rather than 560. ICD-10 descriptions carry their clinical
+    /// distinction in the tail — *without complications*, *with hyperglycemia*,
+    /// *initial encounter for closed fracture* — so a row that runs out of width
+    /// truncates precisely the thing that separates one code from the next.
+    /// Spotlight is 680; this is not a coincidence either.
+    public static let panelWidth: CGFloat = 680
 
     public static let resultListMaxHeight: CGFloat = 340
+
+    /// Wide enough for `ICD-10-CM E11.9 — Type 2 diabetes mellitus without
+    /// complications`, narrow enough not to read as a second window.
+    public static let copyConfirmationMaxWidth: CGFloat = 460
 
     // MARK: - Rows
     //
@@ -49,7 +59,6 @@ public enum Metric {
     public static let rowLeading: CGFloat = rowInset + rowPadding
 
     public static let codeColumn: CGFloat = 92
-    public static let badgeColumn: CGFloat = 72
 
     // MARK: - The detail pane
 

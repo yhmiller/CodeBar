@@ -1,6 +1,18 @@
 import AppKit
 import SwiftUI
 
+/// The one phrasing for a code the publisher says cannot go on a claim.
+///
+/// Spelled once because it was spelled twice: the result row said "category -
+/// not billable" with a hyphen and the detail pane said "Category — not valid
+/// for submission" with an em dash. Two spellings of the same fact, in the app's
+/// most safety-critical label, is how a reader learns not to trust it.
+public let NOT_BILLABLE_LABEL = "Category — not valid for submission"
+
+/// How the same fact is spoken. Reads better aloud than the visual label, and
+/// leads with the noun a screen-reader user is scanning for.
+public let NOT_BILLABLE_SPOKEN_LABEL = "Category header, not valid for submission"
+
 /// The app's semantic colours. Each has exactly one owner.
 ///
 /// Before these existed the palette carried two collisions: orange meant *CPT*

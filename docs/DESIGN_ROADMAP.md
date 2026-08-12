@@ -27,6 +27,16 @@ having them. Procedure in [Appendix A](#appendix-a--re-recording-snapshots).
 **Steps marked ⚠ change a public surface** — an exported symbol, a stored
 preference, or a snapshot's meaning. Those deserve a second look.
 
+## Progress
+
+**Phase 0 — done** (`26838d4`). One step was attempted and reverted; see 0.1,
+which is worth reading before trusting a resource bundle for anything.
+
+**Phase 1 — done.** 1.4 was folded into 0.4, since retiring the hardcoded
+`.system(size: 18)` was already what the typography roles were for.
+
+**Phase 2 is next.** Nothing before it is outstanding.
+
 ## Step index
 
 | # | Step | Phase | Effort | Blocks |

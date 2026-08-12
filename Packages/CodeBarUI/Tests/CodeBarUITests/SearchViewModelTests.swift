@@ -40,6 +40,62 @@ struct SearchViewModelTests {
         }
     }
 
+    // MARK: - Copy confirmation
+
+    /// The confirmation exists to distinguish the two formats, so it has to
+    /// carry the string that was actually written, not the code.
+    @Test("should record the long form when it copies with the description")
+    func recordsLongFormCopy() async throws {
+        let repository = CountingRepository(stubbed: [Samples.diabetes])
+        let model = makeModel(repository: repository)
+        model.setQuery("diabetes")
+        try await model.pendingSearch?.value
+
+        model.copySelected(format: .codeAndDisplay)
+
+        #expect(model.lastCopiedText == "ICD-10-CM E11.9 — Type 2 diabetes mellitus without complications")
+    }
+
+    @Test("should record the bare code when it copies the code alone")
+    func recordsCodeOnlyCopy() async throws {
+        let repository = CountingRepository(stubbed: [Samples.diabetes])
+        let model = makeModel(repository: repository)
+        model.setQuery("diabetes")
+        try await model.pendingSearch?.value
+
+        model.copySelected(format: .codeOnly)
+
+        #expect(model.lastCopiedText == "E11.9")
+    }
+
+    // MARK: - The system badge
+
+    /// The badge costs the leading edge of every row. It only earns that when a
+    /// row could plausibly be from somewhere else.
+    @Test("should hide the system badge when only one system is installed")
+    func hidesBadgeForOneSystem() {
+        let preferences = FakePreferences()
+        for system in CodeSystem.allCases where system != .icd10cm {
+            preferences.setSystem(system, enabled: false)
+        }
+
+        let model = makeModel(repository: nil, preferences: preferences)
+
+        #expect(model.showsSystemBadge == false)
+    }
+
+    @Test("should show the system badge when more than one system is installed")
+    func showsBadgeForSeveralSystems() {
+        let preferences = FakePreferences()
+        for system in CodeSystem.allCases where system != .icd10cm && system != .loinc {
+            preferences.setSystem(system, enabled: false)
+        }
+
+        let model = makeModel(repository: nil, preferences: preferences)
+
+        #expect(model.showsSystemBadge)
+    }
+
     // MARK: - Debounce
 
     /// Covers the deferral itself: keystrokes arrive with real gaps between them,

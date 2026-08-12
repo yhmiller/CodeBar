@@ -41,6 +41,10 @@ final class SearchPanelController {
 
     let preferences = UserDefaultsPreferences()
 
+    /// Shared with `LibraryActions`, so a copy made from the window confirms
+    /// itself the same way a copy made from the panel does.
+    let confirmation = CopyConfirmationPanel()
+
     func toggle() {
         if let panel, panel.isVisible {
             hide()
@@ -96,7 +100,11 @@ final class SearchPanelController {
         // grow downwards as results arrive instead of sitting in a fixed box
         // with dead space underneath.
         let hosting = NSHostingController(
-            rootView: SearchPanelView(model: model) { [weak self] in self?.hide() }
+            rootView: SearchPanelView(
+                model: model,
+                onCopied: { [weak self] copied in self?.confirmation.show(copied) },
+                onDismiss: { [weak self] in self?.hide() }
+            )
         )
         hosting.sizingOptions = [.preferredContentSize]
 
