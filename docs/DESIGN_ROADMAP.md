@@ -7,6 +7,12 @@ each step landed.
 Written 2026-08-12 against `21cc17b`. Steps are sized for one sitting each and
 are meant to be one commit each.
 
+**Status as of 2026-08-12: Phases 0–4 complete, plus 5.2.** Everything the
+review scored High or Medium has shipped. What remains is gated on 5.0, a
+business decision, and Phase 6, which is optional. See the [step
+index](#step-index) for per-step state and [Progress](#progress) for where the
+plan and the code diverged.
+
 ## How to use this
 
 **Order matters more than it usually does.** Phase 0 is a token layer that every
@@ -15,19 +21,34 @@ twice and deleting them again — the review's §8 sequencing note, expanded her
 into hard dependencies.
 
 **Every step has a *Done when*.** It is not "it looks right"; it is a command or
-an observation. `make check` is the gate throughout — 271 Swift tests, the
+an observation. `make check` is the gate throughout — now 323 Swift tests, 45
 Python converter tests, a Swift 6 strict-concurrency typecheck, and the
-module-boundary assertion.
+module-boundary assertion. `make uitest` adds 6 interaction tests against the
+real app.
 
-**Snapshot references will churn.** Six of the Swift tests are rendered images,
-and most of Phases 1–3 move pixels. Re-recording is expected, not a failure —
-but *look at the new reference before accepting it*. That is the entire value of
-having them. Procedure in [Appendix A](#appendix-a--re-recording-snapshots).
+**Snapshot references will churn.** There are 16 of them now, up from 6, and
+most of Phases 1–4 moved pixels. Re-recording is expected, not a failure — but
+*look at the new reference before accepting it*. That is the entire value of
+having them, and it caught a chip that had gone invisible. Procedure in
+[Appendix A](#appendix-a--re-recording-snapshots).
 
 **Steps marked ⚠ change a public surface** — an exported symbol, a stored
 preference, or a snapshot's meaning. Those deserve a second look.
 
 ## Progress
+
+Six commits on `design/phase-0-foundations`, one per phase:
+
+| Commit | Phase |
+|---|---|
+| `26838d4` | 0 — a token layer for spacing, colour and type |
+| `81cdceb` | 1 — stop truncating a code's meaning, and confirm what was copied |
+| `9762000` | 2 — one row everywhere, and a keyboard that reaches the empty state |
+| `940bd1a` | 3 — the publisher's rules come before your own note |
+| `40a11cd` | 4 — hold up under Increase Contrast, and reach the children by keyboard |
+| `845826d` | 5.2 — Liquid Glass on the panel, gated |
+
+Where the plan and the code diverged, and why:
 
 **Phase 0 — done** (`26838d4`). One step was attempted and reverted; see 0.1,
 which is worth reading before trusting a resource bundle for anything.
@@ -96,55 +117,83 @@ be judged by running the app. If it reads badly, the revert is one modifier.
 
 **5.0 is still open.** 5.1, 5.3 and 5.4 all need the deployment target raised.
 
+### Three defects the plan did not know about
+
+All three were found while implementing something adjacent, and none would have
+been caught by the tests as they stood:
+
+1. **The billability chip rendered invisible** under `make check` while looking
+   correct in the app, because `swift build` does not run `actool`. See 0.1.
+2. **`↵` in the empty state had never worked**, so the README's "⌥⌘C then
+   Return, no typing" was false. See 2.5.
+3. **Liquid Glass obscured text in the snapshot harness** — a luminance range of
+   23 against 105 — because it samples a backdrop that an offscreen render does
+   not have. See 5.2.
+
+The first and third were caught only by looking at a re-recorded reference. That
+is the argument for Appendix A step 2, twice over.
+
 ## Step index
 
-| # | Step | Phase | Effort | Blocks |
-|---|---|---|---|---|
-| 0.1 | Package resources for asset colours | Foundations | 30m | 0.3 |
-| 0.2 | `Metric.swift` — the spacing and size scale | Foundations | 1h | almost everything |
-| 0.3 | `Palette.swift` + `AccentColor` | Foundations | 2h | 1.2, 1.3, 3.3, 4.1 |
-| 0.4 | `CodeTypography` — the six roles | Foundations | 1h | 1.4, 2.1 |
-| 1.1 | Two-line descriptions, panel width 680 | Correctness | 2h | 2.1 |
-| 1.2 | Conditional system badge | Correctness | 1h | — |
-| 1.3 | One wording, one dash for billability | Correctness | 30m | — |
-| 1.4 | `.title3` search field | Correctness | 15m | — |
-| 1.5 | Copy confirmation HUD | Correctness | 3h | 4.4 |
-| 1.6 | Row accessibility elements | Correctness | 2h | 4.3 |
-| 1.7 | Honour Reduce Motion | Correctness | 30m | 2.6 |
-| 2.1 | One shared `CodeRow` | Consolidation | 4h | 2.2, 2.3, 3.6 |
-| 2.2 | Hover states and context menus | Consolidation | 2h | — |
-| 2.3 | Selection style | Consolidation | 1h | — |
-| 2.4 | Panel footer key map | Consolidation | 2h | 2.5 |
-| 2.5 | The keyboard set | Consolidation | 4h | 6.1 |
-| 2.6 | Panel appearance animation | Consolidation | 1h | — |
-| 3.1 | The window toolbar | Window | 3h | 3.2, 5.2 |
-| 3.2 | Detail pane reorder | Window | 1h | 3.3, 3.4 |
-| 3.3 | `Excludes 1` container | Window | 1h | — |
-| 3.4 | Collapsible note editor | Window | 2h | — |
-| 3.5 | Sidebar refinements | Window | 2h | 5.4 |
-| 3.6 | Children as real rows | Window | 1h | — |
-| 4.1 | High-contrast colour variants | Accessibility | 3h | — |
-| 4.2 | Dynamic Type and `@ScaledMetric` | Accessibility | 3h | — |
-| 4.3 | Full Keyboard Access | Accessibility | 4h | — |
-| 4.4 | VoiceOver announcements | Accessibility | 1h | — |
-| 5.0 | **Decision gate:** raise the deployment target | Liquid Glass | — | 5.1–5.4 |
-| 5.1 | Rebuild with Xcode 26 and audit | Liquid Glass | 2h | 5.2 |
-| 5.2 | `panelSurface()` shim | Liquid Glass | 2h | — |
-| 5.3 | Concentric radii | Liquid Glass | 1h | — |
-| 5.4 | `safeAreaBar` for the sidebar bar | Liquid Glass | 1h | — |
-| 6.1 | ⌘K action menu | Larger | 1d | — |
-| 6.2 | Panel → window handoff | Larger | 1d | — |
-| 6.3 | Draggable result rows | Larger | 2h | — |
-| 6.4 | Menu bar extra additions | Larger | 3h | — |
-| 6.5 | Feature-module split | Larger | 3d | — |
+`✅` shipped · `↷` shipped differently than written, see Progress · `⏸` blocked
+· `○` not started.
 
-Phases 0–3 are the roadmap proper: about two weeks, and they deliver everything
-the review scored High or Medium. Phase 4 is non-negotiable but can trail. Phase
-5 is gated on a business decision. Phase 6 is optional.
+| # | Step | Phase | Status | Commit |
+|---|---|---|---|---|
+| 0.1 | Package resources for asset colours | Foundations | ↷ superseded | `26838d4` |
+| 0.2 | `Metric.swift` — the spacing and size scale | Foundations | ✅ | `26838d4` |
+| 0.3 | `Palette.swift` + `AccentColor` | Foundations | ↷ colours in code | `26838d4` |
+| 0.4 | `CodeTypography` — the six roles | Foundations | ✅ | `26838d4` |
+| 1.1 | Two-line descriptions, panel width 680 | Correctness | ✅ | `81cdceb` |
+| 1.2 | Conditional system badge | Correctness | ✅ | `81cdceb` |
+| 1.3 | One wording, one dash for billability | Correctness | ✅ | `81cdceb` |
+| 1.4 | `.title3` search field | Correctness | ↷ folded into 0.4 | `26838d4` |
+| 1.5 | Copy confirmation HUD | Correctness | ✅ | `81cdceb` |
+| 1.6 | Row accessibility elements | Correctness | ✅ | `81cdceb` |
+| 1.7 | Honour Reduce Motion | Correctness | ✅ | `81cdceb` |
+| 2.1 | One shared `CodeRow` | Consolidation | ✅ | `9762000` |
+| 2.2 | Hover states and context menus | Consolidation | ↷ no bug to fix | `9762000` |
+| 2.3 | Selection style | Consolidation | ✅ | `9762000` |
+| 2.4 | Panel footer key map | Consolidation | ↷ no dead keys | `9762000` |
+| 2.5 | The keyboard set | Consolidation | ↷ found a real defect | `9762000` |
+| 2.6 | Panel appearance animation | Consolidation | ✅ | `9762000` |
+| 3.1 | The window toolbar | Window | ↷ ⌘⇧C not ⌘C | `940bd1a` |
+| 3.2 | Detail pane reorder | Window | ✅ | `940bd1a` |
+| 3.3 | `Excludes 1` container | Window | ✅ | `940bd1a` |
+| 3.4 | Collapsible note editor | Window | ✅ | `940bd1a` |
+| 3.5 | Sidebar refinements | Window | ↷ symbol deferred | `940bd1a` |
+| 3.6 | Children as real rows | Window | ✅ landed in 2.1 | `9762000` |
+| 4.1 | High-contrast colour variants | Accessibility | ✅ | `40a11cd` |
+| 4.2 | Dynamic Type and `@ScaledMetric` | Accessibility | ↷ unverifiable on macOS | `40a11cd` |
+| 4.3 | Full Keyboard Access | Accessibility | ↷ different gap | `40a11cd` |
+| 4.4 | VoiceOver announcements | Accessibility | ✅ | `40a11cd` |
+| 5.0 | **Decision gate:** raise the deployment target | Liquid Glass | ⏸ **open** | — |
+| 5.1 | Rebuild with Xcode 26 and audit | Liquid Glass | ⏸ needs 5.0 | — |
+| 5.2 | `panelSurface()` shim | Liquid Glass | ↷ applied by the window | `845826d` |
+| 5.3 | Concentric radii | Liquid Glass | ⏸ needs 5.0 | — |
+| 5.4 | `safeAreaBar` for the sidebar bar | Liquid Glass | ⏸ needs 5.0 | — |
+| 6.1 | ⌘K action menu | Larger | ○ | — |
+| 6.2 | Panel → window handoff | Larger | ○ | — |
+| 6.3 | Draggable result rows | Larger | ○ | — |
+| 6.4 | Menu bar extra additions | Larger | ○ | — |
+| 6.5 | Feature-module split | Larger | ○ | — |
+
+Phases 0–4 delivered everything the review scored High or Medium. Phase 5 is
+gated on a business decision and Phase 6 is optional, so **the roadmap has no
+outstanding work that does not need a decision first**.
+
+### Also outstanding, and deliberately so
+
+Neither is a design change, and neither belongs in a design phase:
+
+- **A per-list SF Symbol** (3.5). `CodeList` has no symbol column, so it needs a
+  `library.sqlite` migration.
+- **`⌘K`** (6.1). The footer does not advertise it, because a shortcut that
+  fails the first time it is tried is worse than one nobody knew about.
 
 ---
 
-# Phase 0 — Foundations
+# Phase 0 — Foundations ✅
 
 No user-visible change in this entire phase. That is the point: it is the
 substrate the rest writes against, and it is cheap now and expensive later.
@@ -308,7 +357,7 @@ empty. Snapshots re-record; the window's rows should read noticeably stronger.
 
 ---
 
-# Phase 1 — Correctness and feedback
+# Phase 1 — Correctness and feedback ✅
 
 The user-visible payoff. Everything here is independently shippable.
 
@@ -488,7 +537,7 @@ rather than glides.
 
 ---
 
-# Phase 2 — Consolidation
+# Phase 2 — Consolidation ✅
 
 Where the two surfaces become one app.
 
@@ -639,7 +688,7 @@ this list has already cost one class of bug.
 
 ---
 
-# Phase 3 — The window
+# Phase 3 — The window ✅
 
 ## 3.1 — The window toolbar ⚠
 
@@ -738,7 +787,7 @@ treatment.
 
 ---
 
-# Phase 4 — Accessibility completion
+# Phase 4 — Accessibility completion ✅
 
 Non-negotiable, but it can trail Phase 3 without blocking it.
 
@@ -791,7 +840,7 @@ same trigger, two channels.
 
 ---
 
-# Phase 5 — Liquid Glass
+# Phase 5 — Liquid Glass ⏸ (5.2 shipped; rest gated on 5.0)
 
 ## 5.0 — Decision gate: raise the deployment target
 
@@ -856,7 +905,7 @@ fighting the sidebar's glass.
 
 ---
 
-# Phase 6 — Larger
+# Phase 6 — Larger ○
 
 Optional. Each is a feature, not a fix.
 
@@ -876,7 +925,8 @@ Optional. Each is a feature, not a fix.
 
 ## Appendix A — Re-recording snapshots
 
-Most of Phases 1–3 moves pixels. The procedure:
+Most of Phases 1–4 moved pixels, and the count went from 6 references to 16. The
+procedure, which caught two real defects:
 
 1. Run `make test`. Failures print a diff path.
 2. **Open the diff.** This is the only step that matters — the references exist
@@ -890,6 +940,13 @@ Most of Phases 1–3 moves pixels. The procedure:
 References are machine-specific — fonts, appearance and OS version all move them
 — and appearance is pinned to dark so they do not flip with the system setting.
 Already recorded as a known limit in [README.md](../README.md).
+
+**What they cannot cover.** Anything that samples a live backdrop, because an
+offscreen bitmap render has no backdrop: that is why `panelSurface()` is applied
+by `SearchPanelController` rather than inside `SearchPanelView`. And anything
+driven by `\.dynamicTypeSize`, because macOS does not scale from it — a test
+forcing that value renders at the default size and asserts nothing while
+appearing to cover the case. Both are recorded where the code is.
 
 ## Appendix B — What not to do
 
@@ -910,15 +967,23 @@ scope creep:
 
 ## Appendix C — Risks
 
-| Risk | Where | Mitigation |
+| Risk | Where | Outcome |
 |---|---|---|
-| Snapshot churn hides a real regression | Phases 1–3 | Appendix A step 2. Never bulk-accept. **This already happened once** — see 0.1. |
-| `swift build` and `xcodebuild` disagree | Anything resource-backed | Keep design-system values in code. Assert they resolve, don't assume. |
-| Panel height grows past a 13" screen | 1.1 | Extend `PanelPlacementTests` with the taller frame |
-| Two-stage `⎋` breaks an existing habit | 2.5 | Release notes; it is still the right behaviour |
-| `ToolbarSpacer` unavailable below 26 | 3.1 | Ship one group, add the spacer at 5.1 |
-| Deployment-target decision stalls | 5.0 | Nothing in 0–4 depends on it. Ship those. |
-| Module split attempted too early | 6.5 | It is last for a reason |
+| Snapshot churn hides a real regression | Phases 1–4 | **Materialised twice** — the invisible chip (0.1) and the obscured glass text (5.2). Both caught by Appendix A step 2. Never bulk-accept. |
+| `swift build` and `xcodebuild` disagree | Anything resource-backed | **Materialised** at 0.1. Design-system values are in code now, and `PaletteTests` asserts they resolve rather than assuming it. |
+| Panel height grows past a 13" screen | 1.1 | Did not materialise. `PanelPlacementTests` already covered it generically — `topEdgeIsIndependentOfHeight` and `clampsTallPanel` take the size as a parameter. |
+| Two-stage `⎋` breaks an existing habit | 2.5 | Shipped, and documented in the README. Still the right behaviour. |
+| `ToolbarSpacer` unavailable below 26 | 3.1 | Shipped as two groups with no spacer between them. The visible gap arrives with 5.1. |
+| Deployment-target decision stalls | 5.0 | **Holding.** Nothing in 0–4 depended on it, and 5.2 shipped around it. |
+| Module split attempted too early | 6.5 | Not attempted. Still last for a reason. |
+
+### One risk the plan missed
+
+**A step's own instructions can be wrong.** 5.2 said to put glass on the footer,
+which would have been glass on glass; 2.4's first draft advertised `⌘K` and
+`↑↓ Move` in states where neither did anything; 2.2 asserted a bug that did not
+exist. A roadmap written before the code is a hypothesis, and the *Done when* is
+what tests it — which is the argument for every step having one.
 
 ---
 
