@@ -43,14 +43,19 @@ struct SnapshotTests {
     ///
     /// A failure reports this line rather than the calling test, so `named:`
     /// carries the identification instead.
-    private func assertImage(_ view: some View, size: CGSize, named name: String) {
+    private func assertImage(
+        _ view: some View,
+        size: CGSize,
+        named name: String,
+        appearance: NSAppearance.Name = .darkAqua
+    ) {
         let grounded = view
             .frame(width: size.width, alignment: .topLeading)
             .background(Color(nsColor: .windowBackgroundColor))
 
         let controller = NSHostingController(rootView: grounded)
         controller.view.frame = CGRect(origin: .zero, size: size)
-        controller.view.appearance = NSAppearance(named: .darkAqua)
+        controller.view.appearance = NSAppearance(named: appearance)
 
         assertSnapshot(of: controller, as: .image(size: size), named: name, testName: "snapshot")
     }
@@ -106,6 +111,36 @@ struct SnapshotTests {
 
         assertImage(rows, size: Self.panel(150), named: "code-row-densities")
     }
+
+    // MARK: - Accessibility
+
+    /// The regression test for the semantic-colour work.
+    ///
+    /// Under Increase Contrast an 18%-opacity fill barely separates from the
+    /// surface, so the chips that matter most — not billable, billable — were
+    /// the first things to stop reading. They take a border instead, and the
+    /// only way to know that still holds is to look.
+    @Test("chips should stay legible under increased contrast")
+    func rowsUnderIncreasedContrast() {
+        let rows = VStack(spacing: Metric.xxs) {
+            CodeRow(code: Samples.diabetes.code, density: .panel, isSelected: true,
+                    isPinned: false, onTogglePin: {})
+            CodeRow(code: Samples.header.code, density: .panel,
+                    isPinned: false, onTogglePin: {})
+        }
+        .padding(.vertical, Metric.s)
+
+        assertImage(rows, size: Self.panel(110), named: "result-rows-increased-contrast",
+                    appearance: .accessibilityHighContrastDarkAqua)
+    }
+
+    // There is deliberately no large-text snapshot. macOS does not drive
+    // `@ScaledMetric` from `\.dynamicTypeSize` the way iOS does, so forcing that
+    // environment value renders at the default size and the test would assert
+    // nothing while appearing to cover the code column. The `@ScaledMetric` on
+    // `CodeRow.codeColumn` is still correct — it responds to the real system
+    // setting, and it is what keeps the column honest if `CodeBarUI` is ever
+    // reused on iOS, where text scaling is not optional. See DESIGN_REVIEW.md §11.
 
     // MARK: - Footer
 

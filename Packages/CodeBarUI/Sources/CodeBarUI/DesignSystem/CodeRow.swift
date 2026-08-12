@@ -39,6 +39,21 @@ struct CodeRow: View {
 
     @State private var isHovering = false
     @Environment(\.controlActiveState) private var controlState
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    /// The fill alone carries selection in normal contrast. Under Increase
+    /// Contrast the border does the work, so the fill steps back rather than
+    /// competing with it — and the inactive case stays visibly weaker either way.
+    private var selectionFillOpacity: Double {
+        guard controlState == .key else { return 0.12 }
+        return contrast == .increased ? 0.18 : 0.28
+    }
+
+    /// Scales with the user's text size, so a large-text code cannot clip inside
+    /// a column sized for the default. The column is kept rather than replaced
+    /// by a `Grid`: rows are independent views inside a `ScrollView`, each
+    /// painting its own ground, and a shared grid container would take that away.
+    @ScaledMetric(relativeTo: .body) private var codeColumn: CGFloat = Metric.codeColumn
 
     var body: some View {
         // Baseline-aligned, not centred: a description that wraps to two lines
@@ -47,7 +62,8 @@ struct CodeRow: View {
             Text(code.code)
                 .font(CodeTypography.codeRow)
                 .foregroundStyle(dimsCode ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
-                .frame(width: density.codeColumnWidth, alignment: .leading)
+                .frame(width: density.usesFixedCodeColumn ? codeColumn : nil,
+                       alignment: .leading)
 
             Text(code.display)
                 .font(CodeTypography.description)
@@ -91,9 +107,7 @@ struct CodeRow: View {
                 .font(CodeTypography.metadata.weight(.semibold))
                 .padding(.horizontal, Metric.s)
                 .padding(.vertical, Metric.xxs)
-                .background(Color.systemBadge.opacity(0.15))
-                .foregroundStyle(Color.systemBadge)
-                .clipShape(Capsule())
+                .semanticChip(Color.systemBadge, in: Capsule())
                 .fixedSize()
         }
 
@@ -134,9 +148,7 @@ struct CodeRow: View {
             // code's clinical distinction lives.
             .padding(.horizontal, Metric.xs)
             .padding(.vertical, Metric.xxs)
-            .background(Color.warning.opacity(0.18))
-            .foregroundStyle(Color.warning)
-            .clipShape(RoundedRectangle(cornerRadius: Metric.chipRadius))
+            .semanticChip(Color.warning, in: RoundedRectangle(cornerRadius: Metric.chipRadius))
             .fixedSize()
             // Laid out before the description, not after it. `fixedSize` alone
             // is not enough: with the description competing for the same space
@@ -157,10 +169,12 @@ struct CodeRow: View {
         } else if isSelected {
             // Dimmed when the window is not key, so a panel sitting behind
             // another app does not advertise a live selection.
-            Color.accentColor.opacity(controlState == .key ? 0.28 : 0.12)
+            Color.accentColor.opacity(selectionFillOpacity)
                 .overlay {
                     RoundedRectangle(cornerRadius: Metric.rowRadius)
-                        .strokeBorder(Color.accentColor.opacity(0.45), lineWidth: 1)
+                        .strokeBorder(Color.accentColor,
+                                      lineWidth: contrast == .increased ? 2 : 1)
+                        .opacity(contrast == .increased ? 1 : 0.45)
                 }
         } else if isHovering {
             Color.primary.opacity(0.06)
@@ -187,11 +201,11 @@ private extension CodeRow.Density {
         self == .panel ? 2 : 1
     }
 
-    /// Only the panel gets a fixed column. It is a flat list of siblings, so
-    /// aligned codes scan as a column; the window's rows sit at varying
-    /// disclosure depths, where a fixed width fights the indentation.
-    var codeColumnWidth: CGFloat? {
-        self == .panel ? Metric.codeColumn : nil
+    /// Only the panel gets a column. It is a flat list of siblings, so aligned
+    /// codes scan as a column; the window's rows sit at varying disclosure
+    /// depths, where a fixed width fights the indentation.
+    var usesFixedCodeColumn: Bool {
+        self == .panel
     }
 
     var horizontalPadding: CGFloat {
