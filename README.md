@@ -186,11 +186,37 @@ set never costs you them.
 
 - Your own synonyms, so a department's shorthand does not need a rebuild
 - Configurable hotkey (currently fixed at ⌥⌘C)
+- Export a list as CSV or paste-ready text
+- Add to a list from the search panel, not only from the window
 - iCloud sync of the library across machines
 - Crosswalks between code systems — a separately licensed release, not a column
 
-**Known limits worth reading before relying on it**: nothing tests the app's
-interaction layer, so changes to the UI are verified by opening it; searching a
-condition in general terms surfaces its variants before its catch-all, which
-pinning fixes per-user; and the SNOMED converter has only been exercised against
-constructed rows, not a real distribution.
+## Known limits
+
+Worth reading before relying on it.
+
+- **Ranking.** Searching a condition in general terms surfaces its variants
+  before its catch-all — `chronic kidney disease` reaches N18.9 behind its
+  staged siblings. Relevance cannot know which code a clinician means; the
+  structural fixes were measured and made results worse. Pinning is the answer,
+  and it ships.
+- **The SNOMED converter** has only been exercised against constructed rows, not
+  a real distribution. Column positions vary between releases, so check its
+  output on your first real file.
+- **Interaction coverage** stops at window and panel behaviour. Typing,
+  expanding the tree, selecting and copying are still verified by opening the
+  app. The one case that cannot be covered at all is restoring a *minimised*
+  window from the Dock: a test has to post the reopen event itself, and every
+  way of doing that either restores the window on its own or is refused to the
+  test runner.
+- **Snapshot references are machine-specific.** Fonts, appearance and OS version
+  all move the pixels. Appearance is pinned to dark so they do not flip with the
+  system setting, but another machine needs its own references or a tolerance.
+- **No CI.** `make check` and `make uitest` are the whole gate, and they run by
+  hand.
+- **Migrations run synchronously on the main actor at launch.** Imperceptible at
+  today's scale — 98,186 codes — but a schema change that rewrites rows rather
+  than adding columns would block the app while it ran.
+- **The bundled starter set reports unknown billability** rather than claiming to
+  be billable, because that was never verified against the CMS file. Only
+  imported sets carry the flag.
