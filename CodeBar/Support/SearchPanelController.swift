@@ -7,6 +7,9 @@ import SwiftUI
 
 private let PANEL_SIZE = NSSize(width: 560, height: 420)
 
+/// Also spelled in `UITests`; the two must agree.
+let SEARCH_PANEL_ACCESSIBILITY_ID = "search-panel"
+
 /// NSPanel subclass that overrides canBecomeKey. Without this, a
 /// .nonactivatingPanel style window won't reliably accept keyboard focus,
 /// which would make the search field untypeable.
@@ -110,6 +113,10 @@ final class SearchPanelController {
         // it floating over everything until it is dismissed explicitly.
         panel.hidesOnDeactivate = true
         panel.standardWindowButtons.forEach { $0?.isHidden = true }
+
+        // Lets a UI test tell the panel from the browse window. The panel has no
+        // visible title to match on, deliberately.
+        panel.setAccessibilityIdentifier(SEARCH_PANEL_ACCESSIBILITY_ID)
 
         panel.contentViewController = hosting
         // Still laid out before the panel takes key focus, so the first

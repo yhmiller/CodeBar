@@ -62,3 +62,19 @@ targets:
         # has nothing to show. Menu-bar-only is a preference applied at launch
         # instead — see ActivationPolicyController.
         NSHumanReadableCopyright: "© 2026 Prince Miller"
+    scheme:
+      testTargets:
+        - CodeBarUITests
+
+  # Interaction coverage. Every window and panel defect so far was found by
+  # running a build and looking at it; these drive the real app instead.
+  CodeBarUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [UITests]
+    dependencies:
+      - target: CodeBar
+    settings:
+      base:
+        TEST_TARGET_NAME: CodeBar
+        GENERATE_INFOPLIST_FILE: YES
