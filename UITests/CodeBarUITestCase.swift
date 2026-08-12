@@ -67,11 +67,24 @@ class CodeBarUITestCase: XCTestCase {
         others.forEach { $0.terminate() }
         waitForExit(of: pids, timeout: 3)
 
-        others.filter { isAlive($0.processIdentifier) }.forEach { $0.forceTerminate() }
+        // Then SIGKILL, directly. `forceTerminate()` can be refused, and an
+        // instance blocked on a modal alert — which is what a second copy shows
+        // when it cannot register the global shortcut — ignores everything
+        // gentler.
+        pids.filter(isAlive).forEach { kill($0, SIGKILL) }
         waitForExit(of: pids, timeout: 3)
 
-        XCTAssertFalse(pids.contains(where: isAlive),
-                       "another CodeBar is still running and would make this run non-deterministic")
+        // Refusing to run is the right answer here. Two instances sharing a
+        // bundle identifier make the result meaningless — XCUITest can attach to
+        // the wrong one — so a loud failure beats a confident wrong answer.
+        XCTAssertFalse(
+            pids.contains(where: isAlive),
+            """
+            Another CodeBar is still running and would make this run \
+            non-deterministic. An instance held by a debugger cannot be killed: \
+            stop the running scheme in Xcode, then try again.
+            """
+        )
     }
 
     /// Asks the kernel rather than `NSRunningApplication.isTerminated`, which is
