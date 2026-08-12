@@ -6,7 +6,6 @@ import CodePlatform
 import SwiftUI
 
 private let PANEL_SIZE = NSSize(width: 560, height: 420)
-private let PANEL_FRAME_AUTOSAVE_NAME = "CodeBarSearchPanel"
 
 /// NSPanel subclass that overrides canBecomeKey. Without this, a
 /// .nonactivatingPanel style window won't reliably accept keyboard focus,
@@ -46,8 +45,29 @@ final class SearchPanelController {
     func show() {
         let panel = self.panel ?? makePanel()
         viewModel?.prepareForDisplay()
+        position(panel)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+    }
+
+    /// Re-placed on every show rather than remembered.
+    ///
+    /// The panel used to autosave its frame, which drifted: it grows downwards as
+    /// results arrive, that taller frame was saved, and each search nudged it
+    /// further down until it opened somewhere it had to be dragged back from. A
+    /// panel aimed at blind — the user is already typing — is better off landing
+    /// in the same place every time than remembering a position nobody chose.
+    private func position(_ panel: NSPanel) {
+        // The pointer is a better guess at which display the user is looking at
+        // than the key window, which at this moment still belongs to whichever
+        // app the shortcut was pressed over.
+        let pointer = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(pointer) } ?? .main
+
+        guard let visibleFrame = screen?.visibleFrame else { return }
+        panel.setFrameOrigin(
+            PanelPlacement.origin(for: panel.frame.size, in: visibleFrame)
+        )
     }
 
     func hide() {
@@ -95,12 +115,6 @@ final class SearchPanelController {
         // Still laid out before the panel takes key focus, so the first
         // keystroke has somewhere to land.
         hosting.view.layoutSubtreeIfNeeded()
-
-        // Restore where the user last put it; centre only on the very first run.
-        if !panel.setFrameUsingName(PANEL_FRAME_AUTOSAVE_NAME) {
-            panel.center()
-        }
-        panel.setFrameAutosaveName(PANEL_FRAME_AUTOSAVE_NAME)
 
         self.panel = panel
         return panel
