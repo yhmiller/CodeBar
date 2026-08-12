@@ -60,11 +60,11 @@ struct SnapshotTests {
     @Test("billable and header rows should stay visually distinct")
     func resultRowVariants() {
         let rows = VStack(spacing: Metric.xxs) {
-            ResultRow(code: Samples.diabetes.code, isSelected: true,
+            CodeRow(code: Samples.diabetes.code, density: .panel, isSelected: true,
                       isPinned: false, onTogglePin: {})
-            ResultRow(code: Samples.header.code, isSelected: false,
+            CodeRow(code: Samples.header.code, density: .panel, isSelected: false,
                       isPinned: false, onTogglePin: {})
-            ResultRow(code: Samples.asthma.code, isSelected: false,
+            CodeRow(code: Samples.asthma.code, density: .panel, isSelected: false,
                       isPinned: true, onTogglePin: {})
         }
         .padding(.vertical, Metric.s)
@@ -81,12 +81,48 @@ struct SnapshotTests {
     @Test("a long description should wrap rather than truncate")
     func longDescriptionWraps() {
         let rows = VStack(spacing: Metric.xxs) {
-            ResultRow(code: Samples.longDescription.code, isSelected: true,
+            CodeRow(code: Samples.longDescription.code, density: .panel, isSelected: true,
                       isPinned: false, onTogglePin: {})
         }
         .padding(.vertical, Metric.s)
 
         assertImage(rows, size: Self.panel(90), named: "result-row-long-description")
+    }
+
+    /// The regression test for the merge itself.
+    ///
+    /// The panel and the window used to render a code with two unrelated row
+    /// types, so moving between surfaces made codes stop looking like the same
+    /// kind of thing. Density may change; anatomy may not — and that is only
+    /// checkable by looking at the three side by side.
+    @Test("the three row densities should stay visibly related")
+    func rowDensities() {
+        let rows = VStack(alignment: .leading, spacing: Metric.m) {
+            CodeRow(code: Samples.diabetes.code, density: .panel, showsSystemBadge: false)
+            CodeRow(code: Samples.diabetes.code, density: .list, showsSystemBadge: false)
+            CodeRow(code: Samples.diabetes.code, density: .compact, showsSystemBadge: false)
+        }
+        .padding(Metric.m)
+
+        assertImage(rows, size: Self.panel(150), named: "code-row-densities")
+    }
+
+    // MARK: - Footer
+
+    /// The footer is the app's only statement of its own shortcuts, so what it
+    /// claims has to stay true. Every key listed here must actually work in the
+    /// state it is listed for — a shortcut that fails the first time it is tried
+    /// is worse than one nobody knew about.
+    @Test("the footer should list the keys that work on results")
+    func footerForResults() {
+        assertImage(PanelFooter(context: .results),
+                    size: Self.panel(44), named: "panel-footer-results")
+    }
+
+    @Test("the footer should drop the description key when nothing is typed")
+    func footerForSuggestions() {
+        assertImage(PanelFooter(context: .suggestions),
+                    size: Self.panel(44), named: "panel-footer-suggestions")
     }
 
     // MARK: - Copy confirmation

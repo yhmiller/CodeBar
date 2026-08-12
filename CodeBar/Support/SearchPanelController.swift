@@ -11,6 +11,8 @@ import SwiftUI
 /// value; the panel sizes itself to its content after that.
 private let PANEL_SIZE = NSSize(width: Metric.panelWidth, height: 420)
 
+private let APPEARANCE_DURATION: TimeInterval = 0.12
+
 /// Also spelled in `UITests`; the two must agree.
 let SEARCH_PANEL_ACCESSIBILITY_ID = "search-panel"
 
@@ -58,7 +60,18 @@ final class SearchPanelController {
         viewModel?.prepareForDisplay()
         position(panel)
         NSApp.activate(ignoringOtherApps: true)
+
+        // A hard cut reads as a glitch rather than an arrival. Short enough that
+        // it cannot delay a user who is already typing.
+        let animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        panel.alphaValue = animates ? 0 : 1
         panel.makeKeyAndOrderFront(nil)
+
+        guard animates else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = APPEARANCE_DURATION
+            panel.animator().alphaValue = 1
+        }
     }
 
     /// Re-placed on every show rather than remembered.

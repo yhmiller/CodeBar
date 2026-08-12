@@ -35,7 +35,17 @@ which is worth reading before trusting a resource bundle for anything.
 **Phase 1 — done.** 1.4 was folded into 0.4, since retiring the hardcoded
 `.system(size: 18)` was already what the typography roles were for.
 
-**Phase 2 is next.** Nothing before it is outstanding.
+**Phase 2 — done.** 2.2's "pin click also copies" was a misdiagnosis on my part:
+SwiftUI gives a child `Button` precedence over a parent `.onTapGesture`, so the
+pin already consumed its own click. The pin still moved to a hover-revealed,
+dedicated hit region, as design work rather than as a fix.
+
+2.5 turned up a real one. Selection was defined over `results`, which is empty
+until something is typed — so `↵` in the empty state did nothing, and the
+README's "⌥⌘C then Return, no typing" had never been true. Selection is now
+defined over `selectableCodes`, which is the pins and recents before a query.
+
+**Phase 3 is next.** Nothing before it is outstanding.
 
 ## Step index
 

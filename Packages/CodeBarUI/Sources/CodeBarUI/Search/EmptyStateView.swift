@@ -14,6 +14,10 @@ struct EmptyStateView: View {
     /// results list can never disagree about whether a row names its system.
     var showsSystemBadge: Bool = true
 
+    /// Which suggestion the arrow keys are on, so ⌥⌘C then Return reaches a
+    /// pinned code without typing — the thing the README has always promised.
+    var isSelected: (ClinicalCode) -> Bool = { _ in false }
+
     let onChoose: (ClinicalCode) -> Void
     let onTogglePin: (ClinicalCode) -> Void
 
@@ -50,15 +54,16 @@ struct EmptyStateView: View {
                 .padding(.bottom, Metric.xxs)
 
             ForEach(codes) { code in
-                ResultRow(
+                CodeRow(
                     code: code,
-                    isSelected: false,
+                    density: .panel,
+                    isSelected: isSelected(code),
                     isPinned: isPinnedSection,
                     showsSystemBadge: showsSystemBadge,
                     onTogglePin: { onTogglePin(code) }
                 )
-                .contentShape(Rectangle())
                 .onTapGesture { onChoose(code) }
+                .accessibilityHint("Press Return to copy")
             }
         }
     }
