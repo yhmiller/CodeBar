@@ -6,6 +6,15 @@ import Foundation
 
 private let SEED_RESOURCE_NAME = "seed_icd10_sample"
 
+/// Set by the UI tests to move both databases into a scratch folder.
+///
+/// A UI test drives the real app, so without this it would search, pin and take
+/// notes in the user's own library. It names a *subdirectory* rather than a full
+/// path because the app is sandboxed and can only write inside its container: an
+/// absolute path from outside would fail to open, and the run would look like a
+/// database failure rather than a sandbox denial.
+private let STORE_SUBDIRECTORY_VARIABLE = "CODEBAR_STORE_SUBDIRECTORY"
+
 /// Composition root: builds the object graph once and hands it to whoever needs it.
 ///
 /// Nothing else in the app constructs a `SQLiteCodeStore`, so the concrete
@@ -27,22 +36,50 @@ final class AppEnvironment {
 
     init() {
         var failures: [String] = []
+        let scratch = Self.scratchDirectory()
 
         do {
-            repository = try SQLiteCodeStore()
+            repository = try SQLiteCodeStore(
+                location: scratch.map { .file($0.appendingPathComponent("codes.sqlite")) }
+                    ?? .applicationSupport
+            )
         } catch {
             repository = nil
             failures.append("Code index: \(error)")
         }
 
         do {
-            library = try SQLiteCodeLibrary()
+            library = try SQLiteCodeLibrary(
+                location: scratch.map { .file($0.appendingPathComponent("library.sqlite")) }
+                    ?? .applicationSupport
+            )
         } catch {
             library = nil
             failures.append("Library: \(error)")
         }
 
         startupFailure = failures.isEmpty ? nil : failures.joined(separator: "\n")
+    }
+
+    /// The throwaway folder a UI test asked for, or nil for the real thing.
+    private static func scratchDirectory() -> URL? {
+        guard let name = ProcessInfo.processInfo.environment[STORE_SUBDIRECTORY_VARIABLE],
+              !name.isEmpty
+        else { return nil }
+
+        do {
+            let directory = try FileManager.default
+                .url(for: .applicationSupportDirectory, in: .userDomainMask,
+                     appropriateFor: nil, create: true)
+                .appendingPathComponent("CodeBar", isDirectory: true)
+                .appendingPathComponent(name, isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory
+        } catch {
+            // Falling back to the real library would have the tests quietly
+            // writing into it, which is the one outcome worth crashing over.
+            fatalError("could not create the UI test store directory: \(error)")
+        }
     }
 
     /// Hands pins and recents from the old `UserDefaults` store to the library,
