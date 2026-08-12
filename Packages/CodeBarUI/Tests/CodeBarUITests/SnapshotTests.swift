@@ -16,6 +16,15 @@ import Testing
 /// These are inherently machine-dependent — fonts, appearance and OS version all
 /// move the pixels. They earn their place on a single-developer project on one
 /// Mac; a shared CI machine would need its own references or a tolerance.
+///
+/// What these deliberately do *not* cover is the panel's ground. Liquid Glass
+/// and `.ultraThinMaterial` both sample a live backdrop, and an offscreen bitmap
+/// render has none: a `SearchPanelView` carrying `panelSurface()` measured a
+/// luminance range of 23 across the hint text where the same view without it
+/// measured 105, and changing the text's foreground style moved that not at all.
+/// The text was obscured rather than dimmed. So the ground is applied by
+/// `SearchPanelController` to the hosting root instead, these references cover
+/// the content, and the surface is judged by running the app.
 @Suite("Snapshots")
 @MainActor
 struct SnapshotTests {
