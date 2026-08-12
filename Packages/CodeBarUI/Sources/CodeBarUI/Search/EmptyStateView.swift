@@ -72,9 +72,13 @@ struct EmptyStateView: View {
         VStack(spacing: Metric.xs) {
             Text("Start typing a term or a code")
                 .foregroundStyle(.secondary)
+            // Secondary, not tertiary. Tertiary is for text on an opaque
+            // surface; over a translucent one its effective contrast depends on
+            // whatever happens to be behind the panel, and this is the line that
+            // tells a first-time user what to type.
             Text("e.g. \"type 2 diabetes\" or \"E11\"")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
         }
         .padding(Metric.xl)
         .frame(maxWidth: .infinity)

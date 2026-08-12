@@ -113,11 +113,15 @@ final class SearchPanelController {
         // grow downwards as results arrive instead of sitting in a fixed box
         // with dead space underneath.
         let hosting = NSHostingController(
+            // The ground is applied here rather than inside the view: it samples
+            // a live backdrop, which exists in a real window and not in the
+            // offscreen render the snapshot tests use.
             rootView: SearchPanelView(
                 model: model,
                 onCopied: { [weak self] copied in self?.confirmation.show(copied) },
                 onDismiss: { [weak self] in self?.hide() }
             )
+            .panelSurface()
         )
         hosting.sizingOptions = [.preferredContentSize]
 

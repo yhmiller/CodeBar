@@ -49,7 +49,6 @@ public struct SearchPanelView: View {
             }
         }
         .frame(width: Metric.panelWidth)
-        .background(.ultraThinMaterial)
         .onAppear { isFocused = true }
         .onChange(of: model.displaySessionID) { _, _ in
             // The view survives between showings now, so each appearance has to

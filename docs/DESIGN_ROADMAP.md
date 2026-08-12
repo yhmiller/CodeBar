@@ -72,7 +72,29 @@ it was meant to serve, reaching a row's pin, is already met by `⌘P`. The real
 gap was elsewhere: the detail pane's children were `.onTapGesture` only, so they
 were reachable by pointer and nothing else. They are `Button`s now.
 
-**Phase 5 is next, and opens with the decision gate at 5.0.**
+**5.2 — done**, ahead of the 5.0 gate and without touching the deployment
+target. That is the whole point of the shim: macOS 26 gets Liquid Glass, 14 and
+15 keep `.ultraThinMaterial`, and `project.yml` still says 14.0.
+
+Two things landed differently from the step as written:
+
+- **The footer does not get glass.** The step said to apply it to the panel root
+  *and* the footer, but the footer sits inside the root, so that is glass on
+  glass — named as a mistake in Adopting Liquid Glass.
+- **The surface is applied by `SearchPanelController`, not inside
+  `SearchPanelView`.** Both materials sample a live backdrop and an offscreen
+  bitmap render has none. With the modifier on the view, the placeholder
+  snapshot measured a luminance range of **23** across the hint text against
+  **105** for the same view without it, and changing the text's foreground style
+  moved that not at all — obscured, not dimmed. Moving the ground to the window
+  keeps the references meaningful.
+
+**Unverified, and the reason is worth keeping:** nothing available here can
+render Liquid Glass faithfully. The snapshot harness cannot, and the interaction
+tests check structure rather than pixels. The panel's ground on macOS 26 has to
+be judged by running the app. If it reads badly, the revert is one modifier.
+
+**5.0 is still open.** 5.1, 5.3 and 5.4 all need the deployment target raised.
 
 ## Step index
 
