@@ -21,9 +21,9 @@ public protocol CodeLibraryStoring: Sendable {
     /// Records that a code was copied.
     ///
     /// Every use is kept, not just the last handful. That history is what makes
-    /// ranking by personal frequency possible, which is the one sound answer to
-    /// the gap recorded in phase 7: relevance ranking cannot know that E11.9 is
-    /// the diabetes code a given clinician reaches for daily.
+    /// ranking by personal frequency possible, which is the one sound answer to a
+    /// limit of relevance ranking: no amount of scoring can know that E11.9 is the
+    /// diabetes code a given clinician reaches for daily.
     func recordUse(of code: ClinicalCode, format: CopyFormat) async throws
 
     /// Most recently used first.

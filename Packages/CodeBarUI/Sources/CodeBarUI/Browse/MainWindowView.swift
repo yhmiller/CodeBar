@@ -10,8 +10,9 @@ public struct MainWindowView: View {
     @State private var model: BrowseViewModel
 
     /// The field owns its text and pushes one way into the model — the same rule
-    /// the panel follows. Letting the model drive a text field is what made the
-    /// query walk backwards in phase 2.
+    /// the panel follows. Letting the model drive a text field makes the query
+    /// walk backwards: assigning results re-renders, which pushes a stale query
+    /// back into the field, which searches again.
     @State private var searchText = ""
 
     @State private var isCreatingList = false
