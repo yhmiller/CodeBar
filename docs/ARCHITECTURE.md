@@ -147,7 +147,7 @@ CodeBar/
 │   ├── CodeBarApp.swift               @main — scene declaration only
 │   ├── AppEnvironment.swift           composition root: builds and holds the graph
 │   ├── AppDelegate.swift              lifecycle, hotkey teardown
-│   ├── Info.plist                     LSUIElement=YES lives here, not in an Xcode click
+│   ├── Info.plist                     generated from project.yml, not an Xcode click
 │   ├── CodeBar.entitlements           sandbox on (see §5.4)
 │   ├── Assets.xcassets
 │   └── Resources/
@@ -506,8 +506,7 @@ targets:
     sources: [App]
     info:
       path: App/Info.plist
-      properties:
-        LSUIElement: true
+      properties: {}
     entitlements:
       path: App/CodeBar.entitlements
       properties:
@@ -608,7 +607,7 @@ reading a code's full context, curating lists. Two front doors onto one domain.
 
 | Today | Why it breaks | What it becomes |
 |---|---|---|
-| `LSUIElement: true` | No Dock icon, no app menu, no main window | `.regular` activation with `MenuBarExtra` alongside `WindowGroup`. The Dock icon can still be hidden as a *preference*, rather than being baked into the bundle |
+| ~~`LSUIElement: true`~~ — **done** | No Dock icon, no app menu, no main window | `.regular` activation with `MenuBarExtra` alongside `WindowGroup`. The Dock icon is a *preference* applied at launch rather than baked into the bundle. An accessory app never gets its `WindowGroup` window built, which is what made opening CodeBar show the search panel instead |
 | `SearchPanelController.shared` | A singleton owns the one panel; multi-window and multi-scene fight it | Environment-injected controller. Scenes get what they need; nothing reaches for a global |
 | `AppEnvironment` built in `AppDelegate` | Fine for one panel; SwiftUI scenes cannot see it | Composition root injected through `@Environment`, so any scene resolves its dependencies |
 | Everything user-owned in `UserDefaults` | Pins fit. Notes, lists, annotations and history do not | A second **user database**, see below |
@@ -697,7 +696,7 @@ they are worth knowing before the import path is treated as settled.
 ### Order of work
 
 1. **Settings scene** — the first real window, and the shell later panes plug into
-2. **Activation policy** — `.regular` plus `MenuBarExtra`, Dock icon as a preference
+2. ~~**Activation policy**~~ — `.regular` plus `MenuBarExtra`, Dock icon as a preference
 3. **`CodeLibrary`** — before any feature writes user data that is not a pin
 4. **Main window** — browse and detail, once hierarchy import exists
 5. **Feature modules** — split when a module gets uncomfortable, not before

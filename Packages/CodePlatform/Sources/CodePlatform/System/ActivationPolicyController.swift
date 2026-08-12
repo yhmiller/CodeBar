@@ -2,10 +2,13 @@ import AppKit
 
 /// Switches CodeBar between menu-bar-only and a full app with a Dock icon.
 ///
-/// The bundle keeps `LSUIElement = true`, so the app always launches as an
-/// accessory and promotes itself when the preference says so. The reverse —
-/// launching `.regular` and demoting — flashes a Dock icon on every launch for
-/// people who only want the menu bar, which is the majority case today.
+/// The bundle deliberately omits `LSUIElement`, so the app launches as a normal
+/// app and demotes itself here when the preference says menu-bar-only. The
+/// reverse — launching as an accessory and promoting — costs nothing visually,
+/// but SwiftUI never builds the `WindowGroup` window for an accessory app, so
+/// opening CodeBar had no window to show and fell back to the search panel.
+/// Demoting instead flashes a Dock icon at launch for menu-bar-only users, which
+/// is the cheaper of the two prices.
 ///
 /// See docs/ARCHITECTURE.md §11.
 @MainActor

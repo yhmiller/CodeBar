@@ -28,10 +28,15 @@ public final class UserDefaultsPreferences: PreferencesStoring {
         !disabledSystems.contains(system)
     }
 
-    /// Defaults to false: a Dock icon that opens nothing is worse than none.
-    /// Flips to true in phase 8.4, when there is a window behind it.
+    /// Defaults to true now that there is a window behind the icon.
+    ///
+    /// It defaulted to false while CodeBar was panel-only, on the grounds that a
+    /// Dock icon opening nothing is worse than no Dock icon. Read through
+    /// `object(forKey:)` rather than `bool(forKey:)`, which cannot tell an
+    /// explicit "off" from never having been set — the difference between
+    /// honouring the preference and overwriting it on every launch.
     public var showsDockIcon: Bool {
-        get { defaults.bool(forKey: SHOWS_DOCK_ICON_KEY) }
+        get { defaults.object(forKey: SHOWS_DOCK_ICON_KEY) as? Bool ?? true }
         set { defaults.set(newValue, forKey: SHOWS_DOCK_ICON_KEY) }
     }
 
