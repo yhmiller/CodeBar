@@ -11,7 +11,7 @@ PACKAGES    := Packages/SQLiteKit Packages/CodeCore Packages/CodeStore \
 .DEFAULT_GOAL := help
 
 .PHONY: help install run uninstall release project bootstrap \
-        build test test-scripts typecheck layering check clean icon
+        build test test-scripts typecheck layering check check-all uitest clean icon
 
 ## ---------------------------------------------------------------- using it
 
@@ -90,6 +90,27 @@ build: ## Build every local Swift package
 ## ---------------------------------------------------------------- checking
 
 check: test test-scripts typecheck layering ## Everything CI would run
+	@echo
+	@echo "Interaction tests are not in here — they take ~25s and quit a running"
+	@echo "CodeBar. Run 'make uitest', or 'make check-all' for both."
+
+check-all: check uitest ## check, plus the interaction tests
+
+# These drive the real app: they launch it, close its window, and reopen it.
+# A copy already running under the same bundle identifier makes the run
+# non-deterministic, so the tests quit it first — including the one in
+# /Applications. Relaunch it with 'make install' or from Spotlight afterwards.
+uitest: project ## Interaction tests: window, reopen and panel behaviour
+	@mkdir -p $(BUILD_DIR)
+	@xcodebuild test -project $(PROJECT) -scheme $(APP_NAME) \
+		-destination 'platform=macOS' -derivedDataPath $(BUILD_DIR) \
+		-only-testing:CodeBarUITests > $(BUILD_DIR)/uitest.log 2>&1 || { \
+			grep -E "error:|Test Case .* failed" $(BUILD_DIR)/uitest.log | head -20; \
+			echo "==> interaction tests failed, see $(BUILD_DIR)/uitest.log"; \
+			exit 1; \
+		}
+	@grep -cE "Test Case .* passed" $(BUILD_DIR)/uitest.log \
+		| xargs printf "interaction tests passed: %s\n"
 
 test: ## Swift tests across the four packages
 	@for pkg in $(PACKAGES); do \
