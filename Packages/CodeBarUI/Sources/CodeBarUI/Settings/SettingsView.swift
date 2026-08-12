@@ -10,6 +10,7 @@ private let SETTINGS_HEIGHT: CGFloat = 380
 /// the menu bar panel, and this is step one of that.
 public struct SettingsView: View {
     @State private var codeSets: CodeSetsViewModel
+    @State private var abbreviations: AbbreviationsViewModel
     private let isOpenAtLoginEnabled: () -> Bool
     private let setOpenAtLogin: (Bool) -> Bool
     private let isDockIconShown: () -> Bool
@@ -17,12 +18,14 @@ public struct SettingsView: View {
 
     public init(
         codeSets: CodeSetsViewModel,
+        abbreviations: AbbreviationsViewModel,
         isOpenAtLoginEnabled: @escaping () -> Bool,
         setOpenAtLogin: @escaping (Bool) -> Bool,
         isDockIconShown: @escaping () -> Bool,
         setDockIconShown: @escaping (Bool) -> Void
     ) {
         _codeSets = State(initialValue: codeSets)
+        _abbreviations = State(initialValue: abbreviations)
         self.isOpenAtLoginEnabled = isOpenAtLoginEnabled
         self.setOpenAtLogin = setOpenAtLogin
         self.isDockIconShown = isDockIconShown
@@ -41,6 +44,9 @@ public struct SettingsView: View {
 
             CodeSetsSettingsView(model: codeSets)
                 .tabItem { Label("Code Sets", systemImage: "list.bullet.rectangle") }
+
+            AbbreviationsSettingsView(model: abbreviations)
+                .tabItem { Label("Abbreviations", systemImage: "textformat.abc") }
         }
         .frame(width: SETTINGS_WIDTH, height: SETTINGS_HEIGHT)
         .task { await codeSets.load() }

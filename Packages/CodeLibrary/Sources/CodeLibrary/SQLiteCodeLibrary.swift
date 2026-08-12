@@ -38,6 +38,9 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
             case 1:
                 try database.transaction { try database.execute(LibrarySchema.createV2) }
                 try database.setUserVersion(2)
+            case 2:
+                try database.transaction { try database.execute(LibrarySchema.createV3) }
+                try database.setUserVersion(3)
             default:
                 throw LibraryError.unsupportedSchemaVersion(current)
             }
@@ -89,6 +92,43 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
             }
         }
         return !pinned
+    }
+
+    // MARK: - Abbreviations
+
+    public func abbreviations() throws -> [Abbreviation] {
+        let statement = try database.prepare(LibrarySchema.selectAbbreviations)
+        var found: [Abbreviation] = []
+        while try statement.step() {
+            guard let term = statement.string(at: 0),
+                  let expansion = statement.string(at: 1)
+            else { continue }
+            found.append(Abbreviation(term: term, expansion: expansion))
+        }
+        return found
+    }
+
+    public func saveAbbreviation(_ abbreviation: Abbreviation) throws {
+        // A half-filled entry is dropped rather than stored: a blank term would
+        // expand every query and a blank expansion would search for nothing.
+        guard abbreviation.isUsable else { return }
+
+        let insert = try database.prepare("""
+        INSERT INTO abbreviations (term, expansion, created_at)
+        VALUES (:term, :expansion, :now)
+        ON CONFLICT(term) DO UPDATE SET expansion = :expansion;
+        """)
+        try insert.bind(abbreviation.term, to: ":term")
+        try insert.bind(abbreviation.expansion, to: ":expansion")
+        try insert.bind(Int(Date().timeIntervalSince1970), to: ":now")
+        try insert.step()
+    }
+
+    public func removeAbbreviation(term: String) throws {
+        let delete = try database.prepare("DELETE FROM abbreviations WHERE term = :term;")
+        try delete.bind(term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                        to: ":term")
+        try delete.step()
     }
 
     // MARK: - Usage

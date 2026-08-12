@@ -131,6 +131,31 @@ struct SnapshotTests {
         assertImage(view, size: CGSize(width: 420, height: 260), named: "detail-pane-empty")
     }
 
+    // MARK: - Abbreviations
+
+    /// The override notice is the part worth locking: a silent replacement is how
+    /// the wrong reading of a letter pair ends up in use.
+    @Test("the abbreviations pane should name the built-in an entry replaces")
+    func abbreviationsWithOverride() async {
+        let library = FakeLibrary()
+        await library.saveAbbreviation(Abbreviation(term: "pcn", expansion: "penicillin"))
+        await library.saveAbbreviation(Abbreviation(term: "ra", expansion: "right atrium"))
+        let model = AbbreviationsViewModel(library: library)
+        await model.load()
+
+        assertImage(AbbreviationsSettingsView(model: model),
+                    size: CGSize(width: 540, height: 320), named: "abbreviations")
+    }
+
+    @Test("the abbreviations pane should show an example before anything is added")
+    func abbreviationsEmpty() async {
+        let model = AbbreviationsViewModel(library: FakeLibrary())
+        await model.load()
+
+        assertImage(AbbreviationsSettingsView(model: model),
+                    size: CGSize(width: 540, height: 260), named: "abbreviations-empty")
+    }
+
     // MARK: - Search panel
 
     /// Only the panel's opening state is reachable from here.

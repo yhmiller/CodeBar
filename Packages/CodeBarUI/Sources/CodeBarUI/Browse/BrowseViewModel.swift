@@ -104,6 +104,9 @@ public final class BrowseViewModel {
     /// Codes this person uses, ranked ahead of equally-relevant ones.
     private var preferredIDs: Set<String> = []
 
+    /// The user's own shorthand, keyed by lowercase term.
+    private var ownAbbreviations: [String: String] = [:]
+
     @ObservationIgnored
     public private(set) var pendingWork: Task<Void, Never>?
 
@@ -146,7 +149,8 @@ public final class BrowseViewModel {
         let query = SearchQuery(
             raw: trimmed,
             systems: preferences?.enabledSystems ?? [],
-            preferredCodes: preferredIDs
+            preferredCodes: preferredIDs,
+            abbreviations: ownAbbreviations
         )
 
         searchRunner.run(query) { [weak self] found in
@@ -195,6 +199,11 @@ public final class BrowseViewModel {
         let used = (try? await library?.mostUsedCodes(limit: PREFERRED_CODE_LIMIT))
             .flatMap { $0 } ?? []
         preferredIDs = Set((pinned + used).map(\.id))
+
+        // Refreshed here so an abbreviation added in Settings takes effect
+        // without a restart.
+        let own = (try? await library?.abbreviations()).flatMap { $0 } ?? []
+        ownAbbreviations = own.expansionsByTerm
     }
 
     private func loadSelection() async {

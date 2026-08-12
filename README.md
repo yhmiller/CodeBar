@@ -134,7 +134,9 @@ positions vary between releases, so check its output on your first real file.
 
 ## Architecture
 
-Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). What the outside
+world offers that CodeBar does not yet use is in
+[docs/PRODUCT_RESEARCH.md](docs/PRODUCT_RESEARCH.md).
 
 - **`Packages/CodeCore`** — domain types and the `CodeRepository` protocol.
   No AppKit, no SQLite.
@@ -167,6 +169,23 @@ data.
 Because storage sits behind `CodeRepository`, the search UI never imports
 `CodeStore` — which is what makes both sides testable.
 
+## Your own shorthand
+
+CodeBar expands about two dozen abbreviations nobody argues about — `uti`
+searches as "urinary tract infection", which appears in no ICD-10-CM
+description, so without it the search finds nothing however well it ranks.
+
+Everything past that point is local, so **Settings → Abbreviations** takes your
+own. Adding a term CodeBar already knows replaces its expansion, and the pane
+says what it replaced: `RA` is rheumatoid arthritis on most wards and the right
+atrium on some, and only the person typing it knows which.
+
+This expands the **query**, never the code. `pcn` searching as "penicillin" is a
+fact about vocabulary; pointing `pcn` at a particular code would be a clinical
+judgement made on your behalf, and a wrong one reaches a claim. Your shorthand
+lives in the library beside your pins, so re-importing a code set never costs
+you it.
+
 ## Pinned and recent codes
 
 Pin a code from any result row, and it waits for you in the empty state next
@@ -184,7 +203,6 @@ set never costs you them.
 
 ## Still to come
 
-- Your own synonyms, so a department's shorthand does not need a rebuild
 - Configurable hotkey (currently fixed at ⌥⌘C)
 - Export a list as CSV or paste-ready text
 - Add to a list from the search panel, not only from the window

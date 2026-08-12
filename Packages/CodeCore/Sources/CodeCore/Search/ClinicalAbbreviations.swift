@@ -48,7 +48,16 @@ public enum ClinicalAbbreviations {
     ]
 
     /// The expansion for a single query token, if there is one.
-    public static func expansion(for token: some StringProtocol) -> String? {
-        expansions[token.lowercased()]
+    ///
+    /// The clinician's own entries win over the built-in table. That is the
+    /// point rather than a conflict to resolve: `RA` is rheumatoid arthritis on
+    /// most wards and the right atrium on some, and only the person typing it
+    /// knows which they meant.
+    public static func expansion(
+        for token: some StringProtocol,
+        adding own: [String: String] = [:]
+    ) -> String? {
+        let key = token.lowercased()
+        return own[key] ?? expansions[key]
     }
 }
