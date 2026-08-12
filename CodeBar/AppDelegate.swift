@@ -51,23 +51,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Dock icon and the app itself open the window. Until 8.4 there was no
     /// window, so this opened the panel — which is why launching the app used to
     /// throw a search field at you.
+    /// The return value reads backwards from the obvious: true asks AppKit to run
+    /// its *normal* reopen behaviour, which for a closed `WindowGroup` window is
+    /// to build one; false means "nothing further, this is handled". So an
+    /// existing window is restored here and answered false, and a genuinely
+    /// closed one is left to AppKit by answering true.
+    ///
+    /// `hasVisibleWindows` is deliberately ignored. A minimised window is not
+    /// visible and the search panel is, so it answers a different question than
+    /// the one that matters here.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        guard !hasVisibleWindows else { return true }
-
-        if let window = mainWindow {
-            NSApp.activate(ignoringOtherApps: true)
-            window.makeKeyAndOrderFront(nil)
-            return true
-        }
-
-        // No window built yet. Returning false hands back to AppKit's default,
-        // which asks SwiftUI to create one from the WindowGroup.
-        return false
-    }
-
-    /// The browse window, as distinct from the floating search panel.
-    private var mainWindow: NSWindow? {
-        NSApp.windows.first { $0.canBecomeMain && !($0 is NSPanel) }
+        !BrowseWindow.focusExisting()
     }
 
     /// Closing the window leaves CodeBar in the menu bar, still on ⌥⌘C.
