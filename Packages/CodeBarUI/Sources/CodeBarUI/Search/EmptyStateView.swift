@@ -9,6 +9,11 @@ import SwiftUI
 struct EmptyStateView: View {
     let pinned: [ClinicalCode]
     let recent: [ClinicalCode]
+
+    /// Threaded through rather than decided here, so the empty state and the
+    /// results list can never disagree about whether a row names its system.
+    var showsSystemBadge: Bool = true
+
     let onChoose: (ClinicalCode) -> Void
     let onTogglePin: (ClinicalCode) -> Void
 
@@ -49,6 +54,7 @@ struct EmptyStateView: View {
                     code: code,
                     isSelected: false,
                     isPinned: isPinnedSection,
+                    showsSystemBadge: showsSystemBadge,
                     onTogglePin: { onTogglePin(code) }
                 )
                 .contentShape(Rectangle())

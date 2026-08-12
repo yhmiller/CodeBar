@@ -208,4 +208,15 @@ enum Samples {
                            system: .icd10cm, isBillable: false),
         matchTier: .exactCode
     )
+
+    /// The honest worst case: a real CMS description at 88 characters.
+    ///
+    /// Every clause after the comma changes which claim is correct — *which*
+    /// femur, *which* encounter, open or closed. A row that truncates here is a
+    /// row that hides the answer the user came for.
+    static let longDescription = result(
+        "S72.001A",
+        "Fracture of unspecified part of neck of right femur, "
+            + "initial encounter for closed fracture"
+    )
 }

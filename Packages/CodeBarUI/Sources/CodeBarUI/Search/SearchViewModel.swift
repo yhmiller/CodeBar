@@ -96,6 +96,16 @@ public final class SearchViewModel {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
 
+    /// Whether a row should say which code system it belongs to.
+    ///
+    /// With one system installed — the default, and what most users run — the
+    /// badge reads "ICD-10" on every row forever, while costing the description
+    /// the leading 84 points of a row. It only earns its place when a row could
+    /// plausibly be from somewhere else.
+    public var showsSystemBadge: Bool {
+        preferences.enabledSystems.count > 1
+    }
+
     public func isPinned(_ code: ClinicalCode) -> Bool {
         pinnedIDs.contains(code.id)
     }
@@ -187,8 +197,17 @@ public final class SearchViewModel {
         copy(result.code, format: format)
     }
 
+    /// Exactly what last reached the pasteboard.
+    ///
+    /// Held so the panel can confirm the copy after dismissing itself. It has to
+    /// be the written string rather than the code, because the whole point is
+    /// distinguishing `↵` from `⇧↵`.
+    public private(set) var lastCopiedText: String?
+
     public func copy(_ code: ClinicalCode, format: CopyFormat = .codeOnly) {
-        pasteboard.write(format.string(for: code))
+        let written = format.string(for: code)
+        pasteboard.write(written)
+        lastCopiedText = written
         pendingLibraryWork = Task {
             try? await library.recordUse(of: code, format: format)
             await refreshLibrary()

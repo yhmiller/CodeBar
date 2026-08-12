@@ -20,8 +20,15 @@ import Testing
 @MainActor
 struct SnapshotTests {
 
-    private static let panelSize = CGSize(width: 560, height: 180)
+    private static let panelSize = CGSize(width: Metric.panelWidth, height: 180)
     private static let detailSize = CGSize(width: 620, height: 520)
+
+    /// Rows are rendered at the panel's real width, not at a number that
+    /// happened to match it. The two used to be spelled independently, so a
+    /// change to one silently stopped testing the other.
+    private static func panel(_ height: CGFloat) -> CGSize {
+        CGSize(width: Metric.panelWidth, height: height)
+    }
 
     /// Snapshots the SwiftUI view through the same hosting path the app uses.
     ///
@@ -52,7 +59,7 @@ struct SnapshotTests {
 
     @Test("billable and header rows should stay visually distinct")
     func resultRowVariants() {
-        let rows = VStack(spacing: 2) {
+        let rows = VStack(spacing: Metric.xxs) {
             ResultRow(code: Samples.diabetes.code, isSelected: true,
                       isPinned: false, onTogglePin: {})
             ResultRow(code: Samples.header.code, isSelected: false,
@@ -60,9 +67,51 @@ struct SnapshotTests {
             ResultRow(code: Samples.asthma.code, isSelected: false,
                       isPinned: true, onTogglePin: {})
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Metric.s)
 
-        assertImage(rows, size: CGSize(width: 560, height: 140), named: "result-rows")
+        assertImage(rows, size: Self.panel(140), named: "result-rows")
+    }
+
+    /// The regression test for the app's worst defect.
+    ///
+    /// `.lineLimit(1)` in a 560pt panel truncated "Type 2 diabetes mellitus
+    /// without com…" — hiding the clause that separates E11.9 from E11.65. This
+    /// asserts the widened, two-line row shows a real 88-character CMS
+    /// description whole.
+    @Test("a long description should wrap rather than truncate")
+    func longDescriptionWraps() {
+        let rows = VStack(spacing: Metric.xxs) {
+            ResultRow(code: Samples.longDescription.code, isSelected: true,
+                      isPinned: false, onTogglePin: {})
+        }
+        .padding(.vertical, Metric.s)
+
+        assertImage(rows, size: Self.panel(90), named: "result-row-long-description")
+    }
+
+    // MARK: - Copy confirmation
+
+    /// The long form is the case worth locking. Confirming a copy is only
+    /// useful if it distinguishes `↵` from `⇧↵`, which means the description has
+    /// to survive into the confirmation.
+    @Test("the copy confirmation should show the long form it copied")
+    func copyConfirmationLongForm() {
+        let view = CopyConfirmationView(
+            copiedText: CopyFormat.codeAndDisplay.string(for: Samples.diabetes.code)
+        )
+
+        assertImage(view, size: CGSize(width: 520, height: 70),
+                    named: "copy-confirmation-long")
+    }
+
+    @Test("the copy confirmation should show a bare code")
+    func copyConfirmationCodeOnly() {
+        let view = CopyConfirmationView(
+            copiedText: CopyFormat.codeOnly.string(for: Samples.diabetes.code)
+        )
+
+        assertImage(view, size: CGSize(width: 260, height: 70),
+                    named: "copy-confirmation-code")
     }
 
     // MARK: - Empty state
@@ -75,17 +124,17 @@ struct SnapshotTests {
             onChoose: { _ in },
             onTogglePin: { _ in }
         )
-        .frame(width: 560)
+        .frame(width: Metric.panelWidth)
 
-        assertImage(view, size: CGSize(width: 560, height: 220), named: "empty-state")
+        assertImage(view, size: Self.panel(220), named: "empty-state")
     }
 
     @Test("the empty state should explain itself before anything is pinned")
     func emptyStateHint() {
         let view = EmptyStateView(pinned: [], recent: [], onChoose: { _ in }, onTogglePin: { _ in })
-            .frame(width: 560)
+            .frame(width: Metric.panelWidth)
 
-        assertImage(view, size: CGSize(width: 560, height: 120), named: "empty-state-hint")
+        assertImage(view, size: Self.panel(120), named: "empty-state-hint")
     }
 
     // MARK: - Detail pane
@@ -144,7 +193,7 @@ struct SnapshotTests {
         await model.load()
 
         assertImage(AbbreviationsSettingsView(model: model),
-                    size: CGSize(width: 540, height: 320), named: "abbreviations")
+                    size: CGSize(width: Metric.settingsWidth, height: 320), named: "abbreviations")
     }
 
     @Test("the abbreviations pane should show an example before anything is added")
@@ -153,7 +202,7 @@ struct SnapshotTests {
         await model.load()
 
         assertImage(AbbreviationsSettingsView(model: model),
-                    size: CGSize(width: 540, height: 260), named: "abbreviations-empty")
+                    size: CGSize(width: Metric.settingsWidth, height: 260), named: "abbreviations-empty")
     }
 
     // MARK: - Search panel
