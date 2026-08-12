@@ -29,6 +29,21 @@ struct CodeBarApp: App {
         }
         .defaultSize(width: 1080, height: 680)
         .commands {
+            // The app menu's stock About item shows name, version and copyright
+            // and nothing else. CodeBar's own also lists the installed code sets
+            // and their releases, which is the only place to answer "which
+            // release am I on?" — and a stale code set is invisible until someone
+            // copies a retired code from it.
+            //
+            // This menu did not exist while the app launched as an accessory, so
+            // the menu bar item was the only way in and the stock item was never
+            // reachable to be replaced.
+            CommandGroup(replacing: .appInfo) {
+                Button("About CodeBar") {
+                    AboutPanel.present(repository: appDelegate.environment.repository)
+                }
+            }
+
             CommandGroup(after: .newItem) {
                 Button("Open Search  \(KeyCombo.default.displayString)") {
                     SearchPanelController.shared.show()
