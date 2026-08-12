@@ -40,6 +40,78 @@ struct SearchViewModelTests {
         }
     }
 
+    // MARK: - Keyboard reach into the empty state
+
+    /// The README has always promised "⌥⌘C then Return, no typing" for a pinned
+    /// code. It had never worked: selection was defined over `results`, which is
+    /// empty until something is typed, so Return in the empty state did nothing.
+    @Test("should copy a pinned code with Return before anything is typed")
+    func returnCopiesPinnedCodeWithoutTyping() async {
+        let library = FakeLibrary()
+        await library.togglePin(Samples.diabetes.code)
+        let pasteboard = FakePasteboard()
+        let model = makeModel(repository: CountingRepository(),
+                              pasteboard: pasteboard, library: library)
+        await model.refreshLibrary()
+
+        #expect(model.copySelected())
+        #expect(pasteboard.written == ["E11.9"])
+    }
+
+    /// Newest pin first, so pinning diabetes then asthma puts asthma at the top.
+    @Test("should move the selection through pins and recents before anything is typed")
+    func arrowsReachSuggestions() async {
+        let library = FakeLibrary()
+        await library.togglePin(Samples.diabetes.code)
+        await library.togglePin(Samples.asthma.code)
+        let model = makeModel(repository: CountingRepository(), library: library)
+        await model.refreshLibrary()
+
+        #expect(model.selectedCodeText == Samples.asthma.code.code)
+
+        model.moveSelection(1)
+
+        #expect(model.selectedCodeText == Samples.diabetes.code.code)
+    }
+
+    @Test("should pin the selected result")
+    func pinsTheSelection() async throws {
+        let library = FakeLibrary()
+        let model = makeModel(repository: CountingRepository(stubbed: [Samples.diabetes]),
+                              library: library)
+        model.setQuery("diabetes")
+        try await model.pendingSearch?.value
+
+        #expect(model.togglePinOnSelection())
+        await model.pendingLibraryWork?.value
+
+        #expect(model.isPinned(Samples.diabetes.code))
+    }
+
+    /// ⌘1–⌘9 removes the arrow-key walk for the case the panel exists to serve.
+    @Test("should copy the nth result directly")
+    func copiesByIndex() async throws {
+        let pasteboard = FakePasteboard()
+        let model = makeModel(
+            repository: CountingRepository(stubbed: [Samples.diabetes, Samples.asthma]),
+            pasteboard: pasteboard
+        )
+        model.setQuery("a")
+        try await model.pendingSearch?.value
+
+        #expect(model.copy(at: 1))
+        #expect(pasteboard.written == [Samples.asthma.code.code])
+    }
+
+    @Test("should refuse an index beyond the visible rows")
+    func refusesIndexBeyondResults() async throws {
+        let model = makeModel(repository: CountingRepository(stubbed: [Samples.diabetes]))
+        model.setQuery("diabetes")
+        try await model.pendingSearch?.value
+
+        #expect(model.copy(at: 4) == false)
+    }
+
     // MARK: - Copy confirmation
 
     /// The confirmation exists to distinguish the two formats, so it has to

@@ -198,7 +198,7 @@ public struct MainWindowView: View {
         )) {
             ForEach(model.searchResults) { result in
                 VStack(alignment: .leading, spacing: Metric.xxs) {
-                    CodeRowLabel(code: result.code)
+                    CodeRow(code: result.code, density: .list, showsSystemBadge: false)
                     if let chapter = result.code.chapter {
                         Text(chapter)
                             .font(.caption2)
@@ -224,7 +224,8 @@ public struct MainWindowView: View {
             set: { id in model.selectedCode = model.listCodes.first { $0.id == id } }
         )) {
             ForEach(model.listCodes) { code in
-                CodeRowLabel(code: code).tag(code.id)
+                CodeRow(code: code, density: .list, showsSystemBadge: false)
+                    .tag(code.id)
             }
         }
         .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
@@ -271,7 +272,7 @@ struct BrowseNodeRow: View {
                 ProgressView().controlSize(.small)
             }
         } label: {
-            CodeRowLabel(code: node.code)
+            CodeRow(code: node.code, density: .list, showsSystemBadge: false)
                 .tag(node.id)
         }
         .onChange(of: isExpanded) { _, expanded in
@@ -281,20 +282,3 @@ struct BrowseNodeRow: View {
     }
 }
 
-struct CodeRowLabel: View {
-    let code: ClinicalCode
-
-    var body: some View {
-        HStack(spacing: Metric.s) {
-            Text(code.code)
-                .font(CodeTypography.codeRow)
-                .foregroundStyle(code.isBillable == false ? .secondary : .primary)
-            // Primary, not secondary. The window has more room to show a
-            // description than the panel does, and used to render it weaker.
-            Text(code.display)
-                .font(CodeTypography.description)
-                .lineLimit(1)
-                .foregroundStyle(.primary)
-        }
-    }
-}

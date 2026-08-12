@@ -43,6 +43,10 @@ public struct SearchPanelView: View {
             searchField
             Divider()
             content
+            if let footerContext {
+                Divider()
+                PanelFooter(context: footerContext)
+            }
         }
         .frame(width: Metric.panelWidth)
         .background(.ultraThinMaterial)
@@ -53,15 +57,10 @@ public struct SearchPanelView: View {
             text = ""
             isFocused = true
         }
-        .onKeyPress(.escape) { onDismiss(); return .handled }
-        .onKeyPress(.downArrow) { model.moveSelection(1); return .handled }
-        .onKeyPress(.upArrow) { model.moveSelection(-1); return .handled }
-        .onKeyPress(keys: [.return]) { press in
-            // ⇧↵ copies the code with its description, for pasting into prose
-            // rather than into a code field.
-            copySelected(format: press.modifiers.contains(.shift) ? .codeAndDisplay : .codeOnly)
-            return .handled
-        }
+        // One handler rather than a stack of `.onKeyPress` modifiers. Stacked,
+        // they resolve in an order that is not visible at the call site, and the
+        // set below would have made that unreadable.
+        .onKeyPress { press in handle(press) }
     }
 
     private var searchField: some View {
@@ -78,6 +77,13 @@ public struct SearchPanelView: View {
         .padding(Metric.l)
     }
 
+    /// The footer only advertises keys that work in the state on screen, and is
+    /// absent entirely when none of them would.
+    private var footerContext: PanelFooter.Context? {
+        if model.selectableCodes.isEmpty { return nil }
+        return text.isEmpty ? .suggestions : .results
+    }
+
     @ViewBuilder
     private var content: some View {
         if text.isEmpty {
@@ -85,6 +91,7 @@ public struct SearchPanelView: View {
                 pinned: model.pinnedCodes,
                 recent: model.recentCodes,
                 showsSystemBadge: model.showsSystemBadge,
+                isSelected: { model.isSelected($0) },
                 onChoose: { code in
                     model.copy(code)
                     confirmAndDismiss()
@@ -115,17 +122,32 @@ public struct SearchPanelView: View {
                 // a panel trying to size itself to its content.
                 VStack(spacing: Metric.xxs) {
                     ForEach(model.results) { result in
-                        ResultRow(
+                        CodeRow(
                             code: result.code,
+                            density: .panel,
                             isSelected: model.isSelected(result),
                             isPinned: model.isPinned(result.code),
                             showsSystemBadge: model.showsSystemBadge,
                             onTogglePin: { model.togglePin(result.code) }
                         )
-                        .contentShape(Rectangle())
                         .onTapGesture {
                             model.copy(result)
                             confirmAndDismiss()
+                        }
+                        .accessibilityHint("Press Return to copy")
+                        .contextMenu {
+                            Button("Copy Code") {
+                                model.copy(result)
+                                confirmAndDismiss()
+                            }
+                            Button("Copy with Description") {
+                                model.copy(result, format: .codeAndDisplay)
+                                confirmAndDismiss()
+                            }
+                            Divider()
+                            Button(model.isPinned(result.code) ? "Unpin" : "Pin") {
+                                model.togglePin(result.code)
+                            }
                         }
                     }
                 }
@@ -145,6 +167,63 @@ public struct SearchPanelView: View {
         }
     }
 
+
+    /// Everything the panel does with a key, in one place.
+    private func handle(_ press: KeyPress) -> KeyPress.Result {
+        switch press.key {
+        case .escape:
+            // Two-stage: clear a typed query first, dismiss only when there is
+            // nothing to lose. Dismissing straight away threw away a query with
+            // no way to get it back.
+            if text.isEmpty {
+                onDismiss()
+            } else {
+                text = ""
+            }
+            return .handled
+
+        case .downArrow:
+            model.moveSelection(1)
+            return .handled
+
+        case .upArrow:
+            model.moveSelection(-1)
+            return .handled
+
+        case .return:
+            // ⇧↵ copies the code with its description, for pasting into prose
+            // rather than into a code field.
+            copySelected(format: press.modifiers.contains(.shift) ? .codeAndDisplay : .codeOnly)
+            return .handled
+
+        case .tab:
+            // Completes the field rather than committing, so a promising result
+            // can be narrowed instead of copied.
+            guard let completion = model.selectedCodeText else { return .ignored }
+            text = completion
+            return .handled
+
+        default:
+            return handleCharacter(press)
+        }
+    }
+
+    private func handleCharacter(_ press: KeyPress) -> KeyPress.Result {
+        guard press.modifiers.contains(.command) else { return .ignored }
+
+        if press.characters == "p" {
+            return model.togglePinOnSelection() ? .handled : .ignored
+        }
+
+        // ⌘1–⌘9 copies the nth visible row, which removes the arrow-key walk
+        // for the case the panel exists to serve.
+        guard let digit = Int(press.characters), (1...9).contains(digit) else {
+            return .ignored
+        }
+        guard model.copy(at: digit - 1) else { return .ignored }
+        confirmAndDismiss()
+        return .handled
+    }
 
     private func copySelected(format: CopyFormat) {
         guard model.copySelected(format: format) else { return }

@@ -165,11 +165,12 @@ public struct CodeDetailView: View {
                  : "\(detail.children.count) codes beneath this")
                 .font(CodeTypography.sectionLabel)
                 .foregroundStyle(.secondary)
+            // Real rows, not bare labels: these are the fastest path from a
+            // category to the billable child that can actually go on a claim.
             ForEach(detail.children) { child in
-                Button { onSelectCode(child) } label: {
-                    CodeRowLabel(code: child)
-                }
-                .buttonStyle(.plain)
+                CodeRow(code: child, density: .compact, showsSystemBadge: false)
+                    .onTapGesture { onSelectCode(child) }
+                    .accessibilityHint("Show this code")
             }
         }
     }
