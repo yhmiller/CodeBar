@@ -45,7 +45,18 @@ until something is typed — so `↵` in the empty state did nothing, and the
 README's "⌥⌘C then Return, no typing" had never been true. Selection is now
 defined over `selectableCodes`, which is the pins and recents before a query.
 
-**Phase 3 is next.** Nothing before it is outstanding.
+**Phase 3 — done**, except one part of 3.5. 3.6 landed early, inside 2.1: the
+shared `CodeRow` made the detail pane's children real rows on its own.
+
+3.1 gave "Copy Code" **⌘⇧C rather than ⌘C**. The coding notes and the note
+editor are selectable text, and claiming ⌘C would break copying from them, which
+in a clinical tool is a real thing to want.
+
+3.5's per-list SF Symbol is **deferred**: `CodeList` has no symbol column, so it
+needs a `library.sqlite` migration. That is schema work, not UI work, and it does
+not belong in a design phase. The `.badge` half shipped.
+
+**Phase 4 is next.** Nothing before it is outstanding.
 
 ## Step index
 

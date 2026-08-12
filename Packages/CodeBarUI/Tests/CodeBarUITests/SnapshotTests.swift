@@ -190,27 +190,44 @@ struct SnapshotTests {
 
         let view = CodeDetailView(
             detail: detail,
-            isPinned: false,
             note: "Our clinic codes new diagnoses here",
-            lists: [CodeList(id: 1, name: "Clinic", detail: nil, createdAt: .distantPast, count: 3)],
-            currentList: nil,
-            onCopy: { _, _ in },
-            onTogglePin: { _ in },
             onSelectCode: { _ in },
-            onSaveNote: { _ in },
-            onAddToList: { _ in },
-            onRemoveFromList: {}
+            onSaveNote: { _ in }
         )
 
         assertImage(view, size: Self.detailSize, named: "detail-pane")
     }
 
+    /// The ordering regression test.
+    ///
+    /// With no note, nothing at all should stand between the code and the
+    /// publisher's rules. An always-open editor used to sit there and push
+    /// `Excludes 1` — the rule that means *never code these together* — below
+    /// the fold on every single code.
+    @Test("the detail pane should show coding rules before the empty note")
+    func detailPaneWithoutNote() {
+        let detail = CodeDetail(
+            code: Samples.header.code,
+            ancestors: [],
+            children: [Samples.diabetes.code],
+            notes: [
+                CodeNote(kind: .includes, text: "diabetes NOS"),
+                CodeNote(kind: .excludes1, text: "type 1 diabetes mellitus (E10.-)"),
+                CodeNote(kind: .useAdditionalCode, text: "insulin (Z79.4)")
+            ]
+        )
+
+        let view = CodeDetailView(
+            detail: detail, note: "", onSelectCode: { _ in }, onSaveNote: { _ in }
+        )
+
+        assertImage(view, size: Self.detailSize, named: "detail-pane-no-note")
+    }
+
     @Test("the detail pane should say when nothing is selected")
     func detailPaneEmpty() {
         let view = CodeDetailView(
-            detail: nil, isPinned: false, note: "", lists: [], currentList: nil,
-            onCopy: { _, _ in }, onTogglePin: { _ in }, onSelectCode: { _ in },
-            onSaveNote: { _ in }, onAddToList: { _ in }, onRemoveFromList: {}
+            detail: nil, note: "", onSelectCode: { _ in }, onSaveNote: { _ in }
         )
 
         assertImage(view, size: CGSize(width: 420, height: 260), named: "detail-pane-empty")
