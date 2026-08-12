@@ -136,8 +136,8 @@ struct SnapshotTests {
     /// Only the panel's opening state is reachable from here.
     ///
     /// `SearchPanelView` owns its text in `@State`, which nothing outside the
-    /// view can set — deliberately, since letting the model drive the field is
-    /// what made the query walk backwards in phase 2. Driving it would need a
+    /// view can set — deliberately, since letting the model drive the field
+    /// makes the query walk backwards. Driving it would need a
     /// UI test that types. The rendered result rows are covered by the
     /// `result-rows` reference instead.
     @Test("the panel should open on its placeholder")

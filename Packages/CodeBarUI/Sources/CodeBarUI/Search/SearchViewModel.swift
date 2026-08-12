@@ -31,9 +31,9 @@ public final class SearchViewModel {
     /// Bumped each time the panel is about to be shown.
     ///
     /// Deliberately a bare counter rather than the model handing the view a
-    /// string: the model must never drive the text field's contents. Doing that
-    /// is what made the query walk backwards in phase 2. The view watches this
-    /// and clears its own field.
+    /// string: the model must never drive the text field's contents, or the query
+    /// walks backwards as stale values are pushed back into the field. The view
+    /// watches this and clears its own field.
     public private(set) var displaySessionID = 0
 
     private let repository: (any CodeRepository)?

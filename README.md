@@ -49,11 +49,15 @@ make run        # build a Debug copy and launch it, without installing
 make check      # tests, typecheck, and module-boundary checks
 ```
 
-`make check` is the gate: 253 Swift tests, 45 Python tests, a Swift 6
+`make check` is the gate: 271 Swift tests, 45 Python tests, a Swift 6
 strict-concurrency typecheck of the app target, and an assertion that the module
 boundaries hold. Six of the Swift tests are rendered-image snapshots, which cover
-the class of bug a view model cannot see; interaction is still verified by opening
-the app. See [known gaps](docs/ROADMAP.md#known-gaps).
+the class of bug a view model cannot see.
+
+`make uitest` adds five interaction tests that drive the real app — which window
+opens, what reopening does, whether the panel stays out of the way. They are kept
+out of `make check` because they take about 25 seconds and quit a running CodeBar.
+`make check-all` runs both.
 
 ## Using it
 
@@ -130,8 +134,7 @@ positions vary between releases, so check its output on your first real file.
 
 ## Architecture
 
-Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); progress in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - **`Packages/CodeCore`** — domain types and the `CodeRepository` protocol.
   No AppKit, no SQLite.
@@ -172,17 +175,14 @@ time you open the panel — ⌥⌘C then Return, no typing.
 This is more than a shortcut. Full-text relevance ranks by how well the text
 matches, which is not the same as how often a code is used: typing "diabetes"
 against the real 98k-code set surfaces obscure specific codes above E11.9. No
-structural property of the data fixes that, and
-[the alternatives were measured and rejected](docs/ROADMAP.md#open-ranking-does-not-match-clinical-frequency).
-Your own pins are the one signal that reflects what you actually mean.
+structural property of the data fixes that: weighting descriptions, capping
+synonyms and preferring shorter codes were each measured and each made results
+worse. Your own pins are the one signal that reflects what you actually mean.
 
 Pins and recents are stored outside the code database, so re-importing a code
 set never costs you them.
 
 ## Still to come
-
-Tracked in [the roadmap](docs/ROADMAP.md), with what was measured and rejected
-alongside what is planned.
 
 - Your own synonyms, so a department's shorthand does not need a rebuild
 - Configurable hotkey (currently fixed at ⌥⌘C)

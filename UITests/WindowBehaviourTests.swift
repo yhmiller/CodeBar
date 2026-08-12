@@ -1,10 +1,11 @@
 import XCTest
 
-/// The window and panel behaviour that six defects hid in on 2026-08-12.
+/// Window, reopen and panel behaviour.
 ///
-/// Each test here corresponds to one of them. None was catchable by a view model
-/// test, because none of them changes a value — they are about which window
-/// exists, how many, and whether it is on screen.
+/// None of this is catchable by a view model test, because none of it changes a
+/// value: these are about which window exists, how many, and whether it is on
+/// screen. Every defect this file covers was originally found by running the app
+/// and looking at it.
 @MainActor
 final class WindowBehaviourTests: CodeBarUITestCase {
 

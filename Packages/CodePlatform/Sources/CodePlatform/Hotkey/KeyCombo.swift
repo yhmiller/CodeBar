@@ -2,7 +2,7 @@ import Carbon.HIToolbox
 
 /// A global keyboard shortcut, expressed independently of Carbon's bit masks.
 ///
-/// Kept as a value type so a configurable hotkey (phase 6) is a matter of
+/// Kept as a value type so making the shortcut configurable is a matter of
 /// persisting one of these and re-registering.
 public struct KeyCombo: Equatable, Sendable {
 
@@ -66,8 +66,8 @@ public struct KeyCombo: Equatable, Sendable {
         return text + (Self.keyLabels[keyCode] ?? "?")
     }
 
-    /// Only the keys CodeBar can currently be bound to. Phase 6 widens this when
-    /// the hotkey becomes configurable.
+    /// Only the keys CodeBar can currently be bound to. This widens when the
+    /// shortcut becomes configurable.
     private static let keyLabels: [UInt32: String] = [
         UInt32(kVK_ANSI_C): "C",
         UInt32(kVK_ANSI_D): "D",
