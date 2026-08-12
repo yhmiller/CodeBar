@@ -54,9 +54,19 @@ run: project ## Build Debug and launch it, without installing
 
 ## ---------------------------------------------------------------- building
 
+# A failed build must stop the pipeline. Piping xcodebuild into grep hides its
+# exit status, and `|| true` discarded what was left — so a build that failed to
+# compile still went on to install and launch the *previous* binary, reporting
+# success. A fix that is silently not installed is worse than a visible failure.
 release: project ## Build a Release copy without installing it
+	@mkdir -p $(BUILD_DIR)
 	@xcodebuild -project $(PROJECT) -scheme $(APP_NAME) -configuration Release \
-		-derivedDataPath $(BUILD_DIR) build | grep -E "error:|BUILD" || true
+		-derivedDataPath $(BUILD_DIR) build > $(BUILD_DIR)/release.log 2>&1 || { \
+			grep -E "error:" $(BUILD_DIR)/release.log | head -20; \
+			echo "==> build failed, see $(BUILD_DIR)/release.log"; \
+			exit 1; \
+		}
+	@grep -E "^\*\* BUILD" $(BUILD_DIR)/release.log || true
 
 bootstrap: ## Install XcodeGen if missing, then generate the Xcode project
 	@command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
