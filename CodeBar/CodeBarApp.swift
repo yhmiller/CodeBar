@@ -41,7 +41,6 @@ struct CodeBarApp: App {
                 SearchPanelController.shared.show()
             }
             Button("Browse Codes…") {
-                ActivationPolicyController.setShowsDockIcon(true)
                 NSApp.activate(ignoringOtherApps: true)
                 openWindowFromMenu()
             }

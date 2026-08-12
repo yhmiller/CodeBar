@@ -16,9 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SearchPanelController.shared.repository = environment.repository
         SearchPanelController.shared.library = environment.library
 
-        // The bundle is LSUIElement, so the app always launches menu-bar-only
-        // and promotes itself here if the preference asks. Launching .regular
-        // and demoting would flash a Dock icon on every start.
+        // The app launches as a normal app so that opening it opens its window.
+        // Anyone who wants menu-bar-only gets demoted here instead; the cost is a
+        // brief Dock icon at launch for them, which is the better trade now that
+        // the window is the primary surface rather than an afterthought.
         ActivationPolicyController.setShowsDockIcon(
             SearchPanelController.shared.preferences.showsDockIcon
         )
@@ -43,12 +44,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyRegistrar.unregister()
     }
 
-    /// Clicking the Dock icon opens search. Once there is a main window
-    /// (phase 8.4) that becomes the more natural target.
+    /// Opening the app means the window, never the panel.
+    ///
+    /// The two surfaces are reached deliberately differently: ⌥⌘C and the menu
+    /// bar summon the panel, which copies a code and gets out of the way; the
+    /// Dock icon and the app itself open the window. Until 8.4 there was no
+    /// window, so this opened the panel — which is why launching the app used to
+    /// throw a search field at you.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         guard !hasVisibleWindows else { return true }
-        SearchPanelController.shared.show()
-        return true
+
+        if let window = mainWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            return true
+        }
+
+        // No window built yet. Returning false hands back to AppKit's default,
+        // which asks SwiftUI to create one from the WindowGroup.
+        return false
+    }
+
+    /// The browse window, as distinct from the floating search panel.
+    private var mainWindow: NSWindow? {
+        NSApp.windows.first { $0.canBecomeMain && !($0 is NSPanel) }
+    }
+
+    /// Closing the window leaves CodeBar in the menu bar, still on ⌥⌘C.
+    ///
+    /// AppKit already defaults to this, but stating it is cheap and the default
+    /// is easy to lose to a stray Info.plist key. The failure it prevents — the
+    /// shortcut silently doing nothing because the app quietly quit — is the one
+    /// this app can least afford.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
     }
 
     /// A failed registration is reported rather than swallowed. The previous

@@ -57,6 +57,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
-        # Menu-bar-only: no Dock icon, no Cmd-Tab entry.
-        LSUIElement: true
+        # Deliberately absent: LSUIElement would make the app launch as an
+        # accessory, so SwiftUI never builds the main window and opening the app
+        # has nothing to show. Menu-bar-only is a preference applied at launch
+        # instead — see ActivationPolicyController.
         NSHumanReadableCopyright: "© 2026 Prince Miller"
