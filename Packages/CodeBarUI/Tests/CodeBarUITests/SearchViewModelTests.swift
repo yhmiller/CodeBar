@@ -5,10 +5,15 @@ import Testing
 /// Short enough to keep tests quick, long enough to be reached reliably.
 private let TEST_DEBOUNCE = Duration.milliseconds(20)
 
-/// Used by the debounce tests, which need keystrokes separated by real gaps —
-/// otherwise the tasks never get a chance to run and the test would pass on
-/// cancellation alone. The 20x margin over `TYPING_GAP` keeps it off a knife edge.
-private let SLOW_DEBOUNCE = Duration.milliseconds(400)
+/// Long enough that no scheduling delay can reach it, so "nothing searched yet"
+/// means the debounce deferred the work rather than the machine being quick.
+///
+/// It never elapses in a test — the pending task is cancelled instead — so its
+/// length costs nothing. An earlier 400ms value was reached by a 20ms typing gap
+/// overshooting under parallel test load, which failed the suite spuriously.
+private let NEVER_ELAPSES = Duration.seconds(30)
+
+/// Real gaps, so an absent debounce would let intermediate searches through.
 private let TYPING_GAP = Duration.milliseconds(20)
 
 @Suite("SearchViewModel")
@@ -37,23 +42,38 @@ struct SearchViewModelTests {
 
     // MARK: - Debounce
 
-    @Test("should issue a single search for a burst of keystrokes")
-    func burstIssuesOneSearch() async throws {
-        let repository = CountingRepository(stubbed: [Samples.diabetes])
-        let model = makeModel(repository: repository, debounce: SLOW_DEBOUNCE)
+    /// Covers the deferral itself: keystrokes arrive with real gaps between them,
+    /// and none of them reaches the repository while typing continues.
+    ///
+    /// Without a debounce every fragment would search immediately, since the gaps
+    /// give each task room to run. Asserting on zero rather than on a settled
+    /// count is what keeps this off a timing threshold — there is no duration a
+    /// slow machine could overshoot into.
+    @Test("should not search while the user is still typing")
+    func typingDefersTheSearch() async throws {
+        let repository = CountingRepository()
+        let model = makeModel(repository: repository, debounce: NEVER_ELAPSES)
 
         try await type(["d", "di", "dia", "diab"], into: model)
-        await model.pendingSearch?.value
 
-        #expect(await repository.searchCount == 1)
+        #expect(await repository.searchCount == 0)
+        model.pendingSearch?.cancel()
     }
 
-    @Test("should search for the final text of a burst, not an intermediate one")
-    func burstSearchesFinalText() async throws {
+    /// Covers the other half: once typing stops, exactly one search runs and it
+    /// carries the final text.
+    ///
+    /// The fragments are deliberately not spaced here. Cancellation alone would
+    /// collapse them, which is precisely why this cannot stand in for the
+    /// deferral test above — it is the pair that pins the behaviour down.
+    @Test("should search once, for the text the user stopped on")
+    func settledBurstSearchesFinalText() async throws {
         let repository = CountingRepository()
-        let model = makeModel(repository: repository, debounce: SLOW_DEBOUNCE)
+        let model = makeModel(repository: repository)
 
-        try await type(["d", "di", "diab"], into: model)
+        for fragment in ["d", "di", "dia", "diab"] {
+            model.setQuery(fragment)
+        }
         await model.pendingSearch?.value
 
         #expect(await repository.receivedQueries == ["diab"])

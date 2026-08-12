@@ -77,8 +77,8 @@ struct GeneralSettingsView: View {
             Section("Appearance") {
                 Toggle("Show CodeBar in the Dock", isOn: $showsDockIcon)
                     .onChange(of: showsDockIcon) { _, shows in setDockIconShown(shows) }
-                Text("Off keeps CodeBar in the menu bar only. Clicking the Dock icon "
-                     + "opens search for now; a full window is on the way.")
+                Text("Off keeps CodeBar in the menu bar only, reachable by ⌥⌘C and "
+                     + "the menu bar icon. On, opening CodeBar opens the browse window.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
