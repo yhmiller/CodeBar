@@ -13,7 +13,7 @@ struct CodeBarApp: App {
         // The window is for what does not fit in two seconds: seeing where a
         // code sits, what is beneath it, and what the publisher says about
         // coding it. The panel stays the fast path. See ARCHITECTURE.md §11.
-        WindowGroup("CodeBar") {
+        WindowGroup("CodeBar", id: BrowseWindow.id) {
             MainWindowView(
                 model: BrowseViewModel(
                     repository: appDelegate.environment.repository,
@@ -41,8 +41,7 @@ struct CodeBarApp: App {
                 SearchPanelController.shared.show()
             }
             Button("Browse Codes…") {
-                NSApp.activate(ignoringOtherApps: true)
-                openWindowFromMenu()
+                showBrowseWindow()
             }
             Divider()
 
@@ -85,9 +84,13 @@ struct CodeBarApp: App {
 
 
 private extension CodeBarApp {
-    /// `openWindow` needs the app to be a regular app first, or the window is
-    /// created without ever coming forward.
-    func openWindowFromMenu() {
-        openWindow(id: "CodeBar")
+    /// Focus the window that exists, and only build one when none does.
+    ///
+    /// Calling `openWindow` unconditionally adds a window every time, so the menu
+    /// item would clone the window rather than return to it.
+    func showBrowseWindow() {
+        if !BrowseWindow.focusExisting() {
+            openWindow(id: BrowseWindow.id)
+        }
     }
 }
