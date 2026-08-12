@@ -1,9 +1,6 @@
 import CodeCore
 import SwiftUI
 
-private let BADGE_COLUMN_WIDTH: CGFloat = 72
-private let CODE_COLUMN_WIDTH: CGFloat = 92
-
 struct ResultRow: View {
     let code: ClinicalCode
     let isSelected: Bool
@@ -11,21 +8,22 @@ struct ResultRow: View {
     var onTogglePin: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Metric.m) {
             Text(code.system.shortLabel)
                 .font(.caption.weight(.semibold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(badgeColor.opacity(0.15))
-                .foregroundStyle(badgeColor)
+                .padding(.horizontal, Metric.s)
+                .padding(.vertical, Metric.xs)
+                .background(Color.systemBadge.opacity(0.15))
+                .foregroundStyle(Color.systemBadge)
                 .clipShape(Capsule())
-                .frame(width: BADGE_COLUMN_WIDTH, alignment: .leading)
+                .frame(width: Metric.badgeColumn, alignment: .leading)
 
             Text(code.code)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .frame(width: CODE_COLUMN_WIDTH, alignment: .leading)
+                .font(CodeTypography.codeRow)
+                .frame(width: Metric.codeColumn, alignment: .leading)
 
             Text(code.display)
+                .font(CodeTypography.description)
                 .lineLimit(1)
                 .foregroundStyle(.primary)
 
@@ -52,11 +50,11 @@ struct ResultRow: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.horizontal, Metric.rowPadding)
+        .padding(.vertical, Metric.s)
         .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .padding(.horizontal, 6)
+        .clipShape(RoundedRectangle(cornerRadius: Metric.rowRadius))
+        .padding(.horizontal, Metric.rowInset)
     }
 
     /// Marks a code the publisher says cannot go on a claim.
@@ -68,21 +66,21 @@ struct ResultRow: View {
     private var headerBadge: some View {
         Text("category - not billable")
             .font(.caption2.weight(.medium))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Color.orange.opacity(0.18))
-            .foregroundStyle(Color.orange)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            // Tighter than the rest of the row on purpose: at 560pt every point
+            // this chip takes comes off the description, and the description is
+            // where a code's clinical distinction lives. Step 1.1 settles this
+            // properly by widening the panel and giving the chip its own line.
+            .padding(.horizontal, Metric.xs)
+            .padding(.vertical, Metric.xxs)
+            .background(Color.warning.opacity(0.18))
+            .foregroundStyle(Color.warning)
+            .clipShape(RoundedRectangle(cornerRadius: Metric.chipRadius))
             .fixedSize()
+            // Laid out before the description, not after it. In a row this
+            // tight `fixedSize` alone is not enough: with the description
+            // competing for the same space the chip was dropped from the row
+            // entirely, which is the one element here that must never lose.
+            .layoutPriority(1)
             .accessibilityLabel("Category header, not valid for submission")
-    }
-
-    private var badgeColor: Color {
-        switch code.system {
-        case .icd10cm: .blue
-        case .loinc: .purple
-        case .snomed: .green
-        case .cpt: .orange
-        }
     }
 }

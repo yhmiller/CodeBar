@@ -130,7 +130,8 @@ public struct MainWindowView: View {
                 }
             }
         }
-        .navigationSplitViewColumnWidth(min: 240, ideal: 300)
+        .navigationSplitViewColumnWidth(min: Metric.sidebarMinWidth,
+                                        ideal: Metric.sidebarIdealWidth)
         .safeAreaInset(edge: .bottom) {
             // The bar needs its own ground and a divider: without them the list
             // scrolls *underneath* a transparent button and the two overlap.
@@ -143,7 +144,7 @@ public struct MainWindowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.borderless)
-                .padding(10)
+                .padding(Metric.m)
             }
             .background(.bar)
         }
@@ -183,7 +184,8 @@ public struct MainWindowView: View {
                     BrowseNodeRow(node: node)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+            .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                            ideal: Metric.contentIdealWidth)
         }
     }
 
@@ -195,7 +197,7 @@ public struct MainWindowView: View {
             set: { id in model.selectedCode = model.searchResults.first { $0.id == id }?.code }
         )) {
             ForEach(model.searchResults) { result in
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Metric.xxs) {
                     CodeRowLabel(code: result.code)
                     if let chapter = result.code.chapter {
                         Text(chapter)
@@ -207,7 +209,8 @@ public struct MainWindowView: View {
                 .tag(result.id)
             }
         }
-        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                        ideal: Metric.contentIdealWidth)
         .overlay {
             if model.searchResults.isEmpty {
                 ContentUnavailableView.search(text: searchText)
@@ -224,7 +227,8 @@ public struct MainWindowView: View {
                 CodeRowLabel(code: code).tag(code.id)
             }
         }
-        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                        ideal: Metric.contentIdealWidth)
         .overlay {
             if model.listCodes.isEmpty {
                 ContentUnavailableView(
@@ -281,13 +285,16 @@ struct CodeRowLabel: View {
     let code: ClinicalCode
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Metric.s) {
             Text(code.code)
-                .font(.system(.body, design: .monospaced))
+                .font(CodeTypography.codeRow)
                 .foregroundStyle(code.isBillable == false ? .secondary : .primary)
+            // Primary, not secondary. The window has more room to show a
+            // description than the panel does, and used to render it weaker.
             Text(code.display)
+                .font(CodeTypography.description)
                 .lineLimit(1)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
         }
     }
 }

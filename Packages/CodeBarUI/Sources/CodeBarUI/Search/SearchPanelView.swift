@@ -1,8 +1,6 @@
 import CodeCore
 import SwiftUI
 
-private let PANEL_WIDTH: CGFloat = 560
-let RESULT_LIST_MAX_HEIGHT: CGFloat = 340
 private let SCROLL_ANIMATION_DURATION: TimeInterval = 0.1
 
 public struct SearchPanelView: View {
@@ -35,7 +33,7 @@ public struct SearchPanelView: View {
             Divider()
             content
         }
-        .frame(width: PANEL_WIDTH)
+        .frame(width: Metric.panelWidth)
         .background(.ultraThinMaterial)
         .onAppear { isFocused = true }
         .onChange(of: model.displaySessionID) { _, _ in
@@ -56,16 +54,16 @@ public struct SearchPanelView: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Metric.m) {
             Image(systemName: "stethoscope")
                 .foregroundStyle(.secondary)
             TextField("Search ICD-10, LOINC, SNOMED, CPT…", text: $text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 18))
+                .font(CodeTypography.searchField)
                 .focused($isFocused)
                 .onChange(of: text) { _, newValue in model.setQuery(newValue) }
         }
-        .padding(14)
+        .padding(Metric.l)
     }
 
     @ViewBuilder
@@ -102,7 +100,7 @@ public struct SearchPanelView: View {
                 // Eager rather than lazy: results are capped at 30, and a lazy
                 // stack only measures what it has laid out, which is useless to
                 // a panel trying to size itself to its content.
-                VStack(spacing: 2) {
+                VStack(spacing: Metric.xxs) {
                     ForEach(model.results) { result in
                         ResultRow(
                             code: result.code,
@@ -117,10 +115,10 @@ public struct SearchPanelView: View {
                         }
                     }
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, Metric.s)
                 .measuringHeight()
             }
-            .frame(height: min(listHeight, RESULT_LIST_MAX_HEIGHT))
+            .frame(height: min(listHeight, Metric.resultListMaxHeight))
             .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
             .onChange(of: model.selectedResultID) { _, newValue in
                 guard let newValue else { return }
