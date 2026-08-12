@@ -26,6 +26,11 @@ final class CopyConfirmationPanel {
     private var dismissal: Task<Void, Never>?
 
     func show(_ copiedText: String) {
+        // Spoken as well as shown. The panel vanishing on Return is a silent
+        // outcome otherwise, and a VoiceOver user gets no confirmation at all
+        // that anything reached the pasteboard.
+        AccessibilityNotification.Announcement("Copied \(copiedText)").post()
+
         // A second copy replaces the first rather than queueing behind it —
         // otherwise a fast user reads a confirmation for the code before last.
         dismissal?.cancel()

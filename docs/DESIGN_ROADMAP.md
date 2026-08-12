@@ -56,7 +56,23 @@ in a clinical tool is a real thing to want.
 needs a `library.sqlite` migration. That is schema work, not UI work, and it does
 not belong in a design phase. The `.badge` half shipped.
 
-**Phase 4 is next.** Nothing before it is outstanding.
+**Phase 4 — done**, with two steps landing differently than written.
+
+4.2 kept the code column and scaled it, rather than replacing it with a `Grid`.
+Rows are independent views inside a `ScrollView`, each painting its own ground,
+and a shared grid container would take that away. Note that macOS does not drive
+`@ScaledMetric` from `\.dynamicTypeSize`, so this **cannot be snapshot-tested**;
+a test that forces that environment value renders at the default size and
+asserts nothing. The metric is still correct, and it is what keeps the column
+honest if `CodeBarUI` is reused on iOS.
+
+4.3 did not add `.focusable()` to `CodeRow`. Phase 2 gave the panel `⇥` for
+autocomplete, and focus traversal would fight it — while the accessibility need
+it was meant to serve, reaching a row's pin, is already met by `⌘P`. The real
+gap was elsewhere: the detail pane's children were `.onTapGesture` only, so they
+were reachable by pointer and nothing else. They are `Button`s now.
+
+**Phase 5 is next, and opens with the decision gate at 5.0.**
 
 ## Step index
 

@@ -89,17 +89,13 @@ public struct CodeDetailView: View {
             Label(NOT_BILLABLE_LABEL, systemImage: "exclamationmark.triangle.fill")
                 .font(.caption.weight(.medium))
                 .padding(.horizontal, Metric.s).padding(.vertical, Metric.xs)
-                .background(Color.warning.opacity(0.18))
-                .foregroundStyle(Color.warning)
-                .clipShape(Capsule())
+                .semanticChip(Color.warning, in: Capsule())
                 .accessibilityLabel(NOT_BILLABLE_SPOKEN_LABEL)
         } else if detail.code.isBillable == true {
             Label("Billable", systemImage: "checkmark.circle.fill")
                 .font(.caption.weight(.medium))
                 .padding(.horizontal, Metric.s).padding(.vertical, Metric.xs)
-                .background(Color.confirmed.opacity(0.15))
-                .foregroundStyle(Color.confirmed)
-                .clipShape(Capsule())
+                .semanticChip(Color.confirmed, in: Capsule())
         }
     }
 
@@ -152,10 +148,16 @@ public struct CodeDetailView: View {
                 .foregroundStyle(.secondary)
             // Real rows, not bare labels: these are the fastest path from a
             // category to the billable child that can actually go on a claim.
+            //
+            // Buttons rather than a tap gesture, so they are focusable, reachable
+            // under Full Keyboard Access and activated by Return. A gesture is
+            // invisible to every input except the pointer.
             ForEach(detail.children) { child in
-                CodeRow(code: child, density: .compact, showsSystemBadge: false)
-                    .onTapGesture { onSelectCode(child) }
-                    .accessibilityHint("Show this code")
+                Button { onSelectCode(child) } label: {
+                    CodeRow(code: child, density: .compact, showsSystemBadge: false)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Show this code")
             }
         }
     }
@@ -219,17 +221,24 @@ public struct CodeDetailView: View {
 private struct ProhibitionContainer: ViewModifier {
     let isActive: Bool
 
+    @Environment(\.colorSchemeContrast) private var contrast
+
     func body(content: Content) -> some View {
         if isActive {
             content
                 .padding(.leading, Metric.m)
                 .padding(.vertical, Metric.s)
                 .padding(.trailing, Metric.s)
-                .background(Color.prohibition.opacity(0.10))
+                // The left rule carries the meaning on its own, so under
+                // Increase Contrast the tint simply goes rather than being
+                // replaced — a fill and a border would fight each other here.
+                .background(contrast == .increased
+                            ? Color.clear
+                            : Color.prohibition.opacity(0.10))
                 .overlay(alignment: .leading) {
                     Rectangle()
                         .fill(Color.prohibition)
-                        .frame(width: 3)
+                        .frame(width: contrast == .increased ? 4 : 3)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Metric.chipRadius))
         } else {
