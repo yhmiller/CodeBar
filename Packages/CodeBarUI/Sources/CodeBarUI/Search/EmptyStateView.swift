@@ -19,14 +19,14 @@ struct EmptyStateView: View {
             hint
         } else {
             ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Metric.xxs) {
                     section("Pinned", codes: pinned, isPinnedSection: true)
                     section("Recent", codes: recent, isPinnedSection: false)
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, Metric.s)
                 .measuringHeight()
             }
-            .frame(height: min(listHeight, RESULT_LIST_MAX_HEIGHT))
+            .frame(height: min(listHeight, Metric.resultListMaxHeight))
             .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
         }
     }
@@ -34,12 +34,15 @@ struct EmptyStateView: View {
     @ViewBuilder
     private func section(_ title: String, codes: [ClinicalCode], isPinnedSection: Bool) -> some View {
         if !codes.isEmpty {
+            // Aligned to `rowLeading`, not to a number that happens to match:
+            // the header sits above rows whose text starts at the row's own
+            // inset plus its padding, and the two have to move together.
             Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-                .padding(.bottom, 2)
+                .font(CodeTypography.sectionLabel)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, Metric.rowLeading)
+                .padding(.top, Metric.s)
+                .padding(.bottom, Metric.xxs)
 
             ForEach(codes) { code in
                 ResultRow(
@@ -55,14 +58,14 @@ struct EmptyStateView: View {
     }
 
     private var hint: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Metric.xs) {
             Text("Start typing a term or a code")
                 .foregroundStyle(.secondary)
             Text("e.g. \"type 2 diabetes\" or \"E11\"")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(24)
+        .padding(Metric.xl)
         .frame(maxWidth: .infinity)
     }
 }

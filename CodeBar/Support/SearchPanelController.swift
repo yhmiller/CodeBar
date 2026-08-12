@@ -5,7 +5,11 @@ import CodeLibrary
 import CodePlatform
 import SwiftUI
 
-private let PANEL_SIZE = NSSize(width: 560, height: 420)
+/// The width comes from `Metric` rather than being spelled again here. It used
+/// to be a literal in both places, so the panel and the SwiftUI content laid out
+/// inside it agreed on their width only by coincidence. The height is a starting
+/// value; the panel sizes itself to its content after that.
+private let PANEL_SIZE = NSSize(width: Metric.panelWidth, height: 420)
 
 /// Also spelled in `UITests`; the two must agree.
 let SEARCH_PANEL_ACCESSIBILITY_ID = "search-panel"

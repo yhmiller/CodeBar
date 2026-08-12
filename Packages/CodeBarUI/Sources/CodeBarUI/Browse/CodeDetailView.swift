@@ -21,13 +21,13 @@ public struct CodeDetailView: View {
     public var body: some View {
         if let detail {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: Metric.l) {
                     header(detail)
                     noteEditor(detail)
                     if !detail.notes.isEmpty { notes(detail) }
                     if !detail.children.isEmpty { children(detail) }
                 }
-                .padding(24)
+                .padding(Metric.xl)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .onChange(of: detail.code.id) { _, _ in draft = note }
@@ -39,10 +39,10 @@ public struct CodeDetailView: View {
     }
 
     private func header(_ detail: CodeDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Metric.m) {
             if !detail.ancestors.isEmpty {
                 // Nearest parent last, so it reads root → leaf.
-                HStack(spacing: 4) {
+                HStack(spacing: Metric.xs) {
                     ForEach(detail.ancestors.reversed()) { ancestor in
                         Button(ancestor.code) { onSelectCode(ancestor) }
                             .buttonStyle(.link)
@@ -54,30 +54,30 @@ public struct CodeDetailView: View {
             }
 
             Text(detail.code.code)
-                .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
+                .font(CodeTypography.codeHero)
             Text(detail.code.display)
                 .font(.title3)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 8) {
+            HStack(spacing: Metric.s) {
                 if detail.code.isBillable == false {
                     Label("Category — not valid for submission", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption.weight(.medium))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.18))
-                        .foregroundStyle(.orange)
+                        .padding(.horizontal, Metric.s).padding(.vertical, Metric.xs)
+                        .background(Color.warning.opacity(0.18))
+                        .foregroundStyle(Color.warning)
                         .clipShape(Capsule())
                 } else if detail.code.isBillable == true {
                     Label("Billable", systemImage: "checkmark.circle.fill")
                         .font(.caption.weight(.medium))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.green.opacity(0.15))
-                        .foregroundStyle(.green)
+                        .padding(.horizontal, Metric.s).padding(.vertical, Metric.xs)
+                        .background(Color.confirmed.opacity(0.15))
+                        .foregroundStyle(Color.confirmed)
                         .clipShape(Capsule())
                 }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Metric.m) {
                 Button("Copy code") { onCopy(detail.code, .codeOnly) }
                 Button("Copy with description") { onCopy(detail.code, .codeAndDisplay) }
                 Button(isPinned ? "Unpin" : "Pin") { onTogglePin(detail.code) }
@@ -101,7 +101,7 @@ public struct CodeDetailView: View {
                     }
                 }
             }
-            .padding(.top, 4)
+            .padding(.top, Metric.xs)
         }
     }
 
@@ -109,19 +109,19 @@ public struct CodeDetailView: View {
     /// authoritative, the other is a personal reminder, and confusing them in a
     /// clinical tool would be careless.
     private func noteEditor(_ detail: CodeDetail) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Metric.s) {
             Text("Your note")
-                .font(.caption.weight(.semibold))
+                .font(CodeTypography.sectionLabel)
                 .foregroundStyle(.secondary)
 
             TextEditor(text: $draft)
                 .font(.callout)
-                .frame(minHeight: 56)
-                .padding(6)
+                .frame(minHeight: Metric.noteEditorMinHeight)
+                .padding(Metric.s)
                 .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: Metric.rowRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: Metric.rowRadius)
                         .stroke(Color.secondary.opacity(0.25))
                 )
                 .focused($isEditingNote)
@@ -139,14 +139,14 @@ public struct CodeDetailView: View {
 
     /// Grouped by kind so the coding rules read as rules rather than a list.
     private func notes(_ detail: CodeDetail) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Metric.l) {
             ForEach(CodeNote.Kind.allCases, id: \.self) { kind in
                 let matching = detail.notes.filter { $0.kind == kind }
                 if !matching.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Metric.xs) {
                         Text(kind.label)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(kind == .excludes1 ? Color.red : .secondary)
+                            .font(CodeTypography.sectionLabel)
+                            .foregroundStyle(kind == .excludes1 ? Color.prohibition : .secondary)
                         ForEach(Array(matching.enumerated()), id: \.offset) { _, note in
                             Text(note.text)
                                 .font(.callout)
@@ -159,11 +159,11 @@ public struct CodeDetailView: View {
     }
 
     private func children(_ detail: CodeDetail) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Metric.s) {
             Text(detail.children.count == 1
                  ? "1 code beneath this"
                  : "\(detail.children.count) codes beneath this")
-                .font(.caption.weight(.semibold))
+                .font(CodeTypography.sectionLabel)
                 .foregroundStyle(.secondary)
             ForEach(detail.children) { child in
                 Button { onSelectCode(child) } label: {

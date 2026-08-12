@@ -1,0 +1,1143 @@
+<title>CodeBar Design Review</title>
+<style>
+  /* ============ TOKENS ============
+     Light is the base. Dark redefines tokens only.
+     Type: Apple's own stack — New York (ui-serif) for display, SF Pro for text,
+     SF Mono for codes. Deliberate: this is a critique of an Apple-platform app,
+     read on a Mac, and Apple's type system is the subject's own material. */
+  :root {
+    --ground:      #F2F3F6;
+    --surface:     #FFFFFF;
+    --surface-2:   #E9EBF0;
+    --ink:         #171A21;
+    --ink-2:       #515A69;
+    --ink-3:       #838C9B;
+    --line:        #D9DDE4;
+    --line-soft:   #E7EAEF;
+    --accent:      #8E2C5A;
+    --accent-ink:  #8E2C5A;
+    --accent-soft: #F7E7EE;
+    --sev-high:    #AF2028;
+    --sev-high-bg: #FBE7E7;
+    --sev-med:     #9A5C00;
+    --sev-med-bg:  #FAEEDC;
+    --sev-low:     #2A6484;
+    --sev-low-bg:  #E4EFF5;
+    --ok:          #1C6647;
+    --ok-bg:       #E1F0E8;
+    --shadow:      0 1px 2px rgba(23,26,33,.06), 0 8px 24px -12px rgba(23,26,33,.18);
+
+    --display: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+
+    --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #131519;
+      --surface:     #1B1E24;
+      --surface-2:   #23272F;
+      --ink:         #E9EBF0;
+      --ink-2:       #A5AEBC;
+      --ink-3:       #737C8B;
+      --line:        #2B303A;
+      --line-soft:   #22262E;
+      --accent:      #E38FB2;
+      --accent-ink:  #EFA9C5;
+      --accent-soft: #35202A;
+      --sev-high:    #F0868E;
+      --sev-high-bg: #341C1E;
+      --sev-med:     #E0A44E;
+      --sev-med-bg:  #33270F;
+      --sev-low:     #7CBBD9;
+      --sev-low-bg:  #16262F;
+      --ok:          #5EC099;
+      --ok-bg:       #12291F;
+      --shadow:      0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #131519;
+    --surface:     #1B1E24;
+    --surface-2:   #23272F;
+    --ink:         #E9EBF0;
+    --ink-2:       #A5AEBC;
+    --ink-3:       #737C8B;
+    --line:        #2B303A;
+    --line-soft:   #22262E;
+    --accent:      #E38FB2;
+    --accent-ink:  #EFA9C5;
+    --accent-soft: #35202A;
+    --sev-high:    #F0868E;
+    --sev-high-bg: #341C1E;
+    --sev-med:     #E0A44E;
+    --sev-med-bg:  #33270F;
+    --sev-low:     #7CBBD9;
+    --sev-low-bg:  #16262F;
+    --ok:          #5EC099;
+    --ok-bg:       #12291F;
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--text);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0 var(--s5) var(--s8);
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--s7);
+  }
+  @media (min-width: 1080px) {
+    .page { grid-template-columns: 210px minmax(0,1fr); align-items: start; }
+    .rail { position: sticky; top: var(--s5); }
+  }
+
+  /* ---------- rail ---------- */
+  .rail { padding-top: var(--s7); }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rail a {
+    display: block; padding: 5px 10px; border-radius: 5px;
+    color: var(--ink-2); text-decoration: none;
+    font-size: 13px; line-height: 1.35; letter-spacing: .005em;
+    border-left: 2px solid transparent;
+  }
+  .rail a:hover { color: var(--ink); background: var(--surface-2); }
+  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rail .rail-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding: 0 10px var(--s2);
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { padding-top: var(--s7); border-bottom: 1px solid var(--line); padding-bottom: var(--s5); margin-bottom: var(--s6); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent-ink); margin: 0 0 var(--s3);
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.06; letter-spacing: -.018em; font-weight: 600;
+    margin: 0 0 var(--s4); text-wrap: balance; max-width: 18ch;
+  }
+  .standfirst { font-size: 19px; line-height: 1.5; color: var(--ink-2); max-width: 62ch; margin: 0; }
+  .meta {
+    margin-top: var(--s5); display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); letter-spacing: .03em;
+  }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- prose ---------- */
+  main { min-width: 0; }
+  section { margin-bottom: var(--s8); scroll-margin-top: var(--s5); }
+  h2 {
+    font-family: var(--display); font-size: 30px; line-height: 1.15;
+    letter-spacing: -.012em; font-weight: 600;
+    margin: 0 0 var(--s2); text-wrap: balance;
+  }
+  .h2num {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+    color: var(--ink-3); display: block; margin-bottom: var(--s1);
+  }
+  h2 + .lede { color: var(--ink-2); font-size: 17px; margin: 0 0 var(--s5); max-width: 66ch; }
+  h3 {
+    font-size: 17.5px; font-weight: 620; letter-spacing: -.004em;
+    margin: var(--s6) 0 var(--s2);
+  }
+  h4 { font-size: 15px; font-weight: 620; margin: var(--s5) 0 var(--s2); color: var(--ink); }
+  p { margin: 0 0 var(--s3); max-width: 68ch; }
+  ul, ol { margin: 0 0 var(--s3); padding-left: 1.15em; max-width: 68ch; }
+  li { margin-bottom: 6px; }
+  li::marker { color: var(--ink-3); }
+  a { color: var(--accent-ink); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  strong { font-weight: 620; }
+  code, .mono { font-family: var(--mono); font-size: .875em; }
+  p code, li code, td code {
+    background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+    color: var(--ink); white-space: nowrap;
+  }
+  hr { border: 0; border-top: 1px solid var(--line); margin: var(--s6) 0; }
+
+  /* ---------- source provenance chips ---------- */
+  .src {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .09em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 3px;
+    vertical-align: 2px; white-space: nowrap; font-weight: 500;
+  }
+  .src::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .src-apple  { color: var(--sev-low); background: var(--sev-low-bg); }
+  .src-field  { color: var(--ink-2);   background: var(--surface-2); }
+  .src-mine   { color: var(--accent-ink); background: var(--accent-soft); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: var(--s4); margin: var(--s4) 0 0; padding: 0; list-style: none; }
+  .legend li { display: flex; align-items: baseline; gap: var(--s2); font-size: 13.5px; color: var(--ink-2); margin: 0; max-width: 30ch; }
+
+  /* ---------- finding cards ---------- */
+  .finding {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: var(--s4) var(--s5) var(--s4) var(--s5);
+    margin-bottom: var(--s3); position: relative; overflow: hidden;
+  }
+  .finding::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--sev-low);
+  }
+  .finding[data-sev="high"]::before { background: var(--sev-high); }
+  .finding[data-sev="med"]::before  { background: var(--sev-med); }
+  .finding[data-sev="low"]::before  { background: var(--sev-low); }
+  .finding[data-sev="ok"]::before   { background: var(--ok); }
+  .finding h4 { margin: 0 0 6px; font-size: 16px; }
+  .finding p { margin: 0 0 var(--s2); font-size: 15px; color: var(--ink-2); }
+  .finding p:last-child { margin-bottom: 0; }
+  .finding p strong { color: var(--ink); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--s2); }
+  .tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .07em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 3px;
+    background: var(--surface-2); color: var(--ink-2); font-weight: 500;
+  }
+  .tag-high { background: var(--sev-high-bg); color: var(--sev-high); }
+  .tag-med  { background: var(--sev-med-bg);  color: var(--sev-med); }
+  .tag-low  { background: var(--sev-low-bg);  color: var(--sev-low); }
+  .tag-ok   { background: var(--ok-bg);       color: var(--ok); }
+
+  /* ---------- callout ---------- */
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: var(--s4) var(--s5); border-radius: 0 8px 8px 0; margin: var(--s5) 0;
+  }
+  .callout p { margin: 0; max-width: 64ch; }
+  .callout p + p { margin-top: var(--s2); }
+  .callout .callout-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent-ink); display: block; margin-bottom: 6px;
+  }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: var(--s4) 0 var(--s5); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px var(--s4); border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 500; background: var(--surface-2);
+    border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
+
+  /* ---------- code blocks ---------- */
+  pre {
+    background: var(--surface); border-radius: 10px;
+    padding: var(--s4); overflow-x: auto; margin: var(--s3) 0 var(--s5);
+    font-family: var(--mono); font-size: 13px; line-height: 1.65; color: var(--ink);
+  }
+  pre .c { color: var(--ink-3); font-style: italic; }
+  pre .k { color: var(--accent-ink); }
+  pre .s { color: var(--sev-low); }
+
+  /* ---------- MOCKUPS: dark app chrome, painted explicitly in both themes ---------- */
+  .ba { display: grid; gap: var(--s4); margin: var(--s4) 0 var(--s5); }
+  @media (min-width: 900px) { .ba { grid-template-columns: 1fr 1fr; } }
+  .ba-col { min-width: 0; display: flex; flex-direction: column; gap: var(--s2); }
+  .ba-label {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3); display: flex; align-items: center; gap: var(--s2);
+  }
+  .ba-label b { font-weight: 500; }
+  .ba-label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sev-high); }
+  .ba-col.after .ba-label .dot { background: var(--ok); }
+  .ba-note { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+
+  .shot {
+    background: #16181C; border: 1px solid #2A2E36; border-radius: 11px;
+    padding: 10px 0; overflow-x: auto; box-shadow: var(--shadow);
+    font-family: var(--text); color: #EDEFF3;
+  }
+  .shot.pad { padding: 14px 16px; }
+  .shot .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px; margin: 0 6px; border-radius: 6px;
+    font-size: 13.5px; white-space: nowrap;
+  }
+  .shot .row.sel { background: rgba(10,110,255,.18); }
+  .shot .row.sel-after { background: rgba(120,130,150,.20); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+  .badge {
+    font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+    background: rgba(40,120,255,.18); color: #6FA8FF; letter-spacing: .01em;
+  }
+  .code {
+    font-family: var(--mono); font-weight: 600; font-size: 13.5px;
+    font-variant-numeric: tabular-nums; color: #F2F4F8;
+  }
+  .desc { color: #E4E7ED; overflow: hidden; text-overflow: ellipsis; }
+  .desc.wrap { white-space: normal; line-height: 1.35; }
+  .dim { color: #8A93A3; }
+  .chip-warn {
+    font-size: 10.5px; font-weight: 500; padding: 2px 6px; border-radius: 4px;
+    background: rgba(230,140,40,.20); color: #E5A055; white-space: nowrap;
+  }
+  .kbd {
+    font-family: var(--mono); font-size: 10.5px; color: #9AA3B2;
+    border: 1px solid #363B45; border-radius: 4px; padding: 1px 5px; background: #21252C;
+  }
+  .shot .sechead {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: #767F8E; padding: 8px 20px 3px; font-weight: 600;
+  }
+  .shot .field {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+    border-bottom: 1px solid #262A32; font-size: 17px; color: #9098A6;
+  }
+  .shot .btnrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .mbtn {
+    font-size: 12.5px; padding: 5px 11px; border-radius: 6px;
+    background: #2B3038; color: #E4E7ED; border: 1px solid #383E48; white-space: nowrap;
+  }
+  .mbtn.primary { background: #2C6DF0; border-color: #2C6DF0; color: #fff; font-weight: 550; }
+  .mbtn.ghost { background: transparent; border-color: #383E48; }
+  .shot .title-xl { font-family: var(--mono); font-size: 28px; font-weight: 620; letter-spacing: -.01em; }
+  .shot .sub { font-size: 15px; color: #A8B0BD; }
+  .shot .excl {
+    border-left: 3px solid #E0525C; background: rgba(224,82,92,.10);
+    padding: 8px 12px; border-radius: 0 6px 6px 0;
+  }
+  .shot .excl .lbl { font-size: 11px; font-weight: 640; color: #F08790; letter-spacing: .02em; }
+  .shot .excl .txt { font-size: 13.5px; color: #E4E7ED; }
+  .stack { display: flex; flex-direction: column; }
+  .gap2 { gap: 8px; } .gap3 { gap: 12px; } .gap4 { gap: 16px; }
+
+  /* ---------- roadmap ---------- */
+  .lanes { display: grid; gap: var(--s4); margin: var(--s5) 0; }
+  @media (min-width: 860px) { .lanes { grid-template-columns: repeat(3, 1fr); } }
+  .lane {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: var(--s4) var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s2);
+  }
+  .lane-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); border-bottom: 1px solid var(--line-soft); padding-bottom: var(--s2); margin-bottom: var(--s1); }
+  .lane-head h4 { margin: 0; font-size: 15px; }
+  .lane-head .cost { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+  .lane ol { margin: 0; padding-left: 1.1em; font-size: 14.5px; }
+  .lane li { margin-bottom: 8px; color: var(--ink-2); }
+  .lane li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- principles ---------- */
+  .principles { list-style: none; padding: 0; margin: var(--s4) 0 0; display: grid; gap: var(--s3); max-width: none; }
+  @media (min-width: 760px) { .principles { grid-template-columns: 1fr 1fr; } }
+  .principles li {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 9px;
+    padding: var(--s3) var(--s4); margin: 0;
+  }
+  .principles b { display: block; font-size: 15px; margin-bottom: 3px; }
+  .principles span { font-size: 14px; color: var(--ink-2); }
+
+  /* ---------- swatches ---------- */
+  .swatches { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 var(--s5); padding: 0; list-style: none; max-width: none; }
+  .swatches li { margin: 0; }
+  .sw {
+    display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+    background: var(--surface); border-radius: 8px; padding: 6px 12px 6px 8px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-2);
+  }
+  .sw i { width: 16px; height: 16px; border-radius: 4px; display: block; border: 1px solid rgba(128,128,128,.3); }
+
+  footer {
+    border-top: 1px solid var(--line); padding-top: var(--s5); margin-top: var(--s8);
+    font-size: 14px; color: var(--ink-2);
+  }
+  footer h3 { margin-top: 0; }
+  footer ul { padding-left: 1.15em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="page">
+
+  <nav class="rail" aria-label="Contents">
+    <div class="rail-title">Contents</div>
+    <ol>
+      <li><a href="#verdict">The short version</a></li>
+      <li><a href="#audit">1 · Audit</a></li>
+      <li><a href="#glass">2 · Liquid Glass</a></li>
+      <li><a href="#direction">3 · Design direction</a></li>
+      <li><a href="#components">4 · Components</a></li>
+      <li><a href="#interaction">5 · Interaction</a></li>
+      <li><a href="#a11y">6 · Accessibility</a></li>
+      <li><a href="#beforeafter">7 · Before → After</a></li>
+      <li><a href="#roadmap">8 · Roadmap</a></li>
+      <li><a href="#implementation">9 · Implementation</a></li>
+      <li><a href="#principles">10 · Principles</a></li>
+      <li><a href="#ios">11 · iOS</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <header class="masthead">
+      <p class="eyebrow">CodeBar · UI/UX Review</p>
+      <h1>Make the codes readable first</h1>
+      <p class="standfirst">CodeBar is already better reasoned than most apps its size — the two-surface model is right, the pins-over-relevance call is right, and billability is deliberately not encoded in colour alone. What it lacks is a visual system. This review works from the source and the rendered snapshots, and lands on one conclusion: the highest-value work is density, hierarchy and keyboard, not glass.</p>
+      <div class="meta">
+        <span><b>Reviewed</b> 12 Aug 2026</span>
+        <span><b>Target</b> macOS 14.0 · Swift 6</span>
+        <span><b>Surfaces</b> panel · window · settings · menu bar</span>
+        <span><b>Basis</b> source + 6 snapshot references</span>
+      </div>
+    </header>
+
+    <section id="verdict">
+      <h2><span class="h2num">00</span>The short version</h2>
+
+      <div class="callout">
+        <span class="callout-label">Thesis</span>
+        <p>CodeBar's search panel truncates the end of a code's description — the exact part that distinguishes <span class="mono">E11.9</span> "without complications" from <span class="mono">E11.65</span> "with hyperglycemia". In a clinical coding tool, that is not a cosmetic issue; it is the interface withholding the information the user came for. Fix the row, and most of the app's perceived quality moves with it.</p>
+      </div>
+
+      <p>Three things are true at once, and they should be held separately:</p>
+      <ul>
+        <li><strong>The product thinking is sound.</strong> Panel-as-fast-path, window-as-depth, pins as the answer to a ranking problem that no structural fix solved — these are good decisions, documented honestly in the code.</li>
+        <li><strong>The visual execution has no system.</strong> Spacing values run 2, 4, 6, 8, 9, 10, 12, 14, 18, 24 with no scale behind them. The panel and the window render the same object — a code — with two unrelated row designs. There is no accent colour asset, so the app has no identity of its own.</li>
+        <li><strong>Liquid Glass is mostly not your problem.</strong> The deployment target is macOS 14.0; <span class="mono">.glassEffect</span> is macOS 26. More to the point, Apple's own guidance puts glass on the <em>navigation</em> layer and explicitly warns against it behind dense, text-heavy content — which is nearly all of CodeBar. There is a real, cheap Liquid Glass win here, and it is smaller and less interesting than it sounds.</li>
+      </ul>
+
+      <h3>How claims in this document are labelled</h3>
+      <ul class="legend">
+        <li><span class="src src-apple">Apple</span> Documented in HIG, Technology Overviews, or a WWDC session. Linked at the end.</li>
+        <li><span class="src src-field">Field</span> Observed convention in shipping apps; not Apple guidance.</li>
+        <li><span class="src src-mine">Call</span> My recommendation for CodeBar specifically. Arguable.</li>
+      </ul>
+    </section>
+
+    <section id="audit">
+      <h2><span class="h2num">01</span>UI/UX audit</h2>
+      <p class="lede">What holds up, what doesn't, and why. Severity is scored on user harm, not on how wrong it looks.</p>
+
+      <h3>What works — keep it and build on it</h3>
+
+      <div class="finding" data-sev="ok">
+        <div class="tags"><span class="tag tag-ok">Keep</span><span class="tag">Architecture</span></div>
+        <h4>Two surfaces with genuinely different jobs</h4>
+        <p>The panel copies a code and leaves; the window is for hierarchy, coding notes and lists. They are reached deliberately differently — ⌥⌘C and the menu bar summon the panel, the Dock and the app open the window — and <code>applicationShouldHandleReopen</code> enforces it. This is a clearer separation than most menu bar apps manage, and it is worth protecting as the app grows.</p>
+      </div>
+
+      <div class="finding" data-sev="ok">
+        <div class="tags"><span class="tag tag-ok">Keep</span><span class="tag">Safety</span></div>
+        <h4>Billability is text, not colour</h4>
+        <p>The comment on <code>headerBadge</code> gets this exactly right: the one fact that can turn a correct-looking lookup into a denied claim must not depend on distinguishing two shades. It reads "category - not billable" in words. Most apps would have shipped an orange dot. <span class="src src-apple">Apple</span> also requires this — colour must never be the sole carrier of meaning.</p>
+      </div>
+
+      <div class="finding" data-sev="ok">
+        <div class="tags"><span class="tag tag-ok">Keep</span><span class="tag">Behaviour</span></div>
+        <h4>Panel placement, sizing and dismissal</h4>
+        <p>Re-placed on every show rather than autosaved (avoiding the documented downward drift), positioned on the display under the pointer, grows downward as results arrive via <code>NSHostingController.preferredContentSize</code>, and <code>hidesOnDeactivate</code>. That is the correct Spotlight-class behaviour set, and it is not trivially arrived at.</p>
+      </div>
+
+      <div class="finding" data-sev="ok">
+        <div class="tags"><span class="tag tag-ok">Keep</span><span class="tag">Native</span></div>
+        <h4>Native components where native is right</h4>
+        <p><code>ContentUnavailableView</code> for empty states, <code>.formStyle(.grouped)</code> in Settings, a <code>TabView</code> settings shell, <code>NavigationSplitView</code> for three columns, <code>confirmationDialog</code> for destructive actions. Nothing re-implemented that the system already does — which is also what makes the eventual Liquid Glass adoption nearly free.</p>
+      </div>
+
+      <h3>What doesn't work</h3>
+
+      <div class="finding" data-sev="high">
+        <div class="tags"><span class="tag tag-high">High</span><span class="tag">Correctness</span><span class="tag">Quick win</span></div>
+        <h4>Descriptions truncate at one line, in a fixed 560pt panel</h4>
+        <p><code>ResultRow</code> sets <code>.lineLimit(1)</code>; the snapshot shows "Type 2 diabetes mellitus without com…". ICD-10 descriptions carry their clinical distinction in the tail — <em>without complications</em>, <em>with hyperglycemia</em>, <em>unspecified laterality</em>. Truncating the tail hides precisely the differentiator between adjacent codes.</p>
+        <p><strong>Fix:</strong> allow two lines with <code>.lineLimit(2)</code>, widen the panel to ~680pt, and reclaim the horizontal space currently spent on the system badge. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="high">
+        <div class="tags"><span class="tag tag-high">High</span><span class="tag">Density</span><span class="tag">Quick win</span></div>
+        <h4>The system badge burns 15% of the panel on a constant</h4>
+        <p><code>BADGE_COLUMN_WIDTH</code> is 72pt plus a 12pt gap — 84 of 560 points, at the row's most valuable position, on a label that reads "ICD-10" for every row for anyone who has installed one code set. Which is most users, and the default out of the box.</p>
+        <p><strong>Fix:</strong> show the badge only when more than one system is enabled, and when shown, move it to the trailing edge as a small tinted glyph. Give the reclaimed width to the description. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="high">
+        <div class="tags"><span class="tag tag-high">High</span><span class="tag">Feedback</span></div>
+        <h4>Copying gives no confirmation at all</h4>
+        <p>Press Return; the panel disappears. Nothing tells you <em>what</em> landed on the clipboard, or whether Shift was held and you got the long form instead of the bare code. In a tool whose entire purpose is putting the right string on the clipboard, the terminal action is unacknowledged. This is the gap most likely to make a careful user re-check by pasting somewhere first — which erases the two-second promise.</p>
+        <p><strong>Fix:</strong> a brief non-blocking confirmation showing the copied string, dismissing itself in ~1.2s. See §4. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="high">
+        <div class="tags"><span class="tag tag-high">High</span><span class="tag">Hierarchy</span></div>
+        <h4>The detail pane puts your note above the publisher's exclusion rules</h4>
+        <p><code>CodeDetailView</code> orders: header → <strong>note editor</strong> → publisher notes → children. The <code>TextEditor</code> has a 56pt minimum plus padding and a save button, so roughly 100–140pt of always-present chrome sits between the code and the <span class="mono">Excludes 1</span> rules that mean <em>never code these together</em>. The personal reminder outranks the authoritative safety rule.</p>
+        <p><strong>Fix:</strong> notes → children → your note. Collapse an empty note to a single "Add a note" row. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Colour</span></div>
+        <h4>Two semantic collisions in the colour system</h4>
+        <p>Orange means <em>CPT</em> as a system badge and <em>not billable</em> as a warning. Green means <em>SNOMED</em> and <em>Billable</em>. On a row showing a CPT code the two orange chips sit inches apart meaning unrelated things. The system palette is also being spent decoratively on taxonomy, leaving nothing reserved for state.</p>
+        <p><strong>Fix:</strong> reserve amber and red exclusively for billability and exclusion rules. Render system identity in a neutral or in a single tint distinguished by the label, not by hue. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Consistency</span></div>
+        <h4>The same object has two unrelated row designs</h4>
+        <p>The panel uses <code>ResultRow</code>: badge, fixed-width mono code, primary-coloured description, pin, copy hint. The window uses <code>CodeRowLabel</code>: mono code, secondary-coloured description, no badge, no pin, no fixed columns. Move between the two surfaces and codes stop looking like the same kind of thing — and the window's version reads as the weaker one, with the description demoted to secondary.</p>
+        <p><strong>Fix:</strong> one <code>CodeRow</code> component with a density parameter (<code>.panel</code> / <code>.list</code> / <code>.compact</code>). <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Toolbar</span></div>
+        <h4>The window has no toolbar, so actions live inside scrolling content</h4>
+        <p><code>MainWindowView</code> declares <code>.navigationTitle</code> and <code>.searchable(placement: .toolbar)</code> and no <code>.toolbar { }</code>. Consequently Copy, Copy with description, Pin and Add to List are four equal-weight bordered buttons rendered inline in the detail pane's <code>ScrollView</code> — they scroll away, they have no keyboard shortcuts, and no one of them is the primary.</p>
+        <p><strong>Fix:</strong> move them to a real toolbar with one primary Copy button and a menu for the variants. This is also the change that earns CodeBar its Liquid Glass toolbar for free on macOS 26. <span class="src src-apple">Apple</span> <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Selection</span></div>
+        <h4>Custom selection fill instead of the system's</h4>
+        <p><code>Color.accentColor.opacity(0.15)</code> at radius 6. Three costs: it doesn't dim when the window loses key focus, so a background panel looks active; it doesn't pick up the system's selection vibrancy over a material background; and at 15% over <code>.ultraThinMaterial</code> the contrast against an unselected row is slight — visible in the snapshot as a dim navy that a user scanning quickly can miss.</p>
+        <p><strong>Fix:</strong> either raise the fill and add a hairline inset stroke, or move to a real <code>List</code> with <code>selection:</code> and let AppKit own it. <span class="src src-mine">Call</span></p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Identity</span></div>
+        <h4>No accent colour asset — the app has no colour of its own</h4>
+        <p><code>Assets.xcassets</code> contains only <code>AppIcon</code>. Every <code>Color.accentColor</code> resolves to whatever the user picked in System Settings, which means CodeBar's selection highlight, pin state and link colour all change identity per machine — and can land on the same orange the app uses for "not billable."</p>
+        <p><strong>Fix:</strong> ship an <code>AccentColor</code> with light, dark and high-contrast variants. <span class="src src-apple">Apple</span> asks for exactly these three per custom colour.</p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Discoverability</span></div>
+        <h4>No hover states anywhere in the panel</h4>
+        <p>Rows have <code>.contentShape(Rectangle())</code> and <code>.onTapGesture</code> but no <code>.onHover</code>. Nothing indicates a row is clickable, and the pin button — a 12pt glyph sitting <em>inside</em> the row's tap target — is invisible as an affordance until you already know it exists. On a pointer-driven platform that is a missing layer of the interaction model.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Tokens</span></div>
+        <h4>No spacing or type scale</h4>
+        <p>Across five view files: padding of 2, 3, 4, 6, 8, 9, 10, 12, 14, 18, 20, 24; corner radii of 4, 6; fixed widths of 72, 92, 240, 280, 300, 360, 540; one hardcoded <code>.font(.system(size: 18))</code>. Each was locally reasonable; collectively there is no rule, so every new view is a fresh negotiation and nothing lines up across surfaces.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Typography</span></div>
+        <h4>Hardcoded point size in the search field</h4>
+        <p><code>.font(.system(size: 18))</code> is fixed. It won't scale with the user's text-size preference and it isn't a semantic style, so it can't inherit future metric changes. <code>.font(.title3)</code> lands close and stays adaptive.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Contrast</span></div>
+        <h4>Tertiary text over a translucent background</h4>
+        <p>The empty-state hint's second line is <code>.tertiary</code> over <code>.ultraThinMaterial</code> — visible in the snapshot as a very low-contrast grey. Tertiary is intended for text sitting on an opaque surface; over a material whose luminance depends on the desktop behind it, the effective contrast is unpredictable. Same issue on the sidebar's list-count labels.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Portability</span><span class="tag">Code</span></div>
+        <h4>An AppKit type leaked into the shared UI module</h4>
+        <p><code>CodeDetailView</code> uses <code>Color(nsColor: .textBackgroundColor)</code>. <code>CodeBarUI</code> is otherwise clean of AppKit and is the module an iOS target would reuse wholesale. One line, worth fixing before it becomes ten. See §11.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Copy</span></div>
+        <h4>Inconsistent dashes in user-facing strings</h4>
+        <p>The row says "category - not billable" (hyphen); the detail pane says "Category — not valid for submission" (em dash). Two spellings of the same fact, in the app's most safety-critical label. Pick one wording and one dash and use it in both places.</p>
+      </div>
+    </section>
+
+    <section id="glass">
+      <h2><span class="h2num">02</span>Liquid Glass assessment</h2>
+      <p class="lede">What Apple actually says, what CodeBar can actually ship, and why the honest answer is "a little, in one place."</p>
+
+      <h3>Apple's rules, stated plainly</h3>
+      <p><span class="src src-apple">Apple</span> The guidance is more restrictive than the marketing suggests:</p>
+      <ul>
+        <li>Liquid Glass belongs to <strong>the navigation layer that floats above content</strong> — toolbars, sidebars, tab bars, floating panels. Content stays at the base level.</li>
+        <li><strong>Never glass on glass.</strong> Overlapping glass surfaces are called out explicitly as a mistake.</li>
+        <li><strong>Never glass in the content layer.</strong> Putting it behind scrolling tables and lists "muddies visual hierarchy."</li>
+        <li><strong>Don't overuse it.</strong> "Limit these effects to the most important functional elements in your app." Applying it to many custom controls is described as producing a subpar experience.</li>
+        <li><strong>Tint carries meaning, not decoration.</strong> Tint the primary action; tinting everything means nothing stands out.</li>
+        <li><strong>Two variants.</strong> <em>Regular</em> adapts to what's behind it and guarantees legibility anywhere. <em>Clear</em> is permanently transparent, requires its own dimming layer, and is only correct over bold media-rich content. Never mix them.</li>
+        <li><strong>Don't hardcode metrics.</strong> Fixed frames prevent components from picking up the new sizes and shapes.</li>
+      </ul>
+
+      <div class="callout">
+        <span class="callout-label">The constraint that decides this</span>
+        <p><code>project.yml</code> sets <code>deploymentTarget.macOS: "14.0"</code>. <code>.glassEffect()</code>, <code>GlassEffectContainer</code>, <code>ConcentricRectangle</code>, <code>scrollEdgeEffectStyle</code> and <code>safeAreaBar</code> are all macOS 26. Every one of them needs an <code>if #available</code> branch and a maintained fallback path, on an app that currently has no design-token layer to hang two branches off.</p>
+      </div>
+
+      <h3>Where it should be used</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Surface</th><th>Verdict</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Window toolbar &amp; sidebar</strong></td><td>Yes — free</td><td>Standard components adopt it on recompile with Xcode 26. No code. This is the entire high-ROI Liquid Glass story for CodeBar, and it requires first <em>having</em> a toolbar.</td></tr>
+            <tr><td><strong>The search panel's chrome</strong></td><td>Yes — gated</td><td>A floating panel over arbitrary other apps is the textbook navigation-layer case. Already <code>.ultraThinMaterial</code>; gate up to <em>regular</em> glass on macOS 26, keep the material below.</td></tr>
+            <tr><td><strong>A panel footer action bar</strong></td><td>Yes — if built</td><td>If you add a persistent bar showing ↵ / ⇧↵ / ⌘K, that bar is navigation and should float on glass with a scroll edge effect beneath it.</td></tr>
+            <tr><td><strong>Result rows</strong></td><td><strong>No</strong></td><td>Content layer. Dense text. Apple's stated anti-pattern, and it would put glass on glass inside the panel.</td></tr>
+            <tr><td><strong>Detail pane, note editor</strong></td><td><strong>No</strong></td><td>Reading surface. A text editor needs an opaque, predictable ground — <code>.textBackgroundColor</code> is correct here, whatever else changes.</td></tr>
+            <tr><td><strong>Badges, chips, pin buttons</strong></td><td><strong>No</strong></td><td>"Limit these effects to the most important functional elements." A billability warning must be maximally legible, not translucent.</td></tr>
+            <tr><td><strong>Clear variant, anywhere</strong></td><td><strong>No</strong></td><td>Requires bold, media-rich content beneath and a dimming layer. CodeBar has neither.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="callout-label">Recommendation</span>
+        <p><span class="src src-mine">Call</span> Treat Liquid Glass as a <strong>compilation-time upgrade, not a design project</strong>. Build the toolbar, keep using standard components, raise the deployment target when your users' OS mix allows, and rebuild with Xcode 26. Add exactly one gated custom use — the panel chrome — and stop.</p>
+        <p>The reason is worth stating: on a tool measured in seconds-to-copy, translucency behind an 8×10 grid of small monospaced glyphs costs legibility and buys nothing. CodeBar's distinctiveness should come from being <em>the fastest correct lookup on the machine</em>, not from looking like the OS demo reel.</p>
+      </div>
+    </section>
+
+    <section id="direction">
+      <h2><span class="h2num">03</span>Design direction</h2>
+      <p class="lede">One sentence: <strong>a clinical reference instrument — dense, legible, unhurried in the window and instantaneous in the panel — that spends its colour only on things that can hurt you.</strong></p>
+
+      <h3>The four rules the system follows from</h3>
+      <ol>
+        <li><strong>The code and its description are the interface.</strong> Every pixel not spent on them is justified individually.</li>
+        <li><strong>Colour is a safety channel.</strong> Amber and red mean billability and exclusion. Nothing else may use them.</li>
+        <li><strong>Chrome recedes; the system provides it.</strong> Toolbars, sidebars, selection, materials — all standard, so the app inherits every OS refinement including Liquid Glass at no cost.</li>
+        <li><strong>The panel is a different tempo, not a different app.</strong> Same type, same colour, same row anatomy; tighter spacing, no scrolling chrome, no decoration.</li>
+      </ol>
+
+      <h3>Colour roles</h3>
+      <p><span class="src src-mine">Call</span> Roles, not a repaint. The point is that each role has exactly one owner.</p>
+      <ul class="swatches">
+        <li><span class="sw"><i style="background:#2C6DF0"></i> AccentColor — selection, links, pin-on</span></li>
+        <li><span class="sw"><i style="background:#C97A22"></i> Warning — not billable, only</span></li>
+        <li><span class="sw"><i style="background:#C4383F"></i> Prohibition — Excludes 1, only</span></li>
+        <li><span class="sw"><i style="background:#2E7D5B"></i> Confirmed — billable, only</span></li>
+        <li><span class="sw"><i style="background:#8A929E"></i> System identity — neutral, label-distinguished</span></li>
+      </ul>
+      <p>Ship the accent as an asset with light, dark and high-contrast variants rather than inheriting the user's system accent. The four semantic colours are decided by meaning, so they get the same treatment: three variants each, defined once, in <code>CodeBarUI</code>.</p>
+
+      <h3>Type</h3>
+      <p>Keep the current instinct — it's good. Codes in <code>.monospaced</code> so digits align in a column; descriptions in the system text face. Formalise it:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Role</th><th>Style</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td>Code, hero</td><td class="num">.largeTitle · monospaced · semibold</td><td>Detail pane header</td></tr>
+            <tr><td>Code, row</td><td class="num">.body · monospaced · semibold</td><td>Every row, both surfaces</td></tr>
+            <tr><td>Description</td><td class="num">.body · primary</td><td>Every row, both surfaces</td></tr>
+            <tr><td>Search field</td><td class="num">.title3</td><td>Panel — replaces <code>size: 18</code></td></tr>
+            <tr><td>Section label</td><td class="num">.caption · semibold · secondary</td><td>PINNED, Includes, Excludes 1</td></tr>
+            <tr><td>Metadata</td><td class="num">.caption2 · secondary</td><td>Chapter, counts, release</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Two changes of substance: descriptions are <strong>primary</strong> in both surfaces (the window currently demotes them to secondary), and nothing below <code>.caption2</code> or dimmer than <code>.secondary</code> appears over a translucent background.</p>
+
+      <h3>Space</h3>
+      <p>A 4pt scale, named once, used everywhere: <span class="mono">2 · 4 · 8 · 12 · 16 · 24 · 32</span>. Row vertical padding 8, horizontal 12. Section gaps 24. Detail pane margin 24. Corner radii: 6 for rows, 10 for cards, and <code>ConcentricRectangle</code> where available so nested shapes track their container.</p>
+    </section>
+
+    <section id="components">
+      <h2><span class="h2num">04</span>Component recommendations</h2>
+
+      <h3>Search panel</h3>
+      <ul>
+        <li><strong>Width 680, not 560.</strong> The single highest-leverage number in the app. Descriptions stop truncating and the panel still reads as a panel rather than a window. Spotlight is 680; Raycast is 750. <span class="src src-field">Field</span></li>
+        <li><strong>A persistent footer bar</strong> showing the live key map: <span class="kbd">↵</span> Copy · <span class="kbd">⇧↵</span> Copy with description · <span class="kbd">⌘↵</span> Open in window · <span class="kbd">⌘K</span> Actions. This is how every keyboard-first launcher teaches its own shortcuts, and it replaces the per-row "↵ copy" hint that currently competes with the pin button. <span class="src src-field">Field</span></li>
+        <li><strong>Result count and system filter</strong> in the field's trailing edge when more than one set is installed — a small segmented filter beats a badge on every row.</li>
+        <li><strong>Keep</strong> the placement logic, <code>hidesOnDeactivate</code>, and the content-driven height. Don't touch them.</li>
+      </ul>
+
+      <h3>Result row</h3>
+      <ul>
+        <li>Two-line description, primary colour, no ellipsis on the first line.</li>
+        <li>Code column stays fixed and monospaced — it's what makes the list scannable. Add <code>.monospacedDigit()</code>.</li>
+        <li>System badge only when more than one system is enabled; trailing edge; neutral fill.</li>
+        <li>Billability chip keeps its wording and moves under the description on the second line, so it never displaces description text.</li>
+        <li>Pin appears on hover or when set, at the trailing edge, outside the row's copy target. A pin click must not also copy.</li>
+        <li>Hover: raise the row's background one step. Selection: system-strength fill plus a hairline inset stroke.</li>
+      </ul>
+
+      <h3>Window toolbar</h3>
+      <p>Build one. Primary <code>Copy</code> button (prominent, tinted with the accent — this is the one place tint is earned), a menu beside it for <em>Copy with description</em> and future formats, then Pin, then Add to List. <code>ToolbarSpacer</code> between the copy group and the library group so the two read as separate functions — <span class="src src-apple">Apple</span> asks specifically for semantic grouping with fixed spacers rather than one undifferentiated bar.</p>
+
+      <h3>Sidebar</h3>
+      <ul>
+        <li>Lists section is good. Give each list a symbol the user picks, not a uniform <code>list.bullet.rectangle</code> — a problem list and an encounter template should be distinguishable at a glance.</li>
+        <li>Count badges: move from <code>.tertiary</code> caption to <code>.badge()</code>, which is the native affordance and handles selection-state colour automatically.</li>
+        <li>The bottom "New List" bar is hand-built with a Divider and <code>.background(.bar)</code>. On macOS 26 that hand-built bar will fight the sidebar's glass. Prefer a <code>+</code> in the toolbar's bottom bar, or gate to <code>safeAreaBar</code> where available. <span class="src src-apple">Apple</span></li>
+      </ul>
+
+      <h3>Detail pane</h3>
+      <p>Reorder to: <em>breadcrumb → code → description → status chip → publisher notes → children → your note</em>. Then:</p>
+      <ul>
+        <li><strong>Excludes 1 gets a container</strong>, not just red label text: a left rule in the prohibition colour with a tinted ground, so it survives being skimmed. It is the only content in the app that means "this combination will be rejected."</li>
+        <li><strong>Your note collapses when empty</strong> to a single "Add a note" button. The permanently-open 56pt editor pays a fixed cost on every code for a feature used on a few.</li>
+        <li>The "Save note" button that appears on change is honest but noisy — commit on focus loss (already implemented) and confirm with a brief "Saved" label rather than a button that appears and disappears.</li>
+        <li>Breadcrumb: <code>.buttonStyle(.link)</code> in <code>.caption</code> is small for a click target. Keep the size, add hover underline and a ≥20pt hit area.</li>
+        <li>Children list: these are buttons rendered with <code>.plain</code> and no hover — same fix as result rows. They're also the fastest path to the billable child of a category, so they deserve the row treatment, not a bare label.</li>
+      </ul>
+
+      <h3>Menu bar extra</h3>
+      <p>Currently <code>.menuBarExtraStyle(.menu)</code> with six items — correct, and correct to keep. Two additions: show <em>Pinned codes</em> as a submenu so a pin is reachable without the panel, and put the installed-release summary as a disabled first item, since a stale code set is invisible until it hurts. <span class="src src-mine">Call</span></p>
+
+      <h3>Settings</h3>
+      <p>Structurally right already. Refinements: use <code>Toggle</code>'s own description slot rather than a following <code>Text</code> in the same section (SwiftUI's grouped form styles that natively); render the fixed ⌥⌘C as a real disabled <code>KeyboardShortcut</code>-style capsule rather than a value string, so the eventual configurable version is a swap not a redesign.</p>
+
+      <h3>Feedback and notifications</h3>
+      <p>CodeBar has no feedback layer at all. Add exactly one, and no more: a small HUD over the panel's position showing <span class="mono">Copied E11.9</span> or <span class="mono">Copied ICD-10-CM E11.9 — Type 2 diabetes…</span>, auto-dismissing. Never a system notification — this is a foreground, user-initiated action; a Notification Center banner for it would be intrusive and would outlive its usefulness by 4 seconds.</p>
+
+      <h3>Empty states</h3>
+      <p>The three <code>ContentUnavailableView</code> uses are right. One problem: the "No hierarchy installed" state puts a Python command line in a description string. That's the right information for the right person, but it should be selectable text at minimum, and better as a "Show me how" button opening the docs. Also <code>Text("No matches")</code> in the panel should be <code>ContentUnavailableView.search(text:)</code> for consistency with the window.</p>
+    </section>
+
+    <section id="interaction">
+      <h2><span class="h2num">05</span>Interaction improvements</h2>
+
+      <h3>Keyboard — the highest-value area for a frequent user</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Key</th><th>Action</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="num">↑ ↓</td><td>Move selection</td><td>Shipped</td></tr>
+            <tr><td class="num">↵ / ⇧↵</td><td>Copy code / copy with description</td><td>Shipped, undiscoverable</td></tr>
+            <tr><td class="num">⌘1–⌘9</td><td>Copy the <em>n</em>th result directly</td><td>Add — removes the arrow-key walk for the common case</td></tr>
+            <tr><td class="num">⌘↵</td><td>Open this code in the browse window</td><td>Add — the panel currently cannot hand off to the window</td></tr>
+            <tr><td class="num">⌘P</td><td>Pin / unpin the selection</td><td>Add — pinning is mouse-only today</td></tr>
+            <tr><td class="num">⌘K</td><td>Action menu for the selection</td><td>Add — the extension point for future actions <span class="src src-field">Field</span></td></tr>
+            <tr><td class="num">⇥</td><td>Autocomplete to the selected code</td><td>Add — lets you refine rather than commit</td></tr>
+            <tr><td class="num">⌥↑ ⌥↓</td><td>Jump between Pinned and Recent groups</td><td>Add — empty state only</td></tr>
+            <tr><td class="num">⎋</td><td>Clear field, then dismiss on second press</td><td>Change — currently dismisses immediately, losing a typed query with no undo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Note a structural issue behind this: <code>.onKeyPress(keys: [.return])</code> is attached to the panel's root <code>VStack</code>. As more keys are added that becomes an unreadable pile of modifiers with implicit precedence. Move to a single key-handling function that switches on key and modifiers, or to <code>commands</code> where the shortcut can also appear in a menu.</p>
+
+      <h3>Motion</h3>
+      <p>There is one animation in the whole app: a 0.1s <code>easeOut</code> scroll-to-selection. That restraint is correct. What to add, and nothing beyond it:</p>
+      <ul>
+        <li>Panel appearance: a 120ms opacity-and-scale from 0.98. Currently it hard-cuts, which reads as a glitch rather than an arrival.</li>
+        <li>Result set changes: no animation. Rows appearing and reflowing under a fast typist is worse than an instant swap. <span class="src src-mine">Call</span></li>
+        <li>Copy confirmation: fade in 100ms, hold 1000ms, fade out 200ms.</li>
+        <li><strong>All three gated on <code>@Environment(\.accessibilityReduceMotion)</code></strong>, including the existing scroll animation, which currently ignores it.</li>
+      </ul>
+
+      <h3>Pointer</h3>
+      <ul>
+        <li>Hover backgrounds on every clickable row, panel and window.</li>
+        <li>Right-click context menu on result rows: Copy, Copy with description, Pin, Open in window, Add to List. The window's sidebar already has context menus; the panel has none.</li>
+        <li>Drag a result row out of the panel to drop the code string into another app. Cheap with <code>.draggable()</code>, and for a copy-oriented tool it's the one gesture that genuinely earns its place. <span class="src src-mine">Call</span></li>
+      </ul>
+    </section>
+
+    <section id="a11y">
+      <h2><span class="h2num">06</span>Accessibility</h2>
+      <p class="lede">Current state: two <code>accessibilityLabel</code> calls, two <code>help</code> tooltips, one <code>keyboardShortcut</code>, and no reference to any accessibility environment value in the entire UI layer.</p>
+
+      <div class="finding" data-sev="high">
+        <div class="tags"><span class="tag tag-high">High</span><span class="tag">VoiceOver</span></div>
+        <h4>Result rows are not accessibility elements</h4>
+        <p>A row is an <code>HStack</code> of four to six independent <code>Text</code> views. VoiceOver reads them as separate items — "ICD-10", "E11.9", "Type 2 diabetes mellitus without com…", "pin" — so the user hears the truncated string, and the row itself isn't a single navigable unit.</p>
+        <p><strong>Fix:</strong> <code>.accessibilityElement(children: .ignore)</code> with a composed label that reads the <em>full untruncated</em> description, plus <code>.accessibilityValue</code> for billability and <code>.accessibilityAddTraits(.isSelected)</code>. Add <code>accessibilityAction</code>s for copy and pin.</p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Reduce Motion</span></div>
+        <h4>Reduce Motion is not honoured</h4>
+        <p>The scroll-to-selection animation runs unconditionally. It's small, but it's also the only animation, which makes it a one-line fix with no excuse.</p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Contrast</span></div>
+        <h4>Semantic colours have no high-contrast variants</h4>
+        <p><code>Color.orange</code>, <code>Color.red</code> and <code>Color.green</code> at 0.15–0.18 background opacity are used for the billability and exclusion signals. <span class="src src-apple">Apple</span> asks that custom colours define light, dark <em>and</em> increased-contrast variants. Under Increase Contrast these tinted grounds barely separate from the surface, and the foreground text over an 18%-opacity fill is the app's weakest contrast pairing.</p>
+        <p><strong>Fix:</strong> define the four semantic colours as asset colours with all three variants, and read <code>\.colorSchemeContrast</code> to swap tinted fills for bordered ones.</p>
+      </div>
+
+      <div class="finding" data-sev="med">
+        <div class="tags"><span class="tag tag-med">Medium</span><span class="tag">Keyboard</span></div>
+        <h4>Nothing in the panel is reachable by Tab</h4>
+        <p>Rows are gesture-driven with no focusable representation, so a keyboard-only user can select and copy but cannot reach a row's pin button at all. Full Keyboard Access users get less of the app than mouse users.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">Text size</span></div>
+        <h4>One fixed font size, and fixed row column widths</h4>
+        <p><code>.font(.system(size: 18))</code> won't respond to text-size preferences, and <code>BADGE_COLUMN_WIDTH</code> / <code>CODE_COLUMN_WIDTH</code> are absolute — at larger text the code will clip inside its 92pt column. Use <code>@ScaledMetric</code> for both widths, or drop the fixed columns in favour of a <code>Grid</code> with alignment.</p>
+      </div>
+
+      <div class="finding" data-sev="low">
+        <div class="tags"><span class="tag tag-low">Low</span><span class="tag">VoiceOver</span></div>
+        <h4>The "↵ copy" hint is decorative to a screen reader</h4>
+        <p>It renders a glyph that VoiceOver will pronounce awkwardly and that duplicates information better delivered as a hint. Mark it <code>.accessibilityHidden(true)</code> and put "Press Return to copy" on the row's <code>accessibilityHint</code>.</p>
+      </div>
+
+      <h4>Also worth doing</h4>
+      <ul>
+        <li>Announce the copy with <code>AccessibilityNotification.Announcement</code> — the panel vanishing is currently a silent outcome for a VoiceOver user.</li>
+        <li>Label the search field's stethoscope glyph as decorative.</li>
+        <li>Test with Increase Contrast + Reduce Transparency both on: that combination is what a low-vision clinician on a bright ward display will actually be running, and it's the combination the current material-heavy panel is least tested against.</li>
+      </ul>
+    </section>
+
+    <section id="beforeafter">
+      <h2><span class="h2num">07</span>Before → After</h2>
+      <p class="lede">The three screens that carry the app. Mockups are approximations of the recommendations above, drawn at the app's real proportions.</p>
+
+      <h3>Result row — the panel's core unit</h3>
+      <div class="ba">
+        <div class="ba-col">
+          <div class="ba-label"><span class="dot"></span><b>Before</b></div>
+          <div class="shot">
+            <div class="row sel">
+              <span class="badge">ICD-10</span>
+              <span class="code" style="min-width:74px">E11.9</span>
+              <span class="desc">Type 2 diabetes mellitus without com…</span>
+              <span style="flex:1"></span>
+              <span class="dim">⚲</span>
+              <span class="dim" style="font-size:12px">↵ copy</span>
+            </div>
+            <div class="row">
+              <span class="badge">ICD-10</span>
+              <span class="code" style="min-width:74px">E11</span>
+              <span class="desc">Type 2 diabetes mellitus</span>
+              <span class="chip-warn">category - not billable</span>
+              <span style="flex:1"></span>
+              <span class="dim">⚲</span>
+            </div>
+            <div class="row">
+              <span class="badge">ICD-10</span>
+              <span class="code" style="min-width:74px">E11.65</span>
+              <span class="desc">Type 2 diabetes mellitus with hyperg…</span>
+              <span style="flex:1"></span>
+              <span class="dim">⚲</span>
+            </div>
+          </div>
+          <p class="ba-note">84 of 560 points spent on a constant label. Both diabetes codes truncate exactly where they differ. The warning chip pushes the description further. Selection is a dim navy wash.</p>
+        </div>
+
+        <div class="ba-col after">
+          <div class="ba-label"><span class="dot"></span><b>After</b></div>
+          <div class="shot">
+            <div class="row sel-after" style="align-items:flex-start">
+              <span class="code" style="min-width:74px;padding-top:1px">E11.9</span>
+              <span class="desc wrap" style="flex:1">Type 2 diabetes mellitus without complications</span>
+              <span class="kbd">↵</span>
+            </div>
+            <div class="row" style="align-items:flex-start">
+              <span class="code dim" style="min-width:74px;padding-top:1px">E11</span>
+              <span class="stack gap2" style="flex:1">
+                <span class="desc wrap">Type 2 diabetes mellitus</span>
+                <span><span class="chip-warn">Category — not valid for submission</span></span>
+              </span>
+            </div>
+            <div class="row" style="align-items:flex-start">
+              <span class="code" style="min-width:74px;padding-top:1px">E11.65</span>
+              <span class="desc wrap" style="flex:1">Type 2 diabetes mellitus with hyperglycemia</span>
+            </div>
+            <div style="border-top:1px solid #262A32;margin-top:8px;padding:8px 16px 2px;display:flex;gap:14px;font-size:11px;color:#8A93A3;align-items:center">
+              <span><span class="kbd">↵</span> Copy</span>
+              <span><span class="kbd">⇧↵</span> With description</span>
+              <span><span class="kbd">⌘↵</span> Open</span>
+              <span style="flex:1"></span>
+              <span><span class="kbd">⌘K</span> Actions</span>
+            </div>
+          </div>
+          <p class="ba-note">Badge dropped (one system installed). Descriptions complete. The warning gets its own line instead of stealing width. Category code dimmed rather than chip-flagged twice. Footer teaches the shortcuts once, so the per-row hint isn't needed.</p>
+        </div>
+      </div>
+
+      <h3>Detail pane header — where the actions live</h3>
+      <div class="ba">
+        <div class="ba-col">
+          <div class="ba-label"><span class="dot"></span><b>Before</b></div>
+          <div class="shot pad">
+            <div class="stack gap3">
+              <div class="dim" style="font-size:11px">E00-E89 › E08-E13 › E11</div>
+              <div class="title-xl">E11</div>
+              <div class="sub">Type 2 diabetes mellitus</div>
+              <div><span class="chip-warn">⚠ Category — not valid for submission</span></div>
+              <div class="btnrow">
+                <span class="mbtn">Copy code</span>
+                <span class="mbtn">Copy with description</span>
+                <span class="mbtn">Pin</span>
+                <span class="mbtn">Add to List ⌄</span>
+              </div>
+              <div class="dim" style="font-size:11px;margin-top:4px">Your note</div>
+              <div style="border:1px solid #3A3F49;border-radius:6px;height:62px;background:#101216"></div>
+              <div class="dim" style="font-size:11px;padding-top:4px">Includes · Excludes 1 · Use additional code — <em>below the fold</em></div>
+            </div>
+          </div>
+          <p class="ba-note">Four equal buttons inside scrolling content, no primary, no shortcuts, and they scroll away. An empty note editor sits between the code and the exclusion rules that matter most.</p>
+        </div>
+
+        <div class="ba-col after">
+          <div class="ba-label"><span class="dot"></span><b>After</b></div>
+          <div class="shot">
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #262A32;background:#1A1D23">
+              <span class="mbtn primary">Copy code</span>
+              <span class="mbtn ghost">⌄</span>
+              <span style="width:14px"></span>
+              <span class="mbtn ghost">Pin</span>
+              <span class="mbtn ghost">Add to List ⌄</span>
+            </div>
+            <div class="pad" style="padding:14px 16px">
+              <div class="stack gap3">
+                <div class="dim" style="font-size:11px">E00-E89 › E08-E13 › <span style="color:#C6CCD6">E11</span></div>
+                <div class="title-xl">E11</div>
+                <div class="sub">Type 2 diabetes mellitus</div>
+                <div><span class="chip-warn">Category — not valid for submission</span></div>
+                <div class="excl" style="margin-top:4px">
+                  <div class="lbl">Excludes 1 — never code together</div>
+                  <div class="txt">type 1 diabetes mellitus (E10.-)</div>
+                </div>
+                <div>
+                  <div class="dim" style="font-size:11px;margin-bottom:4px">Use additional code</div>
+                  <div style="font-size:13.5px">insulin (Z79.4)</div>
+                </div>
+                <div>
+                  <div class="dim" style="font-size:11px;margin-bottom:4px">1 code beneath this</div>
+                  <div class="row" style="margin:0;padding:6px 8px;background:#1F232A;border-radius:6px">
+                    <span class="code">E11.9</span>
+                    <span class="desc">Type 2 diabetes mellitus without complications</span>
+                  </div>
+                </div>
+                <div><span class="mbtn ghost" style="font-size:12px">＋ Add a note</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="ba-note">Actions promoted to a toolbar with one primary and a semantic gap between the copy group and the library group. Excludes 1 gets a container, not just red text. Children become real rows. The note collapses to a button until wanted.</p>
+        </div>
+      </div>
+
+      <h3>Panel empty state — the fastest path in the app</h3>
+      <div class="ba">
+        <div class="ba-col">
+          <div class="ba-label"><span class="dot"></span><b>Before</b></div>
+          <div class="shot">
+            <div class="field">🩺 <span>Search ICD-10, LOINC, SNOMED, CPT…</span></div>
+            <div class="sechead">Pinned</div>
+            <div class="row"><span class="badge">ICD-10</span><span class="code" style="min-width:74px">E11.9</span><span class="desc">Type 2 diabetes mellitus without complications</span></div>
+            <div class="sechead">Recent</div>
+            <div class="row"><span class="badge">ICD-10</span><span class="code" style="min-width:74px">J45.909</span><span class="desc">Unspecified asthma, uncomplicated</span></div>
+            <div class="row"><span class="badge">ICD-10</span><span class="code" style="min-width:74px">I10</span><span class="desc">Essential (primary) hypertension</span></div>
+          </div>
+          <p class="ba-note">No selection on open, so Return does nothing until you arrow down. No keyboard route to a pin. Badge repeated four times.</p>
+        </div>
+
+        <div class="ba-col after">
+          <div class="ba-label"><span class="dot"></span><b>After</b></div>
+          <div class="shot">
+            <div class="field">🩺 <span>Search 98,186 codes…</span></div>
+            <div class="sechead">Pinned</div>
+            <div class="row sel-after"><span class="code" style="min-width:74px">E11.9</span><span class="desc" style="flex:1">Type 2 diabetes mellitus without complications</span><span class="kbd">⌘1</span></div>
+            <div class="sechead">Recent</div>
+            <div class="row"><span class="code" style="min-width:74px">J45.909</span><span class="desc" style="flex:1">Unspecified asthma, uncomplicated</span><span class="kbd">⌘2</span></div>
+            <div class="row"><span class="code" style="min-width:74px">I10</span><span class="desc" style="flex:1">Essential (primary) hypertension</span><span class="kbd">⌘3</span></div>
+            <div style="border-top:1px solid #262A32;margin-top:8px;padding:8px 16px 2px;display:flex;gap:14px;font-size:11px;color:#8A93A3">
+              <span><span class="kbd">↵</span> Copy</span><span><span class="kbd">⌘P</span> Pin</span><span style="flex:1"></span><span><span class="kbd">⌘K</span> Actions</span>
+            </div>
+          </div>
+          <p class="ba-note">First pin pre-selected, so ⌥⌘C then Return is the two-keystroke path the README already promises. Direct ⌘1–⌘9 access. The field's placeholder states what's installed, which is also the honest answer to "is my code set loaded?"</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2><span class="h2num">08</span>Priority roadmap</h2>
+      <p class="lede">Ordered by user benefit per hour of work. The first lane is worth doing before anything else in this document.</p>
+
+      <div class="lanes">
+        <div class="lane">
+          <div class="lane-head"><h4>Quick wins</h4><span class="cost">≈ 1 day</span></div>
+          <ol>
+            <li><b>Two-line descriptions</b> + panel width 680. Removes the correctness risk.</li>
+            <li><b>Conditional system badge</b> — hide it when one system is installed.</li>
+            <li><b>Ship an AccentColor asset</b> with three variants.</li>
+            <li><b>Copy confirmation HUD.</b> Closes the app's biggest feedback gap.</li>
+            <li><b>Row accessibility elements</b> with full untruncated labels.</li>
+            <li><b>Honour Reduce Motion</b> on the scroll animation.</li>
+            <li><b>One dash, one wording</b> for the billability label.</li>
+            <li><b><code>.title3</code> for the search field</b>, replacing <code>size: 18</code>.</li>
+          </ol>
+        </div>
+
+        <div class="lane">
+          <div class="lane-head"><h4>Medium</h4><span class="cost">≈ 1 week</span></div>
+          <ol>
+            <li><b>A <code>DesignSystem</code> file</b> in <code>CodeBarUI</code>: spacing scale, radii, semantic colours, row metrics. Everything below depends on it.</li>
+            <li><b>One shared <code>CodeRow</code></b> with a density parameter, replacing <code>ResultRow</code> and <code>CodeRowLabel</code>.</li>
+            <li><b>A real window toolbar</b>, moving the four detail-pane buttons into it with a primary and a menu.</li>
+            <li><b>Reorder the detail pane</b>; give Excludes 1 a container; collapse the empty note.</li>
+            <li><b>Keyboard set:</b> ⌘1–9, ⌘↵, ⌘P, ⇥, two-stage ⎋.</li>
+            <li><b>Hover states and context menus</b> on every clickable row.</li>
+            <li><b>Panel footer key map.</b></li>
+            <li><b>Semantic colours as asset colours</b> with high-contrast variants.</li>
+          </ol>
+        </div>
+
+        <div class="lane">
+          <div class="lane-head"><h4>Larger</h4><span class="cost">≈ 2–4 weeks</span></div>
+          <ol>
+            <li><b>Raise deployment target</b> and rebuild with Xcode 26 — toolbar, sidebar and window shape adopt Liquid Glass with no code.</li>
+            <li><b>Gated glass on the panel chrome</b>, with the current material as the fallback branch.</li>
+            <li><b>⌘K action menu</b> in the panel, as the extension point for list-adding, export, and crosswalks.</li>
+            <li><b>Panel → window handoff</b>, so a lookup that turns out to need context doesn't restart.</li>
+            <li><b>Full Keyboard Access</b> across both surfaces.</li>
+            <li><b>Feature-module split</b> (SearchUI / BrowseUI / LibraryUI / SettingsUI over a shared design system) as ARCHITECTURE §11 already anticipates.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="callout">
+        <span class="callout-label">Sequencing note</span>
+        <p>Do the <code>DesignSystem</code> file before the shared <code>CodeRow</code>, and both before the toolbar. Doing them in the other order means writing the toolbar's spacing twice. Everything in the Larger lane is optional; nothing in the Quick lane is.</p>
+      </div>
+    </section>
+
+    <section id="implementation">
+      <h2><span class="h2num">09</span>Implementation guidance</h2>
+      <p class="lede">Practical shapes, sized to a codebase that values not overengineering. Each of these is one file or one modifier.</p>
+
+      <h3>The token file — the whole thing</h3>
+      <p>Resist a design-system package. One file in <code>CodeBarUI</code>, no protocols, no theming layer:</p>
+<pre><span class="c">// CodeBarUI/DesignSystem/Metrics.swift</span>
+<span class="k">enum</span> Metric {
+    <span class="c">/// 4pt scale. Every spacing value in the app comes from here.</span>
+    <span class="k">static let</span> xs: CGFloat = 4,  s: CGFloat = 8,  m: CGFloat = 12
+    <span class="k">static let</span> l:  CGFloat = 16, xl: CGFloat = 24, xxl: CGFloat = 32
+
+    <span class="k">static let</span> rowRadius: CGFloat = 6
+    <span class="k">static let</span> cardRadius: CGFloat = 10
+    <span class="k">static let</span> panelWidth: CGFloat = 680
+    <span class="k">static let</span> codeColumn: CGFloat = 92
+}
+
+<span class="c">// CodeBarUI/DesignSystem/Palette.swift — asset colours, three variants each</span>
+<span class="k">extension</span> ShapeStyle <span class="k">where Self</span> == Color {
+    <span class="k">static var</span> prohibition: Color { .init(<span class="s">"Prohibition"</span>, bundle: .module) } <span class="c">// Excludes 1</span>
+    <span class="k">static var</span> warning:     Color { .init(<span class="s">"Warning"</span>, bundle: .module) }     <span class="c">// not billable</span>
+    <span class="k">static var</span> confirmed:   Color { .init(<span class="s">"Confirmed"</span>, bundle: .module) }   <span class="c">// billable</span>
+}
+</pre>
+
+      <h3>The availability shim — one modifier, not a framework</h3>
+<pre><span class="c">// Applied to the panel's root. The only place glass is conditional.</span>
+<span class="k">extension</span> View {
+    <span class="k">func</span> panelSurface() -> <span class="k">some</span> View {
+        <span class="k">if</span> #available(macOS 26, *) {
+            <span class="k">self</span>.glassEffect(.regular, <span class="k">in</span>: .rect(cornerRadius: Metric.cardRadius))
+        } <span class="k">else</span> {
+            <span class="k">self</span>.background(.ultraThinMaterial)
+        }
+    }
+}
+</pre>
+      <p>Do not build a general-purpose glass abstraction. There is exactly one gated surface; a shim with two branches at one call site is honest, and a <code>GlassCompatible</code> protocol would be the overengineering the codebase has so far avoided.</p>
+
+      <h3>Row accessibility — the pattern to apply once and reuse</h3>
+<pre>.accessibilityElement(children: .ignore)
+.accessibilityLabel(<span class="s">"\(code.system.shortLabel) \(code.code). \(code.display)"</span>)
+.accessibilityValue(code.isBillable == <span class="k">false</span>
+                    ? <span class="s">"Category header, not valid for submission"</span> : <span class="s">""</span>)
+.accessibilityHint(<span class="s">"Press Return to copy"</span>)
+.accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+.accessibilityAction(named: <span class="s">"Pin"</span>) { onTogglePin?() }
+</pre>
+      <p>Note the label uses <code>code.display</code> in full — the truncation is a visual concern only, and this is the line that guarantees a VoiceOver user never gets the shortened string.</p>
+
+      <h3>What not to do</h3>
+      <ul>
+        <li><strong>Don't hand-roll glass on macOS 14/15.</strong> Stacked blurs and gradients approximating Liquid Glass cost GPU time on every panel show and will look wrong beside the real thing on 26. <code>.ultraThinMaterial</code> is the correct fallback and is already there.</li>
+        <li><strong>Don't animate the result list.</strong> The debounce is 120ms; a typist outruns any transition, and the existing comment about ForEach identity shows this list has already cost you one class of bug.</li>
+        <li><strong>Don't introduce a custom font.</strong> The system faces plus <code>.monospaced</code> are correct for this app and free.</li>
+        <li><strong>Don't build a theming system.</strong> Light, dark and high-contrast via asset catalogue is the whole requirement.</li>
+        <li><strong>Don't replace <code>NavigationSplitView</code>.</strong> It's the right container and it's what makes the sidebar adopt Liquid Glass for free.</li>
+      </ul>
+
+      <h3>Testing the visual work you already have</h3>
+      <p>The six snapshot references are the right tool for most of this, and the known limit is already documented — they're machine-specific and pinned to dark. Two additions worth making alongside these changes: a snapshot of a long-description row at panel width (the regression test for the truncation fix), and one with Increase Contrast enabled (the regression test for the semantic-colour work). Both are one line each in the existing <code>SnapshotTests</code>.</p>
+    </section>
+
+    <section id="principles">
+      <h2><span class="h2num">10</span>Design principles for CodeBar</h2>
+      <p class="lede">Eight rules. If a future change fails one of them, it's the change that's wrong.</p>
+
+      <ol class="principles">
+        <li><b>Never truncate a code's meaning.</b><span>Wrap, widen, or reflow. The end of a description is where the clinical distinction lives. Nothing in the layout outranks it.</span></li>
+        <li><b>Colour is a safety channel.</b><span>Amber, red and green mean billability and exclusion. They are never spent on taxonomy, decoration, or brand.</span></li>
+        <li><b>Every action confirms itself.</b><span>A copy that vanishes silently is a copy the user will verify by hand, which costs more than the confirmation would.</span></li>
+        <li><b>The keyboard is the primary input.</b><span>Every action reachable by mouse gets a shortcut, and the panel states what its shortcuts are rather than assuming they're known.</span></li>
+        <li><b>Use the system's component or build none.</b><span>Standard controls inherit every OS refinement, Liquid Glass included, for free. A custom control has to earn its maintenance.</span></li>
+        <li><b>Glass floats, content doesn't.</b><span>Translucency belongs to chrome that sits above content. It never goes behind text you have to read carefully.</span></li>
+        <li><b>Both surfaces, one vocabulary.</b><span>A code looks like a code in the panel and in the window. Density may change; anatomy may not.</span></li>
+        <li><b>The publisher outranks the user's note.</b><span>Authoritative coding rules come first on screen. A personal reminder is valuable, but it is not the thing that gets a claim denied.</span></li>
+      </ol>
+    </section>
+
+    <section id="ios">
+      <h2><span class="h2num">11</span>On iOS</h2>
+      <p class="lede">Stated plainly because the brief asked for it: <strong>CodeBar has no iOS target.</strong> <code>project.yml</code> declares one macOS application and one macOS UI-test bundle. Nothing here is a live recommendation; it's what would be needed, and the two cheap things worth doing now.</p>
+
+      <h3>What already ports, and what doesn't</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Module</th><th>Portability</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td><code>CodeCore</code></td><td>Clean</td><td>Domain types and protocols, no AppKit, no SQLite. Ports unchanged.</td></tr>
+            <tr><td><code>SQLiteKit</code>, <code>CodeStore</code>, <code>CodeLibrary</code></td><td>Clean</td><td>SQLite is on both platforms. FTS5 and the trigger-maintained index work identically.</td></tr>
+            <tr><td><code>CodeBarUI</code></td><td>One line away</td><td><code>Color(nsColor: .textBackgroundColor)</code> in <code>CodeDetailView</code> is the only AppKit reference. Everything else is portable SwiftUI.</td></tr>
+            <tr><td><code>CodePlatform</code></td><td>macOS-only by design</td><td>Carbon hotkey, <code>NSPasteboard</code>, login item, activation policy. Would need an iOS sibling — and the hotkey has no iOS equivalent at all.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What an iOS CodeBar would have to become</h3>
+      <ul>
+        <li><strong>The fast path changes shape entirely.</strong> There is no global hotkey. The equivalents are a <strong>keyboard extension</strong> (type a term, insert the code into any app's text field — closest to the panel's actual job), a <strong>Share/Action extension</strong>, a <strong>Shortcuts action</strong> with App Intents, and <strong>Spotlight indexing</strong> of pinned codes. The keyboard extension is the one that preserves the product's promise. <span class="src src-mine">Call</span></li>
+        <li><strong>Three columns become a stack.</strong> <code>NavigationSplitView</code> adapts on iPad; on iPhone it collapses to push navigation, which is correct — chapters → codes → detail.</li>
+        <li><strong>Touch targets.</strong> The pin glyph is a 12pt caption today. On iOS it needs 44×44pt, which means moving it out of the row and into a swipe action — the native iOS pattern, and better than the mac version.</li>
+        <li><strong>Dynamic Type is mandatory, not optional.</strong> Which retires the fixed column widths entirely; a <code>Grid</code> or an adaptive two-line row is the only layout that survives Accessibility text sizes.</li>
+        <li><strong>Sheets and detents.</strong> The detail pane on iPhone is a sheet with <code>.medium</code>/<code>.large</code> detents, so the code list stays visible behind it.</li>
+        <li><strong>Liquid Glass matters more here.</strong> On iOS 26 the tab bar and navigation bar are glass by default, and floating action buttons over scrolling content are the canonical case. The one thing that stays true: not behind the code list.</li>
+      </ul>
+
+      <h4>The two cheap things to do now</h4>
+      <ol>
+        <li>Replace the <code>NSColor</code> reference so <code>CodeBarUI</code> stays platform-neutral. Five minutes, and it keeps the option open.</li>
+        <li>Build the design-token file (§9) as platform-neutral <code>CGFloat</code>s and asset colours from the start. A token layer written macOS-first is the thing that's expensive to port later.</li>
+      </ol>
+    </section>
+
+    <footer id="sources">
+      <h3>Sources</h3>
+      <p><strong>Apple, documented guidance</strong></p>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass">Adopting Liquid Glass</a> — the layer model, grouping with fixed spacers, tinting rules, scroll edge effect, concentric radii, and the explicit do-nots.</li>
+        <li><a href="https://developer.apple.com/documentation/technologyoverviews/liquid-glass">Liquid Glass — Technology Overviews</a></li>
+        <li><a href="https://developer.apple.com/videos/play/wwdc2025/219/">Meet Liquid Glass (WWDC25 · 219)</a> — regular vs clear, lensing, adaptivity, and the accessibility behaviours under Reduce Transparency / Increase Contrast / Reduce Motion.</li>
+        <li><a href="https://developer.apple.com/videos/play/wwdc2025/323/">Build a SwiftUI app with the new design (WWDC25 · 323)</a></li>
+        <li><a href="https://developer.apple.com/design/human-interface-guidelines">Human Interface Guidelines</a></li>
+        <li><a href="https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/">Apple introduces a delightful and elegant new software design</a> — the macOS Tahoe / Liquid Glass announcement.</li>
+      </ul>
+      <p><strong>Field patterns</strong></p>
+      <ul>
+        <li><a href="https://www.raycast.com/faq">Raycast</a> and <a href="https://www.raycast.com/raycast-vs-alfred">Raycast vs Alfred</a> — the keyboard-first launcher conventions cited above: the standardised ⌘K action menu, the persistent footer key map, and list/detail result rows.</li>
+        <li><a href="https://www.techinterview.org/post/3233475212/build-command-palette-cmd-k/">Command palette conventions (⌘K)</a> as they've settled across Linear, Vercel, GitHub and Slack.</li>
+      </ul>
+      <p><strong>CodeBar itself</strong> — read directly: <code>SearchPanelView</code>, <code>ResultRow</code>, <code>EmptyStateView</code>, <code>MainWindowView</code>, <code>CodeDetailView</code>, <code>SettingsView</code>, <code>CodeSetsSettingsView</code>, <code>SearchPanelController</code>, <code>CodeBarApp</code>, <code>AppDelegate</code>, <code>AboutPanel</code>, <code>project.yml</code>, <code>README.md</code>, <code>docs/ARCHITECTURE.md</code> §11, and the six snapshot references under <code>CodeBarUITests/__Snapshots__</code>.</p>
+    </footer>
+
+  </main>
+</div>
