@@ -96,6 +96,16 @@ public final class SearchViewModel {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
 
+    /// Whether a row should say which code system it belongs to.
+    ///
+    /// With one system installed — the default, and what most users run — the
+    /// badge reads "ICD-10" on every row forever, while costing the description
+    /// the leading 84 points of a row. It only earns its place when a row could
+    /// plausibly be from somewhere else.
+    public var showsSystemBadge: Bool {
+        preferences.enabledSystems.count > 1
+    }
+
     public func isPinned(_ code: ClinicalCode) -> Bool {
         pinnedIDs.contains(code.id)
     }
@@ -154,9 +164,54 @@ public final class SearchViewModel {
 
     // MARK: - Selection
 
+    /// Everything the arrow keys can land on.
+    ///
+    /// Before a query is typed that is the pins and recents, not nothing. The
+    /// README has always promised "⌥⌘C then Return, no typing" for a pinned
+    /// code, and it had never worked: selection was defined over `results`,
+    /// which is empty until something is typed, so Return in the empty state
+    /// silently did nothing.
+    public var selectableCodes: [ClinicalCode] {
+        query.isEmpty ? pinnedCodes + recentCodes : results.map(\.code)
+    }
+
     public func moveSelection(_ delta: Int) {
-        guard !results.isEmpty else { return }
-        selectedIndex = max(0, min(results.count - 1, selectedIndex + delta))
+        let codes = selectableCodes
+        guard !codes.isEmpty else { return }
+        selectedIndex = max(0, min(codes.count - 1, selectedIndex + delta))
+    }
+
+    public func isSelected(_ code: ClinicalCode) -> Bool {
+        let codes = selectableCodes
+        guard codes.indices.contains(selectedIndex) else { return false }
+        return codes[selectedIndex].id == code.id
+    }
+
+    /// Pins whatever the arrow keys are currently on. Returns `false` when there
+    /// is nothing selected, so the caller can leave the key unhandled.
+    @discardableResult
+    public func togglePinOnSelection() -> Bool {
+        let codes = selectableCodes
+        guard codes.indices.contains(selectedIndex) else { return false }
+        togglePin(codes[selectedIndex])
+        return true
+    }
+
+    /// The text `⇥` completes the field to — the selected code, so the user can
+    /// refine a query rather than commit to it.
+    public var selectedCodeText: String? {
+        let codes = selectableCodes
+        guard codes.indices.contains(selectedIndex) else { return nil }
+        return codes[selectedIndex].code
+    }
+
+    /// Copies the *n*th visible row directly, for `⌘1`–`⌘9`.
+    @discardableResult
+    public func copy(at index: Int, format: CopyFormat = .codeOnly) -> Bool {
+        let codes = selectableCodes
+        guard codes.indices.contains(index) else { return false }
+        copy(codes[index], format: format)
+        return true
     }
 
     /// Identity of the highlighted result, for selection and scrolling.
@@ -178,17 +233,24 @@ public final class SearchViewModel {
     /// copy, so the caller knows whether to dismiss.
     @discardableResult
     public func copySelected(format: CopyFormat = .codeOnly) -> Bool {
-        guard results.indices.contains(selectedIndex) else { return false }
-        copy(results[selectedIndex].code, format: format)
-        return true
+        copy(at: selectedIndex, format: format)
     }
 
     public func copy(_ result: SearchResult, format: CopyFormat = .codeOnly) {
         copy(result.code, format: format)
     }
 
+    /// Exactly what last reached the pasteboard.
+    ///
+    /// Held so the panel can confirm the copy after dismissing itself. It has to
+    /// be the written string rather than the code, because the whole point is
+    /// distinguishing `↵` from `⇧↵`.
+    public private(set) var lastCopiedText: String?
+
     public func copy(_ code: ClinicalCode, format: CopyFormat = .codeOnly) {
-        pasteboard.write(format.string(for: code))
+        let written = format.string(for: code)
+        pasteboard.write(written)
+        lastCopiedText = written
         pendingLibraryWork = Task {
             try? await library.recordUse(of: code, format: format)
             await refreshLibrary()

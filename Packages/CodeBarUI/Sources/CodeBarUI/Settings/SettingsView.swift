@@ -1,9 +1,6 @@
 import CodeCore
 import SwiftUI
 
-private let SETTINGS_WIDTH: CGFloat = 540
-private let SETTINGS_HEIGHT: CGFloat = 380
-
 /// The app's first real window, and the shell later panes plug into.
 ///
 /// See docs/ARCHITECTURE.md §11 — CodeBar is growing into a full app that keeps
@@ -48,7 +45,7 @@ public struct SettingsView: View {
             AbbreviationsSettingsView(model: abbreviations)
                 .tabItem { Label("Abbreviations", systemImage: "textformat.abc") }
         }
-        .frame(width: SETTINGS_WIDTH, height: SETTINGS_HEIGHT)
+        .frame(width: Metric.settingsWidth, height: Metric.settingsHeight)
         .task { await codeSets.load() }
     }
 }
