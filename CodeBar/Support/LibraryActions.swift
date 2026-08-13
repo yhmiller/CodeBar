@@ -27,7 +27,9 @@ final class LibraryActions {
     }
 
     func copy(_ code: ClinicalCode, format: CopyFormat) {
-        pasteboard.write(format.string(for: code))
+        let written = format.string(for: code)
+        pasteboard.write(written)
+        SearchPanelController.shared.confirmation.show(written)
         Task {
             try? await library.recordUse(of: code, format: format)
             await refresh()

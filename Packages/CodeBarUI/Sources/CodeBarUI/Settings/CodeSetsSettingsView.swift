@@ -63,14 +63,14 @@ struct CodeSetsSettingsView: View {
     }
 
     private func row(for manifest: CodeSetManifest) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Metric.m) {
             Toggle(
                 isOn: .init(
                     get: { model.isSearchEnabled(manifest.system) },
                     set: { model.setSearchEnabled(manifest.system, $0) }
                 )
             ) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Metric.xxs) {
                     Text(manifest.system.rawValue)
                     Text(subtitle(for: manifest))
                         .font(.caption)
@@ -84,7 +84,7 @@ struct CodeSetsSettingsView: View {
                 .buttonStyle(.borderless)
                 .foregroundStyle(.red)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Metric.xxs)
     }
 
     /// Release first: a set a year out of date answers every query confidently,

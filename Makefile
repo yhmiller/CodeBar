@@ -112,10 +112,16 @@ uitest: project ## Interaction tests: window, reopen and panel behaviour
 	@grep -cE "Test Case .* passed" $(BUILD_DIR)/uitest.log \
 		| xargs printf "interaction tests passed: %s\n"
 
+# CI sets SWIFT_TEST_FLAGS='--skip SnapshotTests'. The snapshot references are
+# recorded on one Mac, and fonts, appearance and OS version all move the pixels,
+# so they assert nothing on a runner except that it is a different machine. They
+# stay a local gate; everything else runs everywhere.
+SWIFT_TEST_FLAGS ?=
+
 test: ## Swift tests across the four packages
 	@for pkg in $(PACKAGES); do \
 		echo "==> testing $$pkg"; \
-		( cd $$pkg && swift test ) || exit 1; \
+		( cd $$pkg && swift test $(SWIFT_TEST_FLAGS) ) || exit 1; \
 	done
 
 test-scripts: ## Python tests for the code-set converters

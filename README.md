@@ -65,11 +65,20 @@ out of `make check` because they take about 25 seconds and quit a running CodeBa
   Codes match without their dots, so `E119` finds `E11.9`.
 - Clinical shorthand works: `uti`, `copd`, `t2dm`, `gerd` and 22 others expand to
   the words a description actually uses.
-- ↑ / ↓ to move the selection, **Return** to copy the highlighted code,
-  **Esc** to dismiss.
+- ↑ / ↓ to move the selection, **Return** to copy the highlighted code.
 - **Shift+Return** copies `ICD-10-CM E11.9 — Type 2 diabetes mellitus without
   complications` instead of just the code, for pasting into a note.
-- Clicking a result also copies it. The pin icon keeps a code in the empty state.
+- **⌘1**–**⌘9** copies that numbered row outright, without arrowing to it.
+- **⌘P** pins or unpins whatever is selected. **Tab** completes the field to the
+  selected code, so you can narrow a query instead of committing to it.
+- **Esc** clears the field, and closes the panel when it is already empty.
+- Clicking a result also copies it. The pin icon appears on hover, and keeps a
+  code in the empty state.
+- Every copy is confirmed on screen, so you can see which of the two formats
+  actually reached the clipboard.
+
+The panel lists these along its bottom edge, and only ever lists keys that work
+in the state you are looking at.
 
 ### The window
 

@@ -43,18 +43,12 @@ public struct MainWindowView: View {
         } detail: {
             CodeDetailView(
                 detail: model.detail,
-                isPinned: model.detail.map { isPinned($0.code) } ?? false,
                 note: model.note,
-                lists: model.lists,
-                currentList: model.selectedList,
-                onCopy: onCopy,
-                onTogglePin: onTogglePin,
                 onSelectCode: { model.selectedCode = $0 },
-                onSaveNote: { model.saveNote($0) },
-                onAddToList: { model.addSelectedCode(toList: $0) },
-                onRemoveFromList: { model.removeSelectedCodeFromCurrentList() }
+                onSaveNote: { model.saveNote($0) }
             )
         }
+        .toolbar { toolbarContent }
         .navigationTitle(model.isSearching
                          ? "Search"
                          : (model.selectedList?.name ?? "CodeBar"))
@@ -97,27 +91,92 @@ public struct MainWindowView: View {
         }
     }
 
+    /// Actions belong to the window, not to the scrolling content.
+    ///
+    /// Two groups, deliberately: copying a code and curating a library are
+    /// different jobs, and one undifferentiated bar of four equal buttons said
+    /// they were the same. The visible gap between them arrives with
+    /// `ToolbarSpacer` on macOS 26 — see DESIGN_ROADMAP.md 5.1.
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button("Copy Code") { if let code { onCopy(code, .codeOnly) } }
+                .buttonStyle(.borderedProminent)
+                // Not ⌘C: the coding notes and the note editor are selectable
+                // text, and claiming ⌘C would break copying from them — which
+                // in a clinical tool is a real thing to want.
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .help("Copy \(code?.code ?? "the selected code")")
+                .disabled(code == nil)
+
+            Menu {
+                Button("Copy with Description") {
+                    if let code { onCopy(code, .codeAndDisplay) }
+                }
+            } label: {
+                Label("Copy options", systemImage: "chevron.down")
+            }
+            .help("Other copy formats")
+            .disabled(code == nil)
+        }
+
+        ToolbarItemGroup {
+            Button {
+                if let code { onTogglePin(code) }
+            } label: {
+                Label(isCodePinned ? "Unpin" : "Pin",
+                      systemImage: isCodePinned ? "pin.fill" : "pin")
+            }
+            .keyboardShortcut("p", modifiers: .command)
+            .help(isCodePinned ? "Unpin this code" : "Pin this code")
+            .disabled(code == nil)
+
+            Menu {
+                if model.lists.isEmpty {
+                    Text("No lists yet")
+                } else {
+                    ForEach(model.lists) { list in
+                        Button("\(list.name)  (\(list.count))") {
+                            model.addSelectedCode(toList: list.id)
+                        }
+                    }
+                }
+                if let current = model.selectedList {
+                    Divider()
+                    Button("Remove from \(current.name)", role: .destructive) {
+                        model.removeSelectedCodeFromCurrentList()
+                    }
+                }
+            } label: {
+                Label("Add to List", systemImage: "text.badge.plus")
+            }
+            .help("Add this code to one of your lists")
+            .disabled(code == nil)
+        }
+    }
+
+    private var code: ClinicalCode? { model.detail?.code }
+
+    private var isCodePinned: Bool {
+        model.detail.map { isPinned($0.code) } ?? false
+    }
+
     private var chapterList: some View {
         List(selection: $model.selection) {
             if !model.lists.isEmpty {
                 Section("Lists") {
                     ForEach(model.lists) { list in
-                        Label {
-                            HStack {
-                                Text(list.name)
-                                Spacer()
-                                Text("\(list.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                        // `.badge` rather than a hand-built trailing Text: it is
+                        // the native affordance and it handles selection-state
+                        // colour itself, where a `.tertiary` label stayed dim
+                        // against a selected row's fill.
+                        Label(list.name, systemImage: "list.bullet.rectangle")
+                            .badge(list.count)
+                            .tag(SidebarSelection.list(list.id))
+                            .contextMenu {
+                                Button("Rename…") { renaming = list }
+                                Button("Delete", role: .destructive) { deleting = list }
                             }
-                        } icon: {
-                            Image(systemName: "list.bullet.rectangle")
-                        }
-                        .tag(SidebarSelection.list(list.id))
-                        .contextMenu {
-                            Button("Rename…") { renaming = list }
-                            Button("Delete", role: .destructive) { deleting = list }
-                        }
                     }
                 }
             }
@@ -130,7 +189,8 @@ public struct MainWindowView: View {
                 }
             }
         }
-        .navigationSplitViewColumnWidth(min: 240, ideal: 300)
+        .navigationSplitViewColumnWidth(min: Metric.sidebarMinWidth,
+                                        ideal: Metric.sidebarIdealWidth)
         .safeAreaInset(edge: .bottom) {
             // The bar needs its own ground and a divider: without them the list
             // scrolls *underneath* a transparent button and the two overlap.
@@ -143,7 +203,7 @@ public struct MainWindowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.borderless)
-                .padding(10)
+                .padding(Metric.m)
             }
             .background(.bar)
         }
@@ -183,7 +243,8 @@ public struct MainWindowView: View {
                     BrowseNodeRow(node: node)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+            .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                            ideal: Metric.contentIdealWidth)
         }
     }
 
@@ -195,8 +256,8 @@ public struct MainWindowView: View {
             set: { id in model.selectedCode = model.searchResults.first { $0.id == id }?.code }
         )) {
             ForEach(model.searchResults) { result in
-                VStack(alignment: .leading, spacing: 2) {
-                    CodeRowLabel(code: result.code)
+                VStack(alignment: .leading, spacing: Metric.xxs) {
+                    CodeRow(code: result.code, density: .list, showsSystemBadge: false)
                     if let chapter = result.code.chapter {
                         Text(chapter)
                             .font(.caption2)
@@ -207,7 +268,8 @@ public struct MainWindowView: View {
                 .tag(result.id)
             }
         }
-        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                        ideal: Metric.contentIdealWidth)
         .overlay {
             if model.searchResults.isEmpty {
                 ContentUnavailableView.search(text: searchText)
@@ -221,10 +283,12 @@ public struct MainWindowView: View {
             set: { id in model.selectedCode = model.listCodes.first { $0.id == id } }
         )) {
             ForEach(model.listCodes) { code in
-                CodeRowLabel(code: code).tag(code.id)
+                CodeRow(code: code, density: .list, showsSystemBadge: false)
+                    .tag(code.id)
             }
         }
-        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .navigationSplitViewColumnWidth(min: Metric.contentMinWidth,
+                                        ideal: Metric.contentIdealWidth)
         .overlay {
             if model.listCodes.isEmpty {
                 ContentUnavailableView(
@@ -267,7 +331,7 @@ struct BrowseNodeRow: View {
                 ProgressView().controlSize(.small)
             }
         } label: {
-            CodeRowLabel(code: node.code)
+            CodeRow(code: node.code, density: .list, showsSystemBadge: false)
                 .tag(node.id)
         }
         .onChange(of: isExpanded) { _, expanded in
@@ -277,17 +341,3 @@ struct BrowseNodeRow: View {
     }
 }
 
-struct CodeRowLabel: View {
-    let code: ClinicalCode
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(code.code)
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(code.isBillable == false ? .secondary : .primary)
-            Text(code.display)
-                .lineLimit(1)
-                .foregroundStyle(.secondary)
-        }
-    }
-}

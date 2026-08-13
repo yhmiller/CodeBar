@@ -1,0 +1,43 @@
+name: check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A second push to the same branch makes the first run's answer irrelevant.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Tests, typecheck, layering
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Not pinned to a version. The panel's Liquid Glass path calls
+      # glassEffect, which needs the macOS 26 SDK to *compile* even though
+      # #available keeps it from running on anything older — so the newest
+      # toolchain on the image is the one that works, and pinning would break
+      # the day the image moves on.
+      - name: Select the newest Xcode on the runner
+        run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+          swift --version
+
+      # Swift tests across the six packages, the Python converter tests, a
+      # strict-concurrency typecheck of the app target, and the layering
+      # assertion — the same gate `make check` runs locally.
+      #
+      # Snapshots are skipped. Their references are recorded on one Mac, and
+      # fonts, appearance and OS version all move the pixels, so on a runner
+      # they assert nothing except that it is a different machine. They remain
+      # a local gate; see "Known limits" in the README.
+      - name: make check
+        env:
+          SWIFT_TEST_FLAGS: --skip SnapshotTests
+        run: make check

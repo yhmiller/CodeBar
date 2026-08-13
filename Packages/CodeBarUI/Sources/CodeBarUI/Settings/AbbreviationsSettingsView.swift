@@ -15,7 +15,7 @@ struct AbbreviationsSettingsView: View {
     @FocusState private var isTermFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Metric.m) {
             Text("Type a shortcut, search the words it stands for. "
                  + "CodeBar already knows \(model.builtInCount) common ones — "
                  + "add yours here, or override one it got wrong for your specialty.")
@@ -25,9 +25,9 @@ struct AbbreviationsSettingsView: View {
 
             entryList
 
-            HStack(spacing: 8) {
+            HStack(spacing: Metric.s) {
                 TextField("Shortcut", text: $term)
-                    .frame(width: 110)
+                    .frame(width: Metric.abbreviationTermField)
                     .focused($isTermFocused)
                 Image(systemName: "arrow.right")
                     .font(.caption)
@@ -39,7 +39,7 @@ struct AbbreviationsSettingsView: View {
             }
             .textFieldStyle(.roundedBorder)
         }
-        .padding(20)
+        .padding(Metric.xl)
         .task { await model.load() }
     }
 
@@ -52,7 +52,7 @@ struct AbbreviationsSettingsView: View {
     @ViewBuilder
     private var entryList: some View {
         if model.abbreviations.isEmpty {
-            VStack(spacing: 4) {
+            VStack(spacing: Metric.xs) {
                 Text("No shorthand of your own yet")
                     .foregroundStyle(.secondary)
                 Text("For example, PCN → penicillin")
@@ -71,21 +71,21 @@ struct AbbreviationsSettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Color(nsColor: .textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: Metric.rowRadius))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: Metric.rowRadius)
                     .strokeBorder(Color(nsColor: .separatorColor))
             )
         }
     }
 
     private func row(for abbreviation: Abbreviation) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Metric.s) {
             Text(abbreviation.term)
                 .font(.system(.body, design: .monospaced))
-                .frame(width: 100, alignment: .leading)
+                .frame(width: Metric.abbreviationTermColumn, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: Metric.xxs) {
                 Text(abbreviation.expansion)
                 // Naming what was replaced, so an override is visible rather than
                 // silent — the two readings of a letter pair usually belong to
@@ -107,7 +107,7 @@ struct AbbreviationsSettingsView: View {
             .buttonStyle(.borderless)
             .help("Remove \(abbreviation.term)")
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Metric.xxs)
     }
 
     private func add() {
