@@ -15,7 +15,7 @@ jobs:
     name: Tests, typecheck, layering
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Not pinned to a version. The panel's Liquid Glass path calls
       # glassEffect, which needs the macOS 26 SDK to *compile* even though
@@ -41,3 +41,25 @@ jobs:
         env:
           SWIFT_TEST_FLAGS: --skip SnapshotTests
         run: make check
+
+  # Separate job, deliberately. These drive the real app rather than a view
+  # model, so they are slower and depend on a window server the runner may or
+  # may not give them. Keeping them apart means a flake here does not hide a
+  # genuine failure in the gate above.
+  uitest:
+    name: Interaction tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select the newest Xcode on the runner
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      # The project is generated rather than committed, so the runner needs the
+      # generator. `make project` says to run bootstrap rather than installing
+      # anything itself, which is right for a developer's machine.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: make uitest
+        run: make uitest
