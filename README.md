@@ -49,15 +49,18 @@ make run        # build a Debug copy and launch it, without installing
 make check      # tests, typecheck, and module-boundary checks
 ```
 
-`make check` is the gate: 271 Swift tests, 45 Python tests, a Swift 6
+`make check` is the gate: 323 Swift tests, 45 Python tests, a Swift 6
 strict-concurrency typecheck of the app target, and an assertion that the module
-boundaries hold. Six of the Swift tests are rendered-image snapshots, which cover
-the class of bug a view model cannot see.
+boundaries hold. Sixteen of the Swift tests are rendered-image snapshots, which
+cover the class of bug a view model cannot see.
 
-`make uitest` adds five interaction tests that drive the real app — which window
+`make uitest` adds six interaction tests that drive the real app — which window
 opens, what reopening does, whether the panel stays out of the way. They are kept
-out of `make check` because they take about 25 seconds and quit a running CodeBar.
-`make check-all` runs both.
+out of `make check` because they take about 25 seconds and quit a running
+CodeBar. `make check-all` runs both.
+
+Both run on every push and pull request, on a macOS runner, from
+[`.github/workflows/check.yml`](.github/workflows/check.yml).
 
 ## Using it
 
@@ -239,8 +242,10 @@ Worth reading before relying on it.
 - **Snapshot references are machine-specific.** Fonts, appearance and OS version
   all move the pixels. Appearance is pinned to dark so they do not flip with the
   system setting, but another machine needs its own references or a tolerance.
-- **No CI.** `make check` and `make uitest` are the whole gate, and they run by
-  hand.
+- **The snapshots are a local gate only.** CI runs everything else, but skips
+  them: their references are recorded on one Mac, so on a runner they assert
+  nothing except that it is a different machine. A regression they would have
+  caught reaches CI green and is caught at `make check` before a push.
 - **Migrations run synchronously on the main actor at launch.** Imperceptible at
   today's scale — 98,186 codes — but a schema change that rewrites rows rather
   than adding columns would block the app while it ran.
