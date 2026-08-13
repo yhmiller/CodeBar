@@ -4,7 +4,7 @@ import Testing
 
 /// A 16-inch MacBook Pro's usable area, menu bar excluded.
 private let LAPTOP = CGRect(x: 0, y: 0, width: 1728, height: 1051)
-private let PANEL = CGSize(width: 560, height: 420)
+private let PANEL = CGSize(width: 680, height: 420)
 
 @Suite("Panel placement")
 struct PanelPlacementTests {
@@ -72,7 +72,7 @@ struct PanelPlacementTests {
     @Test("should not push a tall panel below the bottom of the screen")
     func clampsTallPanel() {
         let short = CGRect(x: 0, y: 0, width: 1440, height: 500)
-        let tall = CGSize(width: 560, height: 460)
+        let tall = CGSize(width: 680, height: 460)
 
         #expect(PanelPlacement.origin(for: tall, in: short).y >= short.minY)
     }

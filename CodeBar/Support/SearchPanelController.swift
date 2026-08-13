@@ -5,7 +5,13 @@ import CodeLibrary
 import CodePlatform
 import SwiftUI
 
-private let PANEL_SIZE = NSSize(width: 560, height: 420)
+/// The width comes from `Metric` rather than being spelled again here. It used
+/// to be a literal in both places, so the panel and the SwiftUI content laid out
+/// inside it agreed on their width only by coincidence. The height is a starting
+/// value; the panel sizes itself to its content after that.
+private let PANEL_SIZE = NSSize(width: Metric.panelWidth, height: 420)
+
+private let APPEARANCE_DURATION: TimeInterval = 0.12
 
 /// Also spelled in `UITests`; the two must agree.
 let SEARCH_PANEL_ACCESSIBILITY_ID = "search-panel"
@@ -37,6 +43,10 @@ final class SearchPanelController {
 
     let preferences = UserDefaultsPreferences()
 
+    /// Shared with `LibraryActions`, so a copy made from the window confirms
+    /// itself the same way a copy made from the panel does.
+    let confirmation = CopyConfirmationPanel()
+
     func toggle() {
         if let panel, panel.isVisible {
             hide()
@@ -50,7 +60,18 @@ final class SearchPanelController {
         viewModel?.prepareForDisplay()
         position(panel)
         NSApp.activate(ignoringOtherApps: true)
+
+        // A hard cut reads as a glitch rather than an arrival. Short enough that
+        // it cannot delay a user who is already typing.
+        let animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        panel.alphaValue = animates ? 0 : 1
         panel.makeKeyAndOrderFront(nil)
+
+        guard animates else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = APPEARANCE_DURATION
+            panel.animator().alphaValue = 1
+        }
     }
 
     /// Re-placed on every show rather than remembered.
@@ -92,7 +113,15 @@ final class SearchPanelController {
         // grow downwards as results arrive instead of sitting in a fixed box
         // with dead space underneath.
         let hosting = NSHostingController(
-            rootView: SearchPanelView(model: model) { [weak self] in self?.hide() }
+            // The ground is applied here rather than inside the view: it samples
+            // a live backdrop, which exists in a real window and not in the
+            // offscreen render the snapshot tests use.
+            rootView: SearchPanelView(
+                model: model,
+                onCopied: { [weak self] copied in self?.confirmation.show(copied) },
+                onDismiss: { [weak self] in self?.hide() }
+            )
+            .panelSurface()
         )
         hosting.sizingOptions = [.preferredContentSize]
 

@@ -16,12 +16,28 @@ import Testing
 /// These are inherently machine-dependent — fonts, appearance and OS version all
 /// move the pixels. They earn their place on a single-developer project on one
 /// Mac; a shared CI machine would need its own references or a tolerance.
+///
+/// What these deliberately do *not* cover is the panel's ground. Liquid Glass
+/// and `.ultraThinMaterial` both sample a live backdrop, and an offscreen bitmap
+/// render has none: a `SearchPanelView` carrying `panelSurface()` measured a
+/// luminance range of 23 across the hint text where the same view without it
+/// measured 105, and changing the text's foreground style moved that not at all.
+/// The text was obscured rather than dimmed. So the ground is applied by
+/// `SearchPanelController` to the hosting root instead, these references cover
+/// the content, and the surface is judged by running the app.
 @Suite("Snapshots")
 @MainActor
 struct SnapshotTests {
 
-    private static let panelSize = CGSize(width: 560, height: 180)
+    private static let panelSize = CGSize(width: Metric.panelWidth, height: 180)
     private static let detailSize = CGSize(width: 620, height: 520)
+
+    /// Rows are rendered at the panel's real width, not at a number that
+    /// happened to match it. The two used to be spelled independently, so a
+    /// change to one silently stopped testing the other.
+    private static func panel(_ height: CGFloat) -> CGSize {
+        CGSize(width: Metric.panelWidth, height: height)
+    }
 
     /// Snapshots the SwiftUI view through the same hosting path the app uses.
     ///
@@ -36,14 +52,19 @@ struct SnapshotTests {
     ///
     /// A failure reports this line rather than the calling test, so `named:`
     /// carries the identification instead.
-    private func assertImage(_ view: some View, size: CGSize, named name: String) {
+    private func assertImage(
+        _ view: some View,
+        size: CGSize,
+        named name: String,
+        appearance: NSAppearance.Name = .darkAqua
+    ) {
         let grounded = view
             .frame(width: size.width, alignment: .topLeading)
             .background(Color(nsColor: .windowBackgroundColor))
 
         let controller = NSHostingController(rootView: grounded)
         controller.view.frame = CGRect(origin: .zero, size: size)
-        controller.view.appearance = NSAppearance(named: .darkAqua)
+        controller.view.appearance = NSAppearance(named: appearance)
 
         assertSnapshot(of: controller, as: .image(size: size), named: name, testName: "snapshot")
     }
@@ -52,17 +73,125 @@ struct SnapshotTests {
 
     @Test("billable and header rows should stay visually distinct")
     func resultRowVariants() {
-        let rows = VStack(spacing: 2) {
-            ResultRow(code: Samples.diabetes.code, isSelected: true,
+        let rows = VStack(spacing: Metric.xxs) {
+            CodeRow(code: Samples.diabetes.code, density: .panel, isSelected: true,
                       isPinned: false, onTogglePin: {})
-            ResultRow(code: Samples.header.code, isSelected: false,
+            CodeRow(code: Samples.header.code, density: .panel, isSelected: false,
                       isPinned: false, onTogglePin: {})
-            ResultRow(code: Samples.asthma.code, isSelected: false,
+            CodeRow(code: Samples.asthma.code, density: .panel, isSelected: false,
                       isPinned: true, onTogglePin: {})
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Metric.s)
 
-        assertImage(rows, size: CGSize(width: 560, height: 140), named: "result-rows")
+        assertImage(rows, size: Self.panel(140), named: "result-rows")
+    }
+
+    /// The regression test for the app's worst defect.
+    ///
+    /// `.lineLimit(1)` in a 560pt panel truncated "Type 2 diabetes mellitus
+    /// without com…" — hiding the clause that separates E11.9 from E11.65. This
+    /// asserts the widened, two-line row shows a real 88-character CMS
+    /// description whole.
+    @Test("a long description should wrap rather than truncate")
+    func longDescriptionWraps() {
+        let rows = VStack(spacing: Metric.xxs) {
+            CodeRow(code: Samples.longDescription.code, density: .panel, isSelected: true,
+                      isPinned: false, onTogglePin: {})
+        }
+        .padding(.vertical, Metric.s)
+
+        assertImage(rows, size: Self.panel(90), named: "result-row-long-description")
+    }
+
+    /// The regression test for the merge itself.
+    ///
+    /// The panel and the window used to render a code with two unrelated row
+    /// types, so moving between surfaces made codes stop looking like the same
+    /// kind of thing. Density may change; anatomy may not — and that is only
+    /// checkable by looking at the three side by side.
+    @Test("the three row densities should stay visibly related")
+    func rowDensities() {
+        let rows = VStack(alignment: .leading, spacing: Metric.m) {
+            CodeRow(code: Samples.diabetes.code, density: .panel, showsSystemBadge: false)
+            CodeRow(code: Samples.diabetes.code, density: .list, showsSystemBadge: false)
+            CodeRow(code: Samples.diabetes.code, density: .compact, showsSystemBadge: false)
+        }
+        .padding(Metric.m)
+
+        assertImage(rows, size: Self.panel(150), named: "code-row-densities")
+    }
+
+    // MARK: - Accessibility
+
+    /// The regression test for the semantic-colour work.
+    ///
+    /// Under Increase Contrast an 18%-opacity fill barely separates from the
+    /// surface, so the chips that matter most — not billable, billable — were
+    /// the first things to stop reading. They take a border instead, and the
+    /// only way to know that still holds is to look.
+    @Test("chips should stay legible under increased contrast")
+    func rowsUnderIncreasedContrast() {
+        let rows = VStack(spacing: Metric.xxs) {
+            CodeRow(code: Samples.diabetes.code, density: .panel, isSelected: true,
+                    isPinned: false, onTogglePin: {})
+            CodeRow(code: Samples.header.code, density: .panel,
+                    isPinned: false, onTogglePin: {})
+        }
+        .padding(.vertical, Metric.s)
+
+        assertImage(rows, size: Self.panel(110), named: "result-rows-increased-contrast",
+                    appearance: .accessibilityHighContrastDarkAqua)
+    }
+
+    // There is deliberately no large-text snapshot. macOS does not drive
+    // `@ScaledMetric` from `\.dynamicTypeSize` the way iOS does, so forcing that
+    // environment value renders at the default size and the test would assert
+    // nothing while appearing to cover the code column. The `@ScaledMetric` on
+    // `CodeRow.codeColumn` is still correct — it responds to the real system
+    // setting, and it is what keeps the column honest if `CodeBarUI` is ever
+    // reused on iOS, where text scaling is not optional. See DESIGN_REVIEW.md §11.
+
+    // MARK: - Footer
+
+    /// The footer is the app's only statement of its own shortcuts, so what it
+    /// claims has to stay true. Every key listed here must actually work in the
+    /// state it is listed for — a shortcut that fails the first time it is tried
+    /// is worse than one nobody knew about.
+    @Test("the footer should list the keys that work on results")
+    func footerForResults() {
+        assertImage(PanelFooter(context: .results),
+                    size: Self.panel(44), named: "panel-footer-results")
+    }
+
+    @Test("the footer should drop the description key when nothing is typed")
+    func footerForSuggestions() {
+        assertImage(PanelFooter(context: .suggestions),
+                    size: Self.panel(44), named: "panel-footer-suggestions")
+    }
+
+    // MARK: - Copy confirmation
+
+    /// The long form is the case worth locking. Confirming a copy is only
+    /// useful if it distinguishes `↵` from `⇧↵`, which means the description has
+    /// to survive into the confirmation.
+    @Test("the copy confirmation should show the long form it copied")
+    func copyConfirmationLongForm() {
+        let view = CopyConfirmationView(
+            copiedText: CopyFormat.codeAndDisplay.string(for: Samples.diabetes.code)
+        )
+
+        assertImage(view, size: CGSize(width: 520, height: 70),
+                    named: "copy-confirmation-long")
+    }
+
+    @Test("the copy confirmation should show a bare code")
+    func copyConfirmationCodeOnly() {
+        let view = CopyConfirmationView(
+            copiedText: CopyFormat.codeOnly.string(for: Samples.diabetes.code)
+        )
+
+        assertImage(view, size: CGSize(width: 260, height: 70),
+                    named: "copy-confirmation-code")
     }
 
     // MARK: - Empty state
@@ -75,17 +204,17 @@ struct SnapshotTests {
             onChoose: { _ in },
             onTogglePin: { _ in }
         )
-        .frame(width: 560)
+        .frame(width: Metric.panelWidth)
 
-        assertImage(view, size: CGSize(width: 560, height: 220), named: "empty-state")
+        assertImage(view, size: Self.panel(220), named: "empty-state")
     }
 
     @Test("the empty state should explain itself before anything is pinned")
     func emptyStateHint() {
         let view = EmptyStateView(pinned: [], recent: [], onChoose: { _ in }, onTogglePin: { _ in })
-            .frame(width: 560)
+            .frame(width: Metric.panelWidth)
 
-        assertImage(view, size: CGSize(width: 560, height: 120), named: "empty-state-hint")
+        assertImage(view, size: Self.panel(120), named: "empty-state-hint")
     }
 
     // MARK: - Detail pane
@@ -105,27 +234,44 @@ struct SnapshotTests {
 
         let view = CodeDetailView(
             detail: detail,
-            isPinned: false,
             note: "Our clinic codes new diagnoses here",
-            lists: [CodeList(id: 1, name: "Clinic", detail: nil, createdAt: .distantPast, count: 3)],
-            currentList: nil,
-            onCopy: { _, _ in },
-            onTogglePin: { _ in },
             onSelectCode: { _ in },
-            onSaveNote: { _ in },
-            onAddToList: { _ in },
-            onRemoveFromList: {}
+            onSaveNote: { _ in }
         )
 
         assertImage(view, size: Self.detailSize, named: "detail-pane")
     }
 
+    /// The ordering regression test.
+    ///
+    /// With no note, nothing at all should stand between the code and the
+    /// publisher's rules. An always-open editor used to sit there and push
+    /// `Excludes 1` — the rule that means *never code these together* — below
+    /// the fold on every single code.
+    @Test("the detail pane should show coding rules before the empty note")
+    func detailPaneWithoutNote() {
+        let detail = CodeDetail(
+            code: Samples.header.code,
+            ancestors: [],
+            children: [Samples.diabetes.code],
+            notes: [
+                CodeNote(kind: .includes, text: "diabetes NOS"),
+                CodeNote(kind: .excludes1, text: "type 1 diabetes mellitus (E10.-)"),
+                CodeNote(kind: .useAdditionalCode, text: "insulin (Z79.4)")
+            ]
+        )
+
+        let view = CodeDetailView(
+            detail: detail, note: "", onSelectCode: { _ in }, onSaveNote: { _ in }
+        )
+
+        assertImage(view, size: Self.detailSize, named: "detail-pane-no-note")
+    }
+
     @Test("the detail pane should say when nothing is selected")
     func detailPaneEmpty() {
         let view = CodeDetailView(
-            detail: nil, isPinned: false, note: "", lists: [], currentList: nil,
-            onCopy: { _, _ in }, onTogglePin: { _ in }, onSelectCode: { _ in },
-            onSaveNote: { _ in }, onAddToList: { _ in }, onRemoveFromList: {}
+            detail: nil, note: "", onSelectCode: { _ in }, onSaveNote: { _ in }
         )
 
         assertImage(view, size: CGSize(width: 420, height: 260), named: "detail-pane-empty")
@@ -144,7 +290,7 @@ struct SnapshotTests {
         await model.load()
 
         assertImage(AbbreviationsSettingsView(model: model),
-                    size: CGSize(width: 540, height: 320), named: "abbreviations")
+                    size: CGSize(width: Metric.settingsWidth, height: 320), named: "abbreviations")
     }
 
     @Test("the abbreviations pane should show an example before anything is added")
@@ -153,7 +299,7 @@ struct SnapshotTests {
         await model.load()
 
         assertImage(AbbreviationsSettingsView(model: model),
-                    size: CGSize(width: 540, height: 260), named: "abbreviations-empty")
+                    size: CGSize(width: Metric.settingsWidth, height: 260), named: "abbreviations-empty")
     }
 
     // MARK: - Search panel

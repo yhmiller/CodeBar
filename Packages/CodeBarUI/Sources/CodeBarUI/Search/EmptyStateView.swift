@@ -9,6 +9,15 @@ import SwiftUI
 struct EmptyStateView: View {
     let pinned: [ClinicalCode]
     let recent: [ClinicalCode]
+
+    /// Threaded through rather than decided here, so the empty state and the
+    /// results list can never disagree about whether a row names its system.
+    var showsSystemBadge: Bool = true
+
+    /// Which suggestion the arrow keys are on, so ⌥⌘C then Return reaches a
+    /// pinned code without typing — the thing the README has always promised.
+    var isSelected: (ClinicalCode) -> Bool = { _ in false }
+
     let onChoose: (ClinicalCode) -> Void
     let onTogglePin: (ClinicalCode) -> Void
 
@@ -19,14 +28,14 @@ struct EmptyStateView: View {
             hint
         } else {
             ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Metric.xxs) {
                     section("Pinned", codes: pinned, isPinnedSection: true)
                     section("Recent", codes: recent, isPinnedSection: false)
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, Metric.s)
                 .measuringHeight()
             }
-            .frame(height: min(listHeight, RESULT_LIST_MAX_HEIGHT))
+            .frame(height: min(listHeight, Metric.resultListMaxHeight))
             .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
         }
     }
@@ -34,35 +43,44 @@ struct EmptyStateView: View {
     @ViewBuilder
     private func section(_ title: String, codes: [ClinicalCode], isPinnedSection: Bool) -> some View {
         if !codes.isEmpty {
+            // Aligned to `rowLeading`, not to a number that happens to match:
+            // the header sits above rows whose text starts at the row's own
+            // inset plus its padding, and the two have to move together.
             Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-                .padding(.bottom, 2)
+                .font(CodeTypography.sectionLabel)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, Metric.rowLeading)
+                .padding(.top, Metric.s)
+                .padding(.bottom, Metric.xxs)
 
             ForEach(codes) { code in
-                ResultRow(
+                CodeRow(
                     code: code,
-                    isSelected: false,
+                    density: .panel,
+                    isSelected: isSelected(code),
                     isPinned: isPinnedSection,
+                    showsSystemBadge: showsSystemBadge,
                     onTogglePin: { onTogglePin(code) }
                 )
-                .contentShape(Rectangle())
                 .onTapGesture { onChoose(code) }
+                .accessibilityHint("Press Return to copy")
             }
         }
     }
 
     private var hint: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Metric.xs) {
             Text("Start typing a term or a code")
                 .foregroundStyle(.secondary)
+            // Secondary, not tertiary. Tertiary is for text on an opaque
+            // surface; over a translucent one its effective contrast depends on
+            // whatever happens to be behind the panel, and this is the line that
+            // tells a first-time user what to type.
             Text("e.g. \"type 2 diabetes\" or \"E11\"")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
         }
-        .padding(24)
+        .padding(Metric.xl)
         .frame(maxWidth: .infinity)
     }
 }
