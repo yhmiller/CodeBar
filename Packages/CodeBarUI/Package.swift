@@ -16,6 +16,11 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.4")
     ],
     targets: [
+        // Deliberately no `resources:`. The semantic colours were an `.xcassets`
+        // here first; `swift build` copies a catalogue in without running
+        // `actool`, so nothing resolved under `make check` while the app — built
+        // by `xcodebuild` — looked fine. They are defined in code instead, in
+        // DesignSystem/Palette.swift.
         .target(
             name: "CodeBarUI",
             dependencies: [.product(name: "CodeCore", package: "CodeCore")]
