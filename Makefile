@@ -68,7 +68,8 @@ dist: release ## Build a distributable DMG (signs and notarises if configured)
 	@ditto "$(RELEASE_APP)" "$(DIST_DIR)/stage/$(APP_NAME).app"
 	@if [ -n "$(SIGN_IDENTITY)" ]; then \
 		echo "==> signing with $(SIGN_IDENTITY)"; \
-		codesign --force --deep --options runtime --timestamp \
+		codesign --force --options runtime --timestamp \
+			--entitlements "CodeBar/CodeBar.entitlements" \
 			--sign "$(SIGN_IDENTITY)" "$(DIST_DIR)/stage/$(APP_NAME).app"; \
 		codesign --verify --strict --verbose=2 "$(DIST_DIR)/stage/$(APP_NAME).app"; \
 	else \
