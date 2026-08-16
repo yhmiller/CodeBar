@@ -43,6 +43,14 @@ targets:
         # changing what the app may do. Turning it on now means the first signed
         # build is not also the first build under a different runtime.
         ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        Release:
+          # Xcode otherwise injects com.apple.security.get-task-allow, which lets
+          # a debugger attach. Apple's notarization requirements name it
+          # explicitly as disqualifying, so a Release build carrying it is
+          # rejected — on the day of the first release, having looked fine until
+          # then. Verified absent with `codesign -d --entitlements`.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     sources:
       - path: CodeBar
         excludes:

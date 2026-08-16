@@ -23,3 +23,4 @@ Package.resolved
 # Python
 __pycache__/
 *.pyc
+.gstack/
