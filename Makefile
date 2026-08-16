@@ -5,13 +5,19 @@ RELEASE_APP := $(BUILD_DIR)/Build/Products/Release/$(APP_NAME).app
 DEBUG_APP   := $(BUILD_DIR)/Build/Products/Debug/$(APP_NAME).app
 INSTALL_DIR := /Applications
 INSTALLED   := $(INSTALL_DIR)/$(APP_NAME).app
+# Read from project.yml rather than repeated here, so a release cannot be named
+# one version while the bundle inside it claims another. Anchored to the
+# definition line and stopping there: a looser match also finds
+# `CFBundleShortVersionString: $(MARKETING_VERSION)`, whose $(...) the shell then
+# tries to run as a command, and the DMG comes out named `CodeBar-.dmg`.
+VERSION     := $(shell awk -F'"' '/^ *MARKETING_VERSION:/ {print $$2; exit}' project.yml)
 PACKAGES    := Packages/SQLiteKit Packages/CodeCore Packages/CodeStore \
                Packages/CodeLibrary Packages/CodeBarUI Packages/CodePlatform
 
 .DEFAULT_GOAL := help
 
 .PHONY: help install run uninstall release project bootstrap \
-        build test test-scripts typecheck layering check check-all uitest clean icon
+        build test test-scripts typecheck layering check check-all uitest clean icon dist
 
 ## ---------------------------------------------------------------- using it
 
@@ -38,6 +44,54 @@ install: release ## Build Release, install to /Applications, and launch
 	@echo
 	@echo "$(APP_NAME) is installed and running. Press ⌥⌘C from anywhere."
 	@echo "Turn on 'Open at Login' from the menu bar icon so it survives a restart."
+
+## -------------------------------------------------------------- releasing
+
+# Signing and notarising are opt-in through these two, so the same target works
+# before and after enrolling in the Developer Program. Set them and the DMG is
+# something a stranger can open; leave them and it is a DMG that Gatekeeper will
+# refuse, which is still the right thing to build and test.
+#
+#   make dist SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
+#             NOTARY_PROFILE=codebar
+#
+# NOTARY_PROFILE is a keychain profile made once with:
+#   xcrun notarytool store-credentials codebar --apple-id … --team-id … --password …
+SIGN_IDENTITY  ?=
+NOTARY_PROFILE ?=
+DIST_DIR       := dist
+DMG            := $(DIST_DIR)/$(APP_NAME)-$(VERSION).dmg
+
+dist: release ## Build a distributable DMG (signs and notarises if configured)
+	@rm -rf "$(DIST_DIR)/stage" "$(DMG)"
+	@mkdir -p "$(DIST_DIR)/stage"
+	@ditto "$(RELEASE_APP)" "$(DIST_DIR)/stage/$(APP_NAME).app"
+	@if [ -n "$(SIGN_IDENTITY)" ]; then \
+		echo "==> signing with $(SIGN_IDENTITY)"; \
+		codesign --force --deep --options runtime --timestamp \
+			--sign "$(SIGN_IDENTITY)" "$(DIST_DIR)/stage/$(APP_NAME).app"; \
+		codesign --verify --strict --verbose=2 "$(DIST_DIR)/stage/$(APP_NAME).app"; \
+	else \
+		echo "==> SIGN_IDENTITY not set — building an unsigned DMG"; \
+	fi
+	@ln -sf /Applications "$(DIST_DIR)/stage/Applications"
+	@echo "==> building $(DMG)"
+	@hdiutil create -volname "$(APP_NAME)" -srcfolder "$(DIST_DIR)/stage" \
+		-ov -format UDZO -quiet "$(DMG)"
+	@if [ -n "$(SIGN_IDENTITY)" ]; then \
+		codesign --force --sign "$(SIGN_IDENTITY)" "$(DMG)"; \
+	fi
+	@if [ -n "$(NOTARY_PROFILE)" ]; then \
+		echo "==> notarising (this waits on Apple)"; \
+		xcrun notarytool submit "$(DMG)" --keychain-profile "$(NOTARY_PROFILE)" --wait; \
+		xcrun stapler staple "$(DMG)"; \
+		xcrun stapler validate "$(DMG)"; \
+	else \
+		echo "==> NOTARY_PROFILE not set — not notarised, Gatekeeper will refuse it"; \
+	fi
+	@rm -rf "$(DIST_DIR)/stage"
+	@echo
+	@echo "built $(DMG)"
 
 uninstall: ## Quit and remove /Applications/CodeBar.app
 	@osascript -e 'tell application "$(APP_NAME)" to quit' >/dev/null 2>&1 || true
