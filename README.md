@@ -90,6 +90,12 @@ rules that mean *never code these together*.
 Lists live in the sidebar: build a problem list or an encounter template, and add
 codes to it from any detail pane.
 
+Right-click a list to get it out again — **Copy as Text** puts it on the
+clipboard worded exactly as ⇧Return writes a single code, and **Export as CSV…**
+writes a spreadsheet with the code, description, system and billability. A list
+that can only be read inside CodeBar is worth much less than one you can paste
+into a note or hand to someone.
+
 ## Importing full code sets
 
 The bundled starter set is intentionally small (common outpatient codes)
@@ -213,7 +219,6 @@ set never costs you them.
 ## Still to come
 
 - Configurable hotkey (currently fixed at ⌥⌘C)
-- Export a list as CSV or paste-ready text
 - Add to a list from the search panel, not only from the window
 - iCloud sync of the library across machines
 - Crosswalks between code systems — a separately licensed release, not a column
