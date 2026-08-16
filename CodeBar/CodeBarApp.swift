@@ -22,7 +22,14 @@ struct CodeBarApp: App {
                 ),
                 isPinned: { appDelegate.actions.isPinned($0) },
                 onCopy: { code, format in appDelegate.actions.copy(code, format: format) },
-                onTogglePin: { appDelegate.actions.togglePin($0) }
+                onTogglePin: { appDelegate.actions.togglePin($0) },
+                onExportList: { content, list, format, toFile in
+                    if toFile {
+                        ListExporter.save(content, as: format, suggestedName: list.name)
+                    } else {
+                        ListExporter.copyToClipboard(content)
+                    }
+                }
             )
             .frame(minWidth: 900, minHeight: 560)
             .task { await appDelegate.actions.refresh() }
