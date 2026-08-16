@@ -1,0 +1,97 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  # Dispatchable so the build-and-package path can be exercised without cutting
+  # a release. Signing is skipped when the secrets are absent, so a dispatch run
+  # proves everything except the parts that need a certificate.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    name: Build the DMG
+    runs-on: macos-latest
+    # The `secrets` context is not available in a step's `if`, so the two
+    # questions "have we a certificate" and "have we notarisation credentials"
+    # are answered once here. A step-level `if: secrets.X != ''` would simply
+    # never fire, and the job would quietly build an unsigned DMG forever.
+    env:
+      HAS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_NOTARY_CREDENTIALS: ${{ secrets.APPLE_APP_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select the newest Xcode on the runner
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # Everything below is conditional on the certificate existing, so this
+      # workflow is useful before enrolling in the Developer Program and correct
+      # after. Without it the DMG is unsigned and Gatekeeper will refuse it,
+      # which the job says out loud rather than shipping quietly.
+      - name: Import the Developer ID certificate
+        if: env.HAS_CERTIFICATE == 'true'
+        env:
+          CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 900 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo -n "$CERTIFICATE_P12" | base64 --decode -o "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Store notarisation credentials
+        if: env.HAS_NOTARY_CREDENTIALS == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials codebar \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD"
+
+      # `make dist` signs when SIGN_IDENTITY is set and notarises when
+      # NOTARY_PROFILE is, so the same target runs in both worlds.
+      - name: Build the DMG
+        env:
+          SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          NOTARY_PROFILE: ${{ secrets.APPLE_APP_PASSWORD != '' && 'codebar' || '' }}
+          # (`env` may read secrets; only `if` may not.)
+        run: make dist SIGN_IDENTITY="$SIGN_IDENTITY" NOTARY_PROFILE="$NOTARY_PROFILE"
+
+      - name: Say what was actually produced
+        run: |
+          DMG="$(ls dist/*.dmg)"
+          echo "built $DMG"
+          if codesign -dv "$DMG" 2>&1 | grep -q "adhoc"; then
+            echo "::warning::This DMG is ad-hoc signed and NOT notarised. Gatekeeper will refuse it."
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodeBar-dmg
+          path: dist/*.dmg
+
+      # Only for a tag. A dispatch run leaves the DMG as an artifact instead, so
+      # exercising the workflow never publishes anything.
+      - name: Attach it to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/*.dmg --generate-notes --verify-tag
