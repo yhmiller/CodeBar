@@ -23,16 +23,31 @@ public struct MainWindowView: View {
     private let onTogglePin: (ClinicalCode) -> Void
     private let isPinned: (ClinicalCode) -> Bool
 
+    /// Handed a finished string rather than a list, so the view never touches
+    /// AppKit and the app decides between the clipboard and a file.
+    private let onExportList: (String, CodeList, ListExportFormat, Bool) -> Void
+
     public init(
         model: BrowseViewModel,
         isPinned: @escaping (ClinicalCode) -> Bool,
         onCopy: @escaping (ClinicalCode, CopyFormat) -> Void,
-        onTogglePin: @escaping (ClinicalCode) -> Void
+        onTogglePin: @escaping (ClinicalCode) -> Void,
+        onExportList: @escaping (String, CodeList, ListExportFormat, Bool) -> Void = { _, _, _, _ in }
     ) {
         _model = State(initialValue: model)
         self.isPinned = isPinned
         self.onCopy = onCopy
         self.onTogglePin = onTogglePin
+        self.onExportList = onExportList
+    }
+
+    /// Loads the list before handing it over, so an export is of the whole list
+    /// rather than of whatever a pane happens to have loaded.
+    private func export(_ list: CodeList, as format: ListExportFormat, toFile: Bool) {
+        Task {
+            let content = await model.exportString(forList: list.id, as: format)
+            onExportList(content, list, format, toFile)
+        }
     }
 
     public var body: some View {
@@ -175,6 +190,17 @@ public struct MainWindowView: View {
                             .tag(SidebarSelection.list(list.id))
                             .contextMenu {
                                 Button("Rename…") { renaming = list }
+                                Divider()
+                                Button("Copy as Text") {
+                                    export(list, as: .text, toFile: false)
+                                }
+                                Button("Export as CSV…") {
+                                    export(list, as: .csv, toFile: true)
+                                }
+                                Button("Export as Text…") {
+                                    export(list, as: .text, toFile: true)
+                                }
+                                Divider()
                                 Button("Delete", role: .destructive) { deleting = list }
                             }
                     }

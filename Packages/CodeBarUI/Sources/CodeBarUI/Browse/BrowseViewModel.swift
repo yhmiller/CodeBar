@@ -190,6 +190,16 @@ public final class BrowseViewModel {
         }
     }
 
+    /// The contents of a list, formatted for export.
+    ///
+    /// Read from the library rather than from whatever is on screen: exporting a
+    /// list should give you the list, not the part of it currently loaded into a
+    /// pane.
+    public func exportString(forList id: Int, as format: ListExportFormat) async -> String {
+        let codes = (try? await library?.codes(inList: id)).flatMap { $0 } ?? []
+        return format.string(for: codes)
+    }
+
     public func reloadLists() async {
         lists = (try? await library?.lists()).flatMap { $0 } ?? []
     }
