@@ -6,7 +6,20 @@ on:
   # Dispatchable so the build-and-package path can be exercised without cutting
   # a release. Signing is skipped when the secrets are absent, so a dispatch run
   # proves everything except the parts that need a certificate.
+  #
+  # (workflow_dispatch only works once this file is on the default branch, which
+  # is why the pull_request trigger below exists as well.)
   workflow_dispatch:
+  # Packaging is the kind of thing that breaks silently and is only noticed on
+  # release day, so any change to it rebuilds the DMG. Nothing is published:
+  # the release step is gated on a tag, and a PR run leaves an artifact.
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "Makefile"
+      - "project.yml"
+      - "CodeBar/**"
+
 
 permissions:
   contents: write
