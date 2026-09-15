@@ -247,3 +247,13 @@ Worth reading before relying on it.
 - **The bundled starter set reports unknown billability** rather than claiming to
   be billable, because that was never verified against the CMS file. Only
   imported sets carry the flag.
+
+## License
+
+The source code is released under the [MIT License](LICENSE).
+
+That covers CodeBar's code, not the clinical code sets. Each set stays under its
+publisher's terms, listed under [Importing full code sets](#importing-full-code-sets).
+The bundled starter set is ICD-10-CM only, which is public domain. The tests use
+two LOINC codes and two SNOMED CT concepts as sample data; those remain under the
+LOINC and SNOMED CT licenses.
