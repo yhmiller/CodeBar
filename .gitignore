@@ -8,6 +8,9 @@ CodeBar/CodeBar.entitlements
 
 # Xcode
 DerivedData/
+
+# Built DMGs. Releases are the distribution channel, not the repo.
+dist/
 build/
 *.xcuserdatad
 xcuserdata/
@@ -20,3 +23,4 @@ Package.resolved
 # Python
 __pycache__/
 *.pyc
+.gstack/

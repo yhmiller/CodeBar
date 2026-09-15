@@ -36,6 +36,21 @@ targets:
   CodeBar:
     type: application
     platform: macOS
+    settings:
+      base:
+        # Required for notarization, and harmless before it: it restricts the
+        # process (no unsigned code injection, no DYLD overrides) rather than
+        # changing what the app may do. Turning it on now means the first signed
+        # build is not also the first build under a different runtime.
+        ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        Release:
+          # Xcode otherwise injects com.apple.security.get-task-allow, which lets
+          # a debugger attach. Apple's notarization requirements name it
+          # explicitly as disqualifying, so a Release build carrying it is
+          # rejected — on the day of the first release, having looked fine until
+          # then. Verified absent with `codesign -d --entitlements`.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     sources:
       - path: CodeBar
         excludes:
@@ -53,7 +68,7 @@ targets:
       path: CodeBar/CodeBar.entitlements
       properties:
         com.apple.security.app-sandbox: true
-        com.apple.security.files.user-selected.read-only: true
+        com.apple.security.files.user-selected.read-write: true
     info:
       path: CodeBar/Info.plist
       properties:
