@@ -299,3 +299,66 @@ struct BrowseViewModelTests {
         #expect(await loaded().selectedList == nil)
     }
 }
+
+/// Exporting a saved list. The formatting itself is covered in CodeCore; what
+/// matters here is that the whole list is read from the library rather than
+/// whatever a pane happens to be showing.
+@Suite("Exporting a list")
+@MainActor
+struct ListExportViewModelTests {
+
+    private let diabetes = ClinicalCode(
+        code: "E11.9", display: "Type 2 diabetes mellitus without complications",
+        system: .icd10cm, isBillable: true
+    )
+    private let asthma = ClinicalCode(
+        code: "J45.909", display: "Unspecified asthma, uncomplicated",
+        system: .icd10cm, isBillable: true
+    )
+
+    private func modelWithList(containing codes: [ClinicalCode]) async -> (BrowseViewModel, Int) {
+        let library = FakeLibrary()
+        let list = await library.createList(named: "Clinic", detail: nil)
+        for code in codes {
+            await library.addCode(code, toList: list.id)
+        }
+        let model = BrowseViewModel(repository: nil, library: library)
+        return (model, list.id)
+    }
+
+    @Test("should export every code in the list")
+    func exportsEveryCode() async {
+        let (model, id) = await modelWithList(containing: [diabetes, asthma])
+
+        let exported = await model.exportString(forList: id, as: .csv)
+
+        #expect(exported.split(separator: "\n").count == 3)
+    }
+
+    @Test("should export the list as the requested format")
+    func honoursTheFormat() async {
+        let (model, id) = await modelWithList(containing: [diabetes])
+
+        let exported = await model.exportString(forList: id, as: .text)
+
+        #expect(exported == CopyFormat.codeAndDisplay.string(for: diabetes))
+    }
+
+    @Test("should give an empty list its header and nothing else")
+    func exportsAnEmptyList() async {
+        let (model, id) = await modelWithList(containing: [])
+
+        let exported = await model.exportString(forList: id, as: .csv)
+
+        #expect(exported == "Code,Description,System,Billable")
+    }
+
+    @Test("should export nothing when there is no library")
+    func survivesAMissingLibrary() async {
+        let model = BrowseViewModel(repository: nil, library: nil)
+
+        let exported = await model.exportString(forList: 1, as: .text)
+
+        #expect(exported.isEmpty)
+    }
+}
