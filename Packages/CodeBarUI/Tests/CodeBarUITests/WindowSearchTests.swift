@@ -68,8 +68,6 @@ struct WindowSearchTests {
 
     @Test("should search the whole code set, not the selected chapter")
     func searchesEverything() async {
-        // Browsing is for when you know where a code sits; constraining search
-        // to the open chapter would make it useless in the case it exists for.
         let repository = SearchableTreeRepository()
         let model = await loaded(repository: repository)
         model.selection = .chapter("Endocrine")

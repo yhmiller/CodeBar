@@ -3,8 +3,6 @@ import CodeCore
 import CodeStore
 import UniformTypeIdentifiers
 
-/// Handles "Import Code Set…": pick a JSON file produced by one of the
-/// `Scripts/import_*.py` converters and load it into the search index.
 enum CodeImporter {
 
     @MainActor
@@ -46,9 +44,6 @@ enum CodeImporter {
         }
     }
 
-    /// Replace mode deletes codes the file omits, which is the whole point for a
-    /// yearly release — but it is destructive and driven by the file's own
-    /// request, so it is confirmed rather than obeyed silently.
     @MainActor
     private static func confirmReplacement(
         of codeSet: CodeSetImport,
@@ -80,9 +75,6 @@ enum CodeImporter {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
-    /// Reports the net effect on what is installed, not the file's row count, so
-    /// re-importing a file reads as "nothing changed" rather than implying the
-    /// codes were added twice.
     private static func describe(_ summary: IngestSummary, release: String?) -> String {
         let systems = summary.systems.map(\.rawValue).sorted().joined(separator: ", ")
         var lines = ["Read \(summary.processed) codes from \(systems)."]

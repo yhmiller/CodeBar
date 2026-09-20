@@ -87,8 +87,6 @@ struct CodeSetsSettingsView: View {
         .padding(.vertical, Metric.xxs)
     }
 
-    /// Release first: a set a year out of date answers every query confidently,
-    /// and the only visible symptom is a retired code.
     private func subtitle(for manifest: CodeSetManifest) -> String {
         let count = "\(manifest.rowCount.formatted()) codes"
         guard let release = manifest.release else {

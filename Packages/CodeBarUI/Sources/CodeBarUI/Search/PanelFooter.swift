@@ -1,20 +1,6 @@
 import SwiftUI
 
-/// The panel's key map, stated rather than assumed.
-///
-/// `↵` and `⇧↵` shipped for a long time with no way to discover them except the
-/// README, and the per-row "↵ copy" hint competed with the pin for the row's
-/// trailing edge while only ever describing one of the keys. Saying it once, in
-/// a fixed place, is how every keyboard-first launcher teaches its own
-/// shortcuts.
 struct PanelFooter: View {
-    /// What the keys do depends on what is on screen — there is nothing to copy
-    /// before anything is typed.
-    ///
-    /// There is deliberately no case for the bare hint state. With no pins, no
-    /// recents and nothing typed, every key here would be inert, and a footer
-    /// listing keys that do nothing is worse than no footer: the panel would be
-    /// teaching a shortcut that fails the first time it is tried.
     enum Context {
         case results
         case suggestions
@@ -32,8 +18,6 @@ struct PanelFooter: View {
         .padding(.horizontal, Metric.l)
         .padding(.vertical, Metric.s)
         .background(.bar)
-        // One announcement of the whole map, rather than eight fragments
-        // interrupting the results a VoiceOver user is actually navigating.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spokenSummary)
     }
@@ -43,8 +27,6 @@ struct PanelFooter: View {
         let label: String
     }
 
-    /// Only keys that work in the state on screen. `⌘K` is absent until the
-    /// action menu exists — see DESIGN_ROADMAP.md 6.1.
     private var shortcuts: [Shortcut] {
         switch context {
         case .results:

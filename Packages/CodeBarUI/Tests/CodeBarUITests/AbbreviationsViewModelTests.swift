@@ -63,8 +63,6 @@ struct AbbreviationsViewModelTests {
         #expect(model().canAdd(term: "abx", expansion: "antibiotic"))
     }
 
-    /// A silent override is how the wrong reading of a letter pair gets used, so
-    /// the pane names what an entry replaces.
     @Test("should report the built-in an entry overrides")
     func reportsOverriddenBuiltIn() {
         let overridden = model().overriddenBuiltIn(

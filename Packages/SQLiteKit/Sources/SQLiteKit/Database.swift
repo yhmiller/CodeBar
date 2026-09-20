@@ -3,10 +3,6 @@ import SQLite3
 
 private let BUSY_TIMEOUT_MS = 5_000
 
-/// An open SQLite connection.
-///
-/// Not `Sendable` by design — owned exclusively by `SQLiteCodeStore`'s actor
-/// isolation, which is what serializes access to the underlying handle.
 public final class Database {
     private var handle: OpaquePointer?
 
@@ -49,10 +45,6 @@ public final class Database {
         try Statement(database: handle, sql: sql)
     }
 
-    /// Runs `body` in a transaction, rolling back if it throws.
-    ///
-    /// The absence of this rollback is what let a failed import commit half a
-    /// code set in the previous implementation.
     public func transaction<T>(_ body: () throws -> T) throws -> T {
         try execute("BEGIN IMMEDIATE;")
         do {
@@ -65,7 +57,6 @@ public final class Database {
         }
     }
 
-    /// Rows changed by the most recent statement.
     public var changeCount: Int {
         Int(sqlite3_changes64(handle))
     }
@@ -78,8 +69,6 @@ public final class Database {
         return Int32(statement.int(at: 0))
     }
 
-    /// `PRAGMA` does not accept bind parameters, so the version is interpolated.
-    /// Safe because it is an `Int32` this module controls.
     public func setUserVersion(_ version: Int32) throws {
         try execute("PRAGMA user_version = \(version);")
     }

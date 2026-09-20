@@ -1,18 +1,8 @@
 import CodeCore
 import SwiftUI
 
-/// The main window: browse the code hierarchy the menu bar panel cannot show.
-///
-/// The panel stays the fast path — hotkey, type, copy, gone. This is for the
-/// work that does not fit in two seconds: seeing where a code sits, what sits
-/// beneath it, and what the publisher says about coding it.
 public struct MainWindowView: View {
     @State private var model: BrowseViewModel
-
-    /// The field owns its text and pushes one way into the model — the same rule
-    /// the panel follows. Letting the model drive a text field makes the query
-    /// walk backwards: assigning results re-renders, which pushes a stale query
-    /// back into the field, which searches again.
     @State private var searchText = ""
 
     @State private var isCreatingList = false
@@ -23,8 +13,6 @@ public struct MainWindowView: View {
     private let onTogglePin: (ClinicalCode) -> Void
     private let isPinned: (ClinicalCode) -> Bool
 
-    /// Handed a finished string rather than a list, so the view never touches
-    /// AppKit and the app decides between the clipboard and a file.
     private let onExportList: (String, CodeList, ListExportFormat, Bool) -> Void
 
     public init(
@@ -41,8 +29,6 @@ public struct MainWindowView: View {
         self.onExportList = onExportList
     }
 
-    /// Loads the list before handing it over, so an export is of the whole list
-    /// rather than of whatever a pane happens to have loaded.
     private func export(_ list: CodeList, as format: ListExportFormat, toFile: Bool) {
         Task {
             let content = await model.exportString(forList: list.id, as: format)
@@ -106,20 +92,11 @@ public struct MainWindowView: View {
         }
     }
 
-    /// Actions belong to the window, not to the scrolling content.
-    ///
-    /// Two groups, deliberately: copying a code and curating a library are
-    /// different jobs, and one undifferentiated bar of four equal buttons said
-    /// they were the same. The visible gap between them arrives with
-    /// `ToolbarSpacer` on macOS 26 — see DESIGN_ROADMAP.md 5.1.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             Button("Copy Code") { if let code { onCopy(code, .codeOnly) } }
                 .buttonStyle(.borderedProminent)
-                // Not ⌘C: the coding notes and the note editor are selectable
-                // text, and claiming ⌘C would break copying from them — which
-                // in a clinical tool is a real thing to want.
                 .keyboardShortcut("c", modifiers: [.command, .shift])
                 .help("Copy \(code?.code ?? "the selected code")")
                 .disabled(code == nil)
@@ -181,10 +158,6 @@ public struct MainWindowView: View {
             if !model.lists.isEmpty {
                 Section("Lists") {
                     ForEach(model.lists) { list in
-                        // `.badge` rather than a hand-built trailing Text: it is
-                        // the native affordance and it handles selection-state
-                        // colour itself, where a `.tertiary` label stayed dim
-                        // against a selected row's fill.
                         Label(list.name, systemImage: "list.bullet.rectangle")
                             .badge(list.count)
                             .tag(SidebarSelection.list(list.id))
@@ -218,8 +191,6 @@ public struct MainWindowView: View {
         .navigationSplitViewColumnWidth(min: Metric.sidebarMinWidth,
                                         ideal: Metric.sidebarIdealWidth)
         .safeAreaInset(edge: .bottom) {
-            // The bar needs its own ground and a divider: without them the list
-            // scrolls *underneath* a transparent button and the two overlap.
             VStack(spacing: 0) {
                 Divider()
                 Button {
@@ -274,8 +245,6 @@ public struct MainWindowView: View {
         }
     }
 
-    /// Search covers the whole code set, so a result carries its chapter — the
-    /// tree that would otherwise give it context is not on screen.
     private var searchResults: some View {
         List(selection: Binding(
             get: { model.selectedCode?.id },
@@ -328,8 +297,6 @@ public struct MainWindowView: View {
         }
     }
 
-    /// The selection binding carries an id, so the chosen node has to be found
-    /// again in the loaded tree.
     private func findCode(_ id: String?, in nodes: [BrowseNode]) -> ClinicalCode? {
         guard let id else { return nil }
         for node in nodes {
@@ -342,7 +309,6 @@ public struct MainWindowView: View {
     }
 }
 
-/// A row in the tree, loading its children the first time it is opened.
 struct BrowseNodeRow: View {
     @Bindable var node: BrowseNode
     @State private var isExpanded = false

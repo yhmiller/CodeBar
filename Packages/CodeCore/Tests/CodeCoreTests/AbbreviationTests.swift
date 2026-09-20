@@ -14,7 +14,6 @@ struct AbbreviationTests {
 
     @Test("should keep the abbreviation itself searchable")
     func keepsLiteralToken() {
-        // A code set that does spell out GERD should still match someone typing it.
         #expect(SearchQuery.matchExpression(for: "gerd")?.contains(#""gerd"*"#) == true)
     }
 
@@ -54,8 +53,6 @@ struct AbbreviationTests {
 
     @Test("should not map an abbreviation to a code")
     func expansionsAreWordsNotCodes() {
-        // Mapping shorthand to a specific code would be a clinical judgement made
-        // for the user. Every expansion must be prose.
         let codeLike = ClinicalAbbreviations.expansions.values.filter {
             $0.contains(".") || $0.first?.isNumber == true
         }
@@ -64,8 +61,6 @@ struct AbbreviationTests {
     }
 }
 
-/// The clinician's own shorthand, which the built-in table deliberately stops
-/// short of. These cover the query side; storage is covered in CodeLibrary.
 @Suite("A clinician's own abbreviations")
 struct OwnAbbreviationTests {
 
@@ -78,8 +73,6 @@ struct OwnAbbreviationTests {
         #expect(expression == #"("pcn"* OR ("penicillin"*))"#)
     }
 
-    /// The whole point of letting people add their own: `RA` is rheumatoid
-    /// arthritis on most wards and the right atrium on some.
     @Test("should let the user's own entry override a built-in")
     func ownEntryWinsOverBuiltIn() {
         let expression = SearchQuery.matchExpression(

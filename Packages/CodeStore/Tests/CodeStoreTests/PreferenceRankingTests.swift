@@ -44,7 +44,6 @@ struct PreferenceRankingTests {
 
     @Test("should not let preference override an exact code match")
     func exactCodeStillWins() async throws {
-        // Someone typing E11 means E11, however often they have used E11.9.
         let results = try await seeded().search(
             SearchQuery(raw: "E11", preferredCodes: ["ICD-10-CM-E11.9"])
         )

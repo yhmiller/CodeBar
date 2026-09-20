@@ -2,13 +2,6 @@ import CodeCore
 import SQLiteKit
 import Foundation
 
-/// Translates a `ClinicalCode` to and from its stored column form.
-///
-/// Synonyms are stored twice on purpose: `synonyms_json` preserves them exactly,
-/// including multi-word entries like "type 2 diabetes", while `synonyms_text` is
-/// the flattened form the FTS5 index reads. v1 stored only the flattened form
-/// and split it back apart on read, which silently shredded every multi-word
-/// synonym into separate tokens.
 enum CodeBinder {
 
     static func bind(_ code: ClinicalCode, to statement: Statement) throws {

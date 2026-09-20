@@ -1,27 +1,14 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Four-character signature identifying CodeBar's registration to Carbon: 'CBAR'.
 private let HOTKEY_SIGNATURE: OSType = 0x4342_4152
 private let HOTKEY_ID: UInt32 = 1
 
-/// Registers a system-wide hotkey through Carbon's `RegisterEventHotKey`.
-///
-/// This replaces `NSEvent.addGlobalMonitorForEvents`, which was the wrong API for
-/// the job in four ways: it needed Accessibility permission, it forced the app
-/// out of the sandbox, it observed *every* keystroke system-wide, and it did not
-/// consume the event — so ⌥⌘C also reached whatever app was in front.
-///
-/// It also failed silently. Without Accessibility permission the monitor simply
-/// never fires, with no error to report, which is why the shortcut appeared to do
-/// nothing at all. `RegisterEventHotKey` returns a status code, so a failure here
-/// is something we can actually surface.
 @MainActor
 public final class CarbonHotkeyRegistrar {
 
     public enum RegistrationError: Error, CustomStringConvertible {
         case handlerInstallFailed(OSStatus)
-        /// Most commonly `eventHotKeyExistsErr` — another app already owns the combo.
         case hotkeyRegistrationFailed(OSStatus)
 
         public var description: String {
@@ -42,10 +29,6 @@ public final class CarbonHotkeyRegistrar {
 
     public init() {}
 
-    /// Registers `combo`, replacing any previous registration.
-    ///
-    /// Callers must call `unregister()` before releasing the registrar: cleanup
-    /// cannot happen in `deinit`, which is not main-actor isolated.
     public func register(_ combo: KeyCombo, onTrigger: @escaping @MainActor () -> Void) throws {
         unregister()
         self.onTrigger = onTrigger
@@ -100,8 +83,6 @@ public final class CarbonHotkeyRegistrar {
     }
 }
 
-/// Carbon delivers hot-key events on the main thread's run loop, which is what
-/// makes `assumeIsolated` sound here.
 private func hotkeyEventHandler(
     _ callRef: EventHandlerCallRef?,
     _ event: EventRef?,

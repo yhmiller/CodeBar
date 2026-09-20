@@ -3,17 +3,6 @@ import SwiftUI
 import Testing
 @testable import CodeBarUI
 
-/// The semantic colours have to *resolve*, not merely compile.
-///
-/// They were defined in an asset catalogue first. `swift build` copies an
-/// `.xcassets` into the resource bundle without running `actool`, so
-/// `Color(_:bundle:)` found nothing and every chip rendered as clear — while
-/// `xcodebuild` compiled the same catalogue correctly and the app looked fine.
-/// The result-row snapshot re-recorded with the "not billable" chip invisible
-/// and would have kept passing.
-///
-/// A colour that fails to resolve is a colour that silently disappears, and the
-/// two it would take with it are the two the app cannot afford to lose.
 @Suite("Palette")
 struct PaletteTests {
 
@@ -21,8 +10,6 @@ struct PaletteTests {
         .aqua, .darkAqua, .accessibilityHighContrastAqua, .accessibilityHighContrastDarkAqua
     ]
 
-    /// `NSColor` from an unresolved named colour reports no components, so
-    /// asking for one is what separates "defined" from "actually there".
     private func assertResolves(_ color: Color, _ label: String) {
         for name in Self.appearances {
             let appearance = NSAppearance(named: name)

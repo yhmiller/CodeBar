@@ -5,11 +5,6 @@ private let TAGLINE = "Fast clinical code lookup for ICD-10-CM, LOINC, SNOMED CT
 private let WEBSITE = URL(string: "https://www.princemiller.com")!
 private let WEBSITE_LABEL = "www.princemiller.com"
 
-/// The standard macOS About window, with the installed code sets folded in.
-///
-/// Showing the release here is not decoration: a stale code set is invisible
-/// until someone copies a retired code, and until the settings scene exists this
-/// is the only place to answer "which release am I on?".
 @MainActor
 enum AboutPanel {
 

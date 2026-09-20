@@ -1,15 +1,10 @@
 import CodeCore
 import Foundation
 import SQLiteKit
-
-/// SQLite implementation of the user's library.
 public actor SQLiteCodeLibrary: CodeLibraryStoring {
 
     public enum Location: Sendable {
         case inMemory
-        /// `~/Library/…/CodeBar/library.sqlite`, alongside but separate from the
-        /// code index. Separate files because their lifecycles are opposite: the
-        /// index is replaced by a yearly release, this must survive every one.
         case applicationSupport
         case file(URL)
     }
@@ -22,13 +17,10 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
         try Self.migrate(database)
     }
 
-    /// Static so it can run from `init`, which cannot call isolated members.
     private static func migrate(_ database: Database) throws {
         let version = try database.userVersion()
         guard version != LibrarySchema.version else { return }
 
-        // Steps forward one version at a time, so a library from any earlier
-        // build arrives intact rather than only the immediately previous one.
         var current = version
         while current < LibrarySchema.version {
             switch current {
@@ -80,8 +72,6 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
                 try delete.step()
                 try database.execute(LibrarySchema.pruneOrphans)
             } else {
-                // New pins go to the top; existing sort orders are left alone so
-                // a future manual ordering is not disturbed by a later pin.
                 let insert = try database.prepare("""
                 INSERT INTO pins (saved_code_id, pinned_at, sort_order)
                 VALUES (:id, :now, COALESCE((SELECT MIN(sort_order) FROM pins), 0) - 1);
@@ -109,8 +99,6 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
     }
 
     public func saveAbbreviation(_ abbreviation: Abbreviation) throws {
-        // A half-filled entry is dropped rather than stored: a blank term would
-        // expand every query and a blank expansion would search for nothing.
         guard abbreviation.isUsable else { return }
 
         let insert = try database.prepare("""
@@ -220,7 +208,6 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
             let delete = try database.prepare("DELETE FROM lists WHERE id = :id;")
             try delete.bind(id, to: ":id")
             try delete.step()
-            // Members cascade; the codes themselves may now be leftovers.
             try database.execute(LibrarySchema.pruneOrphans)
         }
     }
@@ -251,9 +238,9 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
         try database.transaction {
             let delete = try database.prepare("""
             DELETE FROM list_members
-             WHERE list_id = :list_id
-               AND saved_code_id IN (SELECT id FROM saved_codes
-                                      WHERE system = :system AND code = :code);
+              WHERE list_id = :list_id
+                AND saved_code_id IN (SELECT id FROM saved_codes
+                                       WHERE system = :system AND code = :code);
             """)
             try delete.bind(id, to: ":list_id")
             try delete.bind(code.system.rawValue, to: ":system")
@@ -300,14 +287,11 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
 
     // MARK: - Migration from UserDefaults
 
-    /// Runs once. Anything already in the library means a previous run adopted
-    /// the old data, so this must not run again and duplicate it.
     @discardableResult
     public func adoptLegacyData(pinned: [ClinicalCode], recent: [ClinicalCode]) throws -> Bool {
         guard try isEmpty() else { return false }
         guard !pinned.isEmpty || !recent.isEmpty else { return false }
 
-        // Oldest first, so the resulting recency order matches the old list.
         for code in recent.reversed() {
             try recordUse(of: code, format: .codeOnly)
         }
@@ -325,7 +309,6 @@ public actor SQLiteCodeLibrary: CodeLibraryStoring {
 
     // MARK: - Private
 
-    /// Inserts or refreshes the hub row and returns its id.
     private func saveCode(_ code: ClinicalCode) throws -> Int {
         let upsert = try database.prepare(LibrarySchema.upsertSavedCode)
         try upsert.bind(code.system.rawValue, to: ":system")

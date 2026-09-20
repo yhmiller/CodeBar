@@ -1,9 +1,5 @@
 import Carbon.HIToolbox
 
-/// A global keyboard shortcut, expressed independently of Carbon's bit masks.
-///
-/// Kept as a value type so making the shortcut configurable is a matter of
-/// persisting one of these and re-registering.
 public struct KeyCombo: Equatable, Sendable {
 
     public struct Modifiers: OptionSet, Sendable {
@@ -16,8 +12,6 @@ public struct KeyCombo: Equatable, Sendable {
         public static let shift = Modifiers(rawValue: 1 << 3)
     }
 
-    /// Virtual key code, e.g. `kVK_ANSI_C`. Layout-independent: it identifies the
-    /// physical key, not the character it produces.
     public let keyCode: UInt32
     public let modifiers: Modifiers
 
@@ -26,7 +20,6 @@ public struct KeyCombo: Equatable, Sendable {
         self.modifiers = modifiers
     }
 
-    /// ⌥⌘C.
     public static let `default` = KeyCombo(
         keyCode: UInt32(kVK_ANSI_C),
         modifiers: [.command, .option]
@@ -34,7 +27,6 @@ public struct KeyCombo: Equatable, Sendable {
 
     // MARK: - Carbon interchange
 
-    /// The modifier mask `RegisterEventHotKey` expects.
     public var carbonModifiers: UInt32 {
         var mask: UInt32 = 0
         if modifiers.contains(.command) { mask |= UInt32(cmdKey) }
@@ -55,8 +47,6 @@ public struct KeyCombo: Equatable, Sendable {
 
     // MARK: - Display
 
-    /// Menu-style rendering, e.g. `⌥⌘C`. Modifier order follows Apple's
-    /// convention: control, option, shift, command.
     public var displayString: String {
         var text = ""
         if modifiers.contains(.control) { text += "⌃" }
@@ -66,8 +56,6 @@ public struct KeyCombo: Equatable, Sendable {
         return text + (Self.keyLabels[keyCode] ?? "?")
     }
 
-    /// Only the keys CodeBar can currently be bound to. This widens when the
-    /// shortcut becomes configurable.
     private static let keyLabels: [UInt32: String] = [
         UInt32(kVK_ANSI_C): "C",
         UInt32(kVK_ANSI_D): "D",
