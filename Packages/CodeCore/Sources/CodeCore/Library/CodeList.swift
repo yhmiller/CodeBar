@@ -1,7 +1,5 @@
 import Foundation
 
-/// A named collection of codes: a problem list, an encounter template, a
-/// personal favourites set.
 public struct CodeList: Identifiable, Hashable, Sendable {
     public let id: Int
     public let name: String

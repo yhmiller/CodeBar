@@ -1,10 +1,6 @@
 import CodeCore
 import Foundation
 
-/// Stands in when `library.sqlite` could not be opened.
-///
-/// Search still works without a library; only pins and history are lost. A
-/// no-op keeps that failure contained rather than making the panel unusable.
 struct EmptyCodeLibrary: CodeLibraryStoring {
     func pinnedCodes() async throws -> [ClinicalCode] { [] }
     func isPinned(_ code: ClinicalCode) async throws -> Bool { false }

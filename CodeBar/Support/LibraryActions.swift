@@ -2,10 +2,6 @@ import CodeBarUI
 import CodeCore
 import CodePlatform
 
-/// Pin and copy, shared by the menu bar panel and the main window.
-///
-/// Two front doors onto one library: pinning in the window must show up in the
-/// panel's empty state, and vice versa.
 @MainActor
 final class LibraryActions {
     private let library: any CodeLibraryStoring

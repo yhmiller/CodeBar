@@ -1,16 +1,10 @@
 import Foundation
 import SQLite3
 
-/// Tells SQLite to copy a bound value immediately, so the caller's Swift string
-/// does not need to outlive the bind call.
 private var sqliteTransient: sqlite3_destructor_type {
     unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 }
 
-/// A prepared statement with checked binding and stepping.
-///
-/// Not `Sendable` by design — instances are created and consumed entirely
-/// inside `SQLiteCodeStore`'s actor isolation.
 public final class Statement {
     private var handle: OpaquePointer?
     private let databaseHandle: OpaquePointer?
@@ -67,7 +61,6 @@ public final class Statement {
 
     // MARK: - Executing
 
-    /// Advances the statement. Returns `true` when a row is available.
     @discardableResult
     public func step() throws -> Bool {
         let result = sqlite3_step(handle)
@@ -78,9 +71,6 @@ public final class Statement {
         }
     }
 
-    /// Rewinds for reuse. Return codes are intentionally ignored: `sqlite3_reset`
-    /// re-reports the error from the previous execution, which `step()` has
-    /// already thrown.
     public func reset() {
         sqlite3_reset(handle)
         sqlite3_clear_bindings(handle)
@@ -97,7 +87,6 @@ public final class Statement {
         Int(sqlite3_column_int64(handle, column))
     }
 
-    /// `nil` when the column holds SQL NULL, which is distinct from `0`.
     public func optionalBool(at column: Int32) -> Bool? {
         guard sqlite3_column_type(handle, column) != SQLITE_NULL else { return nil }
         return sqlite3_column_int64(handle, column) != 0

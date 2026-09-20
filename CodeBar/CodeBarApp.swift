@@ -10,9 +10,6 @@ struct CodeBarApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        // The window is for what does not fit in two seconds: seeing where a
-        // code sits, what is beneath it, and what the publisher says about
-        // coding it. The panel stays the fast path. See ARCHITECTURE.md §11.
         WindowGroup("CodeBar", id: BrowseWindow.id) {
             MainWindowView(
                 model: BrowseViewModel(
@@ -36,15 +33,6 @@ struct CodeBarApp: App {
         }
         .defaultSize(width: 1080, height: 680)
         .commands {
-            // The app menu's stock About item shows name, version and copyright
-            // and nothing else. CodeBar's own also lists the installed code sets
-            // and their releases, which is the only place to answer "which
-            // release am I on?" — and a stale code set is invisible until someone
-            // copies a retired code from it.
-            //
-            // This menu did not exist while the app launched as an accessory, so
-            // the menu bar item was the only way in and the stock item was never
-            // reachable to be replaced.
             CommandGroup(replacing: .appInfo) {
                 Button("About CodeBar") {
                     AboutPanel.present(repository: appDelegate.environment.repository)
@@ -83,9 +71,6 @@ struct CodeBarApp: App {
         }
         .menuBarExtraStyle(.menu)
 
-        // The app's first real window. docs/ARCHITECTURE.md §11 — CodeBar is
-        // growing into a full app that keeps the menu bar panel, and later panes
-        // plug in here.
         Settings {
             SettingsView(
                 codeSets: CodeSetsViewModel(
@@ -109,10 +94,6 @@ struct CodeBarApp: App {
 
 
 private extension CodeBarApp {
-    /// Focus the window that exists, and only build one when none does.
-    ///
-    /// Calling `openWindow` unconditionally adds a window every time, so the menu
-    /// item would clone the window rather than return to it.
     func showBrowseWindow() {
         if !BrowseWindow.focusExisting() {
             openWindow(id: BrowseWindow.id)

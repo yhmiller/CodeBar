@@ -2,18 +2,8 @@ import CodeCore
 import Testing
 @testable import CodeBarUI
 
-/// Short enough to keep tests quick, long enough to be reached reliably.
 private let TEST_DEBOUNCE = Duration.milliseconds(20)
-
-/// Long enough that no scheduling delay can reach it, so "nothing searched yet"
-/// means the debounce deferred the work rather than the machine being quick.
-///
-/// It never elapses in a test — the pending task is cancelled instead — so its
-/// length costs nothing. An earlier 400ms value was reached by a 20ms typing gap
-/// overshooting under parallel test load, which failed the suite spuriously.
 private let NEVER_ELAPSES = Duration.seconds(30)
-
-/// Real gaps, so an absent debounce would let intermediate searches through.
 private let TYPING_GAP = Duration.milliseconds(20)
 
 @Suite("SearchViewModel")
@@ -31,8 +21,6 @@ struct SearchViewModelTests {
                         library: library, preferences: preferences, debounce: debounce)
     }
 
-    /// Types each fragment with a real pause between them, so an absent debounce
-    /// would let the intermediate searches actually reach the repository.
     private func type(_ fragments: [String], into model: SearchViewModel) async throws {
         for fragment in fragments {
             model.setQuery(fragment)
@@ -42,9 +30,6 @@ struct SearchViewModelTests {
 
     // MARK: - Keyboard reach into the empty state
 
-    /// The README has always promised "⌥⌘C then Return, no typing" for a pinned
-    /// code. It had never worked: selection was defined over `results`, which is
-    /// empty until something is typed, so Return in the empty state did nothing.
     @Test("should copy a pinned code with Return before anything is typed")
     func returnCopiesPinnedCodeWithoutTyping() async {
         let library = FakeLibrary()
@@ -58,7 +43,6 @@ struct SearchViewModelTests {
         #expect(pasteboard.written == ["E11.9"])
     }
 
-    /// Newest pin first, so pinning diabetes then asthma puts asthma at the top.
     @Test("should move the selection through pins and recents before anything is typed")
     func arrowsReachSuggestions() async {
         let library = FakeLibrary()
@@ -88,7 +72,6 @@ struct SearchViewModelTests {
         #expect(model.isPinned(Samples.diabetes.code))
     }
 
-    /// ⌘1–⌘9 removes the arrow-key walk for the case the panel exists to serve.
     @Test("should copy the nth result directly")
     func copiesByIndex() async throws {
         let pasteboard = FakePasteboard()
@@ -114,8 +97,6 @@ struct SearchViewModelTests {
 
     // MARK: - Copy confirmation
 
-    /// The confirmation exists to distinguish the two formats, so it has to
-    /// carry the string that was actually written, not the code.
     @Test("should record the long form when it copies with the description")
     func recordsLongFormCopy() async throws {
         let repository = CountingRepository(stubbed: [Samples.diabetes])
@@ -142,8 +123,6 @@ struct SearchViewModelTests {
 
     // MARK: - The system badge
 
-    /// The badge costs the leading edge of every row. It only earns that when a
-    /// row could plausibly be from somewhere else.
     @Test("should hide the system badge when only one system is installed")
     func hidesBadgeForOneSystem() {
         let preferences = FakePreferences()
@@ -170,13 +149,6 @@ struct SearchViewModelTests {
 
     // MARK: - Debounce
 
-    /// Covers the deferral itself: keystrokes arrive with real gaps between them,
-    /// and none of them reaches the repository while typing continues.
-    ///
-    /// Without a debounce every fragment would search immediately, since the gaps
-    /// give each task room to run. Asserting on zero rather than on a settled
-    /// count is what keeps this off a timing threshold — there is no duration a
-    /// slow machine could overshoot into.
     @Test("should not search while the user is still typing")
     func typingDefersTheSearch() async throws {
         let repository = CountingRepository()
@@ -188,12 +160,6 @@ struct SearchViewModelTests {
         model.pendingSearch?.cancel()
     }
 
-    /// Covers the other half: once typing stops, exactly one search runs and it
-    /// carries the final text.
-    ///
-    /// The fragments are deliberately not spaced here. Cancellation alone would
-    /// collapse them, which is precisely why this cannot stand in for the
-    /// deferral test above — it is the pair that pins the behaviour down.
     @Test("should search once, for the text the user stopped on")
     func settledBurstSearchesFinalText() async throws {
         let repository = CountingRepository()
@@ -226,8 +192,6 @@ struct SearchViewModelTests {
         ])
         let model = makeModel(repository: repository)
 
-        // Let "dia" get past the debounce and into the repository, so this
-        // exercises the post-await cancellation check rather than the debounce.
         model.setQuery("dia")
         await repository.waitForSearchToStart("dia")
         let staleSearch = model.pendingSearch
@@ -235,10 +199,6 @@ struct SearchViewModelTests {
         model.setQuery("diabetes")
         await repository.waitForSearchToStart("diabetes")
 
-        // Order matters: the newer query must land first, so that releasing the
-        // stale one afterwards is a genuine attempt to overwrite it. Releasing
-        // the stale query first would let it be overwritten either way, and the
-        // test would pass even without the cancellation check.
         await repository.release("diabetes")
         await model.pendingSearch?.value
 
@@ -462,11 +422,6 @@ struct SearchViewModelTests {
     }
 }
 
-/// The path from the stored abbreviation to the query the store receives.
-///
-/// The pieces either side of this are covered elsewhere — CodeCore expands the
-/// expression, CodeLibrary stores the entry — so what is left to prove is that
-/// the view model carries one to the other.
 @Suite("Own abbreviations reaching search")
 @MainActor
 struct SearchAbbreviationTests {
@@ -495,8 +450,6 @@ struct SearchAbbreviationTests {
         #expect(expression?.contains(#""penicillin"*"#) == true)
     }
 
-    /// Guards the refresh, not just the plumbing: without reloading, a term added
-    /// in Settings would not reach search until the app restarted.
     @Test("should not expand a term before the library has been read")
     func doesNotExpandBeforeRefresh() async throws {
         let repository = CountingRepository()

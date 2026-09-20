@@ -5,8 +5,6 @@ import Foundation
 
 enum Fixtures {
 
-    /// A handful of real ICD-10-CM and LOINC codes. Small enough to reason about,
-    /// wide enough to cover both terminologies and multi-word synonyms.
     static let icd10: [ClinicalCode] = [
         // A real ICD-10-CM category header: not valid for submission on its own.
         ClinicalCode(
@@ -110,11 +108,6 @@ struct LegacyDatabaseFixture {
     }
 }
 
-/// Builds a database in the v2 shape: the current tables, but without the
-/// `is_billable` column added in v3.
-///
-/// The DDL is deliberately a frozen copy rather than a reference to `Schema` —
-/// a migration test that follows the current schema forward tests nothing.
 struct V2DatabaseFixture {
     let directory: URL
     let url: URL

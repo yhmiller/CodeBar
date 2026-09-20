@@ -16,8 +16,6 @@ struct CopyAndPinTests {
                         debounce: .milliseconds(10))
     }
 
-    /// Library writes run in a detached task; awaiting the handle keeps these
-    /// deterministic rather than racing them.
     private func settle(_ model: SearchViewModel) async {
         await model.pendingLibraryWork?.value
     }

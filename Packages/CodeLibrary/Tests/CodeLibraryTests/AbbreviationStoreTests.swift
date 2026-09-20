@@ -37,8 +37,6 @@ struct AbbreviationStoreTests {
         #expect(try await library.abbreviations().map(\.expansion) == ["penicillin G"])
     }
 
-    /// Without `COLLATE NOCASE` this stores a second row that can never be found:
-    /// lookup lowercases the query token, so only one of the two would ever win.
     @Test("should treat a term typed in a different case as the same entry")
     func replacesRegardlessOfCase() async throws {
         let library = try library()
@@ -87,8 +85,6 @@ struct AbbreviationStoreTests {
         #expect(try await library.abbreviations().map(\.term) == ["abx", "pcn"])
     }
 
-    /// The migration every existing install will actually take. A v2 library
-    /// holds pins, lists and notes that must survive gaining a new table.
     @Test("should migrate a v2 library forward without losing what is in it")
     func migratesV2ToV3() async throws {
         let directory = FileManager.default.temporaryDirectory

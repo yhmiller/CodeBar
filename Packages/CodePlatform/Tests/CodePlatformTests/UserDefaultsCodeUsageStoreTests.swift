@@ -3,8 +3,6 @@ import Foundation
 import Testing
 @testable import CodePlatform
 
-/// The legacy store is now only a source to migrate from, so these cover exactly
-/// that: it can still read what an older install wrote, and it can be cleared.
 @Suite("Legacy UserDefaults usage store")
 @MainActor
 struct LegacyUserDefaultsUsageStoreTests {

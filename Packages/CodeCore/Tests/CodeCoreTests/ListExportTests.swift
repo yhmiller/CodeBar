@@ -29,8 +29,6 @@ struct ListExportTests {
         #expect(exported.split(separator: "\n").count == 2)
     }
 
-    /// The same wording ⇧Return writes for a single code, so a pasted list reads
-    /// like the codes a clinician has pasted one at a time.
     @Test("should word a line exactly as copying one code does")
     func textMatchesTheSingleCodeWording() {
         let exported = ListExportFormat.text.string(for: [diabetes])
@@ -54,9 +52,6 @@ struct ListExportTests {
         #expect(exported.split(separator: "\n").count == 3)
     }
 
-    /// The failure this format exists to avoid: ICD-10-CM descriptions are full
-    /// of commas, so an unescaped export puts half of nearly every description in
-    /// the wrong column.
     @Test("should quote a description containing a comma")
     func csvQuotesCommas() {
         let exported = ListExportFormat.csv.string(for: [asthma])
@@ -92,9 +87,6 @@ struct ListExportTests {
         #expect(ListExportFormat.csv.string(for: [header]).hasSuffix(",no"))
     }
 
-    /// Silence is not a "no". A category header must never reach a claim, so
-    /// writing `no` for a code the publisher said nothing about would turn an
-    /// unknown into a statement.
     @Test("should leave billability empty when the publisher did not say")
     func csvLeavesUnknownBillabilityEmpty() {
         #expect(ListExportFormat.csv.string(for: [unknown]).hasSuffix(","))

@@ -4,27 +4,6 @@ import SwiftUI
 import Testing
 @testable import CodeBarUI
 
-/// Rendered-output tests, covering the class of defect the view-model tests
-/// cannot see.
-///
-/// Every UI bug in this project's history was found by a human looking at the
-/// screen: a query walking backwards while the field showed something else,
-/// duplicated rows, a transparent toolbar with list content scrolling under it.
-/// None of those change a view model's values, so none were catchable by
-/// asserting on one. A reference image is.
-///
-/// These are inherently machine-dependent — fonts, appearance and OS version all
-/// move the pixels. They earn their place on a single-developer project on one
-/// Mac; a shared CI machine would need its own references or a tolerance.
-///
-/// What these deliberately do *not* cover is the panel's ground. Liquid Glass
-/// and `.ultraThinMaterial` both sample a live backdrop, and an offscreen bitmap
-/// render has none: a `SearchPanelView` carrying `panelSurface()` measured a
-/// luminance range of 23 across the hint text where the same view without it
-/// measured 105, and changing the text's foreground style moved that not at all.
-/// The text was obscured rather than dimmed. So the ground is applied by
-/// `SearchPanelController` to the hosting root instead, these references cover
-/// the content, and the surface is judged by running the app.
 @Suite("Snapshots")
 @MainActor
 struct SnapshotTests {
@@ -32,26 +11,10 @@ struct SnapshotTests {
     private static let panelSize = CGSize(width: Metric.panelWidth, height: 180)
     private static let detailSize = CGSize(width: 620, height: 520)
 
-    /// Rows are rendered at the panel's real width, not at a number that
-    /// happened to match it. The two used to be spelled independently, so a
-    /// change to one silently stopped testing the other.
     private static func panel(_ height: CGFloat) -> CGSize {
         CGSize(width: Metric.panelWidth, height: height)
     }
 
-    /// Snapshots the SwiftUI view through the same hosting path the app uses.
-    ///
-    /// The appearance is pinned and a ground is painted deliberately. Without
-    /// them the view renders dark-appearance text onto a transparent background,
-    /// so anything using `.primary` came out white on white — the first recorded
-    /// detail-pane reference was almost entirely blank, and would have passed
-    /// forever while hiding regressions in everything invisible.
-    ///
-    /// Pinning also means the references do not change when the machine switches
-    /// between light and dark mode.
-    ///
-    /// A failure reports this line rather than the calling test, so `named:`
-    /// carries the identification instead.
     private func assertImage(
         _ view: some View,
         size: CGSize,
@@ -86,12 +49,6 @@ struct SnapshotTests {
         assertImage(rows, size: Self.panel(140), named: "result-rows")
     }
 
-    /// The regression test for the app's worst defect.
-    ///
-    /// `.lineLimit(1)` in a 560pt panel truncated "Type 2 diabetes mellitus
-    /// without com…" — hiding the clause that separates E11.9 from E11.65. This
-    /// asserts the widened, two-line row shows a real 88-character CMS
-    /// description whole.
     @Test("a long description should wrap rather than truncate")
     func longDescriptionWraps() {
         let rows = VStack(spacing: Metric.xxs) {
@@ -103,12 +60,6 @@ struct SnapshotTests {
         assertImage(rows, size: Self.panel(90), named: "result-row-long-description")
     }
 
-    /// The regression test for the merge itself.
-    ///
-    /// The panel and the window used to render a code with two unrelated row
-    /// types, so moving between surfaces made codes stop looking like the same
-    /// kind of thing. Density may change; anatomy may not — and that is only
-    /// checkable by looking at the three side by side.
     @Test("the three row densities should stay visibly related")
     func rowDensities() {
         let rows = VStack(alignment: .leading, spacing: Metric.m) {
@@ -123,12 +74,6 @@ struct SnapshotTests {
 
     // MARK: - Accessibility
 
-    /// The regression test for the semantic-colour work.
-    ///
-    /// Under Increase Contrast an 18%-opacity fill barely separates from the
-    /// surface, so the chips that matter most — not billable, billable — were
-    /// the first things to stop reading. They take a border instead, and the
-    /// only way to know that still holds is to look.
     @Test("chips should stay legible under increased contrast")
     func rowsUnderIncreasedContrast() {
         let rows = VStack(spacing: Metric.xxs) {
@@ -143,20 +88,8 @@ struct SnapshotTests {
                     appearance: .accessibilityHighContrastDarkAqua)
     }
 
-    // There is deliberately no large-text snapshot. macOS does not drive
-    // `@ScaledMetric` from `\.dynamicTypeSize` the way iOS does, so forcing that
-    // environment value renders at the default size and the test would assert
-    // nothing while appearing to cover the code column. The `@ScaledMetric` on
-    // `CodeRow.codeColumn` is still correct — it responds to the real system
-    // setting, and it is what keeps the column honest if `CodeBarUI` is ever
-    // reused on iOS, where text scaling is not optional. See DESIGN_REVIEW.md §11.
-
     // MARK: - Footer
 
-    /// The footer is the app's only statement of its own shortcuts, so what it
-    /// claims has to stay true. Every key listed here must actually work in the
-    /// state it is listed for — a shortcut that fails the first time it is tried
-    /// is worse than one nobody knew about.
     @Test("the footer should list the keys that work on results")
     func footerForResults() {
         assertImage(PanelFooter(context: .results),
@@ -171,9 +104,6 @@ struct SnapshotTests {
 
     // MARK: - Copy confirmation
 
-    /// The long form is the case worth locking. Confirming a copy is only
-    /// useful if it distinguishes `↵` from `⇧↵`, which means the description has
-    /// to survive into the confirmation.
     @Test("the copy confirmation should show the long form it copied")
     func copyConfirmationLongForm() {
         let view = CopyConfirmationView(
@@ -242,12 +172,6 @@ struct SnapshotTests {
         assertImage(view, size: Self.detailSize, named: "detail-pane")
     }
 
-    /// The ordering regression test.
-    ///
-    /// With no note, nothing at all should stand between the code and the
-    /// publisher's rules. An always-open editor used to sit there and push
-    /// `Excludes 1` — the rule that means *never code these together* — below
-    /// the fold on every single code.
     @Test("the detail pane should show coding rules before the empty note")
     func detailPaneWithoutNote() {
         let detail = CodeDetail(
@@ -279,8 +203,6 @@ struct SnapshotTests {
 
     // MARK: - Abbreviations
 
-    /// The override notice is the part worth locking: a silent replacement is how
-    /// the wrong reading of a letter pair ends up in use.
     @Test("the abbreviations pane should name the built-in an entry replaces")
     func abbreviationsWithOverride() async {
         let library = FakeLibrary()
@@ -304,13 +226,6 @@ struct SnapshotTests {
 
     // MARK: - Search panel
 
-    /// Only the panel's opening state is reachable from here.
-    ///
-    /// `SearchPanelView` owns its text in `@State`, which nothing outside the
-    /// view can set — deliberately, since letting the model drive the field
-    /// makes the query walk backwards. Driving it would need a
-    /// UI test that types. The rendered result rows are covered by the
-    /// `result-rows` reference instead.
     @Test("the panel should open on its placeholder")
     func searchPanelPlaceholder() async {
         let model = SearchViewModel(repository: CountingRepository(),

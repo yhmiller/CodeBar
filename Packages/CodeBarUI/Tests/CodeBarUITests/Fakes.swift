@@ -106,13 +106,11 @@ final class FakePasteboard: PasteboardWriting {
     }
 }
 
-/// Returns canned results immediately and records how many searches it saw.
 actor CountingRepository: CodeRepository {
     private(set) var searchCount = 0
     private(set) var receivedQueries: [String] = []
     private(set) var receivedSystems: [Set<CodeSystem>] = []
     private(set) var receivedPreferred: [Set<String>] = []
-    /// The FTS expression, which is where abbreviation expansion ends up.
     private(set) var receivedExpressions: [String?] = []
     private var stubbed: [SearchResult] = []
 
@@ -141,10 +139,6 @@ actor CountingRepository: CodeRepository {
     func roots(inChapter chapter: String, of system: CodeSystem) async throws -> [ClinicalCode] { [] }
 }
 
-/// A repository whose searches suspend until the test explicitly releases them.
-///
-/// Lets a test interleave a slow query with a fast one deterministically, rather
-/// than racing two sleeps and hoping the ordering holds.
 actor GatedRepository: CodeRepository {
     private var resultsByQuery: [String: [SearchResult]] = [:]
     private var startedQueries: Set<String> = []
@@ -165,7 +159,6 @@ actor GatedRepository: CodeRepository {
         return resultsByQuery[query.raw] ?? []
     }
 
-    /// Suspends until `raw` has entered `search`.
     func waitForSearchToStart(_ raw: String) async {
         guard !startedQueries.contains(raw) else { return }
         await withCheckedContinuation { continuation in
@@ -173,7 +166,6 @@ actor GatedRepository: CodeRepository {
         }
     }
 
-    /// Lets a suspended search return.
     func release(_ raw: String) {
         suspendedSearches.removeValue(forKey: raw)?.resume()
     }
@@ -202,18 +194,12 @@ enum Samples {
     static let hypertension = result("I10", "Essential (primary) hypertension")
     static let asthma = result("J45.909", "Unspecified asthma, uncomplicated")
 
-    /// A category header — the badge case worth keeping an eye on.
     static let header = SearchResult(
         code: ClinicalCode(code: "E11", display: "Type 2 diabetes mellitus",
                            system: .icd10cm, isBillable: false),
         matchTier: .exactCode
     )
 
-    /// The honest worst case: a real CMS description at 88 characters.
-    ///
-    /// Every clause after the comma changes which claim is correct — *which*
-    /// femur, *which* encounter, open or closed. A row that truncates here is a
-    /// row that hides the answer the user came for.
     static let longDescription = result(
         "S72.001A",
         "Fracture of unspecified part of neck of right femur, "

@@ -1,25 +1,10 @@
 import CodeCore
 import Observation
 
-/// How long typing must pause before a search is issued.
-///
-/// Long enough that a burst of keystrokes collapses into one query, short enough
-/// that it reads as instant. Injectable so tests do not depend on wall-clock timing.
 public let DEFAULT_SEARCH_DEBOUNCE = Duration.milliseconds(120)
-
-/// How many recently-used codes the empty state offers. Enough to cover a
-/// clinic session, few enough to stay scannable.
 public let EMPTY_STATE_RECENT_LIMIT = 8
-
-/// How many of the user's own codes influence ranking. Matches the store's own
-/// cap; beyond this the query becomes mostly bind parameters.
 public let PREFERRED_CODE_LIMIT = 50
 
-/// Owns the search panel's state.
-///
-/// Two guarantees it exists to provide: a burst of keystrokes issues one query,
-/// not one per character; and a slow query for "dia" can never land on top of a
-/// faster one for "diabetes".
 @MainActor
 @Observable
 public final class SearchViewModel {
@@ -28,12 +13,6 @@ public final class SearchViewModel {
     public private(set) var results: [SearchResult] = []
     public private(set) var selectedIndex: Int = 0
 
-    /// Bumped each time the panel is about to be shown.
-    ///
-    /// Deliberately a bare counter rather than the model handing the view a
-    /// string: the model must never drive the text field's contents, or the query
-    /// walks backwards as stale values are pushed back into the field. The view
-    /// watches this and clears its own field.
     public private(set) var displaySessionID = 0
 
     private let repository: (any CodeRepository)?
@@ -47,12 +26,9 @@ public final class SearchViewModel {
         repository: repository, debounce: debounce
     )
 
-    /// Tests await this to settle deterministically rather than sleeping.
     @ObservationIgnored
     var pendingSearch: Task<Void, Never>? { searchRunner.pending }
 
-    /// Writes to the library are fire-and-forget from the view's point of view.
-    /// Retained so tests can await them, exactly as `pendingSearch` is.
     @ObservationIgnored
     public private(set) var pendingLibraryWork: Task<Void, Never>?
 
@@ -72,36 +48,16 @@ public final class SearchViewModel {
 
     // MARK: - Pinned and recent
 
-    /// Shown when the field is empty. Pins first, then recents.
-    ///
-    /// This is where the ranking gap gets addressed in practice: relevance
-    /// ranking cannot know that E11.9 is the diabetes code someone reaches for
-    /// every day, but their own history can.
-    ///
-    /// Cached here rather than read through on demand: the library is an actor,
-    /// and a view cannot await.
     public private(set) var pinnedCodes: [ClinicalCode] = []
     public private(set) var recentCodes: [ClinicalCode] = []
     private var pinnedIDs: Set<String> = []
-
-    /// Codes this person uses, ranked ahead of equally-relevant ones they have
-    /// never touched. Pins count too: pinning is an explicit statement that a
-    /// code matters, and waiting for usage to accumulate would ignore it.
     private var preferredIDs: Set<String> = []
-
-    /// The user's own shorthand, keyed by lowercase term.
     private var ownAbbreviations: [String: String] = [:]
 
     public var hasEmptyStateSuggestions: Bool {
         !pinnedCodes.isEmpty || !recentCodes.isEmpty
     }
 
-    /// Whether a row should say which code system it belongs to.
-    ///
-    /// With one system installed — the default, and what most users run — the
-    /// badge reads "ICD-10" on every row forever, while costing the description
-    /// the leading 84 points of a row. It only earns its place when a row could
-    /// plausibly be from somewhere else.
     public var showsSystemBadge: Bool {
         preferences.enabledSystems.count > 1
     }
@@ -117,7 +73,6 @@ public final class SearchViewModel {
         }
     }
 
-    /// Reloads the cached pins and recents.
     public func refreshLibrary() async {
         pinnedCodes = (try? await library.pinnedCodes()) ?? []
         recentCodes = (try? await library.recentCodes(limit: EMPTY_STATE_RECENT_LIMIT)) ?? []
@@ -126,8 +81,6 @@ public final class SearchViewModel {
         let mostUsed = (try? await library.mostUsedCodes(limit: PREFERRED_CODE_LIMIT)) ?? []
         preferredIDs = pinnedIDs.union(mostUsed.map(\.id))
 
-        // Cached rather than read per keystroke, and refreshed here so an
-        // abbreviation added in Settings takes effect without a restart.
         ownAbbreviations = ((try? await library.abbreviations()) ?? []).expansionsByTerm
     }
 
@@ -137,8 +90,6 @@ public final class SearchViewModel {
         query = text
         selectedIndex = 0
 
-        // Read at search time rather than at init, so toggling a system in
-        // Settings takes effect on the next keystroke without a restart.
         let query = SearchQuery(
             raw: text,
             systems: preferences.enabledSystems,
@@ -152,10 +103,6 @@ public final class SearchViewModel {
         }
     }
 
-    /// Resets for a fresh appearance of the panel.
-    ///
-    /// The panel and its view are now built once and reused, so state does not
-    /// clear itself by the view being thrown away.
     public func prepareForDisplay() {
         displaySessionID += 1
         setQuery("")
@@ -164,13 +111,6 @@ public final class SearchViewModel {
 
     // MARK: - Selection
 
-    /// Everything the arrow keys can land on.
-    ///
-    /// Before a query is typed that is the pins and recents, not nothing. The
-    /// README has always promised "⌥⌘C then Return, no typing" for a pinned
-    /// code, and it had never worked: selection was defined over `results`,
-    /// which is empty until something is typed, so Return in the empty state
-    /// silently did nothing.
     public var selectableCodes: [ClinicalCode] {
         query.isEmpty ? pinnedCodes + recentCodes : results.map(\.code)
     }
@@ -187,8 +127,6 @@ public final class SearchViewModel {
         return codes[selectedIndex].id == code.id
     }
 
-    /// Pins whatever the arrow keys are currently on. Returns `false` when there
-    /// is nothing selected, so the caller can leave the key unhandled.
     @discardableResult
     public func togglePinOnSelection() -> Bool {
         let codes = selectableCodes
@@ -197,15 +135,12 @@ public final class SearchViewModel {
         return true
     }
 
-    /// The text `⇥` completes the field to — the selected code, so the user can
-    /// refine a query rather than commit to it.
     public var selectedCodeText: String? {
         let codes = selectableCodes
         guard codes.indices.contains(selectedIndex) else { return nil }
         return codes[selectedIndex].code
     }
 
-    /// Copies the *n*th visible row directly, for `⌘1`–`⌘9`.
     @discardableResult
     public func copy(at index: Int, format: CopyFormat = .codeOnly) -> Bool {
         let codes = selectableCodes
@@ -214,11 +149,6 @@ public final class SearchViewModel {
         return true
     }
 
-    /// Identity of the highlighted result, for selection and scrolling.
-    ///
-    /// Exposed by identity rather than by index so the list can key its rows on
-    /// something stable: keying a row on its position makes every row a new view
-    /// whenever the result set changes, which leaves stale rows on screen.
     public var selectedResultID: SearchResult.ID? {
         results.indices.contains(selectedIndex) ? results[selectedIndex].id : nil
     }
@@ -229,8 +159,6 @@ public final class SearchViewModel {
 
     // MARK: - Copying
 
-    /// Copies the highlighted result. Returns `false` when there is nothing to
-    /// copy, so the caller knows whether to dismiss.
     @discardableResult
     public func copySelected(format: CopyFormat = .codeOnly) -> Bool {
         copy(at: selectedIndex, format: format)
@@ -240,11 +168,6 @@ public final class SearchViewModel {
         copy(result.code, format: format)
     }
 
-    /// Exactly what last reached the pasteboard.
-    ///
-    /// Held so the panel can confirm the copy after dismissing itself. It has to
-    /// be the written string rather than the code, because the whole point is
-    /// distinguishing `↵` from `⇧↵`.
     public private(set) var lastCopiedText: String?
 
     public func copy(_ code: ClinicalCode, format: CopyFormat = .codeOnly) {

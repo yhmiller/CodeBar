@@ -6,16 +6,7 @@ private let SCROLL_ANIMATION_DURATION: TimeInterval = 0.1
 public struct SearchPanelView: View {
     @State private var model: SearchViewModel
 
-    /// The field owns its own text.
-    ///
-    /// Binding the TextField straight at `model.query` deadlocks the two against
-    /// each other: assigning `results` when a search lands re-renders the view,
-    /// which pushes a stale `query` back into the field, which writes back
-    /// through the binding — and the text walks backwards one character per
-    /// render. Keeping the text here means the model can never drive the field.
     @State private var text: String = ""
-
-    /// Measured height of the result rows, so the panel can size to them.
     @State private var listHeight: CGFloat = 0
 
     @FocusState private var isFocused: Bool
@@ -23,9 +14,6 @@ public struct SearchPanelView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let onDismiss: () -> Void
-
-    /// Called with the string that reached the pasteboard, just before the panel
-    /// goes away. The panel cannot show its own confirmation — it is dismissing.
     private let onCopied: (String) -> Void
 
     public init(
@@ -51,14 +39,9 @@ public struct SearchPanelView: View {
         .frame(width: Metric.panelWidth)
         .onAppear { isFocused = true }
         .onChange(of: model.displaySessionID) { _, _ in
-            // The view survives between showings now, so each appearance has to
-            // clear the field and reclaim focus explicitly.
             text = ""
             isFocused = true
         }
-        // One handler rather than a stack of `.onKeyPress` modifiers. Stacked,
-        // they resolve in an order that is not visible at the call site, and the
-        // set below would have made that unreadable.
         .onKeyPress { press in handle(press) }
     }
 
@@ -76,8 +59,6 @@ public struct SearchPanelView: View {
         .padding(Metric.l)
     }
 
-    /// The footer only advertises keys that work in the state on screen, and is
-    /// absent entirely when none of them would.
     private var footerContext: PanelFooter.Context? {
         if model.selectableCodes.isEmpty { return nil }
         return text.isEmpty ? .suggestions : .results
@@ -110,15 +91,6 @@ public struct SearchPanelView: View {
     private var resultList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Rows are keyed on the result's own identity. An explicit
-                // .id(index) here fights ForEach's identity: when the result set
-                // changes, a row that merely moved position is torn down and
-                // rebuilt, and the stack can leave the old one on screen —
-                // which showed up as stale and duplicated rows.
-                //
-                // Eager rather than lazy: results are capped at 30, and a lazy
-                // stack only measures what it has laid out, which is useless to
-                // a panel trying to size itself to its content.
                 VStack(spacing: Metric.xxs) {
                     ForEach(model.results) { result in
                         CodeRow(
@@ -157,8 +129,6 @@ public struct SearchPanelView: View {
             .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
             .onChange(of: model.selectedResultID) { _, newValue in
                 guard let newValue else { return }
-                // The app's only animation, so honouring Reduce Motion is one
-                // line and there is no excuse for skipping it.
                 withAnimation(reduceMotion ? nil : .easeOut(duration: SCROLL_ANIMATION_DURATION)) {
                     proxy.scrollTo(newValue, anchor: .center)
                 }
@@ -166,14 +136,9 @@ public struct SearchPanelView: View {
         }
     }
 
-
-    /// Everything the panel does with a key, in one place.
     private func handle(_ press: KeyPress) -> KeyPress.Result {
         switch press.key {
         case .escape:
-            // Two-stage: clear a typed query first, dismiss only when there is
-            // nothing to lose. Dismissing straight away threw away a query with
-            // no way to get it back.
             if text.isEmpty {
                 onDismiss()
             } else {
@@ -190,14 +155,10 @@ public struct SearchPanelView: View {
             return .handled
 
         case .return:
-            // ⇧↵ copies the code with its description, for pasting into prose
-            // rather than into a code field.
             copySelected(format: press.modifiers.contains(.shift) ? .codeAndDisplay : .codeOnly)
             return .handled
 
         case .tab:
-            // Completes the field rather than committing, so a promising result
-            // can be narrowed instead of copied.
             guard let completion = model.selectedCodeText else { return .ignored }
             text = completion
             return .handled
@@ -214,8 +175,6 @@ public struct SearchPanelView: View {
             return model.togglePinOnSelection() ? .handled : .ignored
         }
 
-        // ⌘1–⌘9 copies the nth visible row, which removes the arrow-key walk
-        // for the case the panel exists to serve.
         guard let digit = Int(press.characters), (1...9).contains(digit) else {
             return .ignored
         }
