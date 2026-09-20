@@ -43,6 +43,7 @@ struct CodeRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.primary)
 
+            if showsUnspecifiedChip { unspecifiedChip }
             if showsBillabilityChip { billabilityChip }
 
             Spacer(minLength: Metric.s)
@@ -58,7 +59,7 @@ struct CodeRow: View {
         .onHover { isHovering = $0 }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(code.system.shortLabel) \(code.code). \(code.display)")
-        .accessibilityValue(code.isBillable == false ? NOT_BILLABLE_SPOKEN_LABEL : "")
+        .accessibilityValue(accessibilityValueString)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction(named: isPinned ? "Unpin" : "Pin") { onTogglePin?() }
     }
@@ -93,6 +94,17 @@ struct CodeRow: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
         }
+    }
+
+    private var unspecifiedChip: some View {
+        Text(UNSPECIFIED_LABEL)
+            .font(CodeTypography.metadata.weight(.medium))
+            .padding(.horizontal, Metric.xs)
+            .padding(.vertical, Metric.xxs)
+            .semanticChip(Color.warning, in: RoundedRectangle(cornerRadius: Metric.chipRadius))
+            .fixedSize()
+            .layoutPriority(1)
+            .accessibilityHidden(true)
     }
 
     private var billabilityChip: some View {
@@ -131,8 +143,18 @@ struct CodeRow: View {
         code.isBillable == false && density == .panel
     }
 
+    private var showsUnspecifiedChip: Bool {
+        code.isUnspecified == true && density == .panel
+    }
+
     private var dimsCode: Bool {
         code.isBillable == false && density != .panel
+    }
+
+    private var accessibilityValueString: String {
+        if code.isBillable == false { return NOT_BILLABLE_SPOKEN_LABEL }
+        if code.isUnspecified == true { return UNSPECIFIED_SPOKEN_LABEL }
+        return ""
     }
 }
 
