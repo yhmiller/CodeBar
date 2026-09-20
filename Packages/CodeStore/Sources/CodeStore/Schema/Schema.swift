@@ -1,5 +1,5 @@
 enum Schema {
-    static let version: Int32 = 4
+    static let version: Int32 = 5
 
     static let createSchema = """
     CREATE TABLE code_sets (
@@ -9,16 +9,17 @@ enum Schema {
     );
 
     CREATE TABLE codes (
-        id            INTEGER PRIMARY KEY,
-        system        TEXT NOT NULL,
-        code          TEXT NOT NULL,
-        code_norm     TEXT NOT NULL,
-        display       TEXT NOT NULL,
-        synonyms_json TEXT NOT NULL DEFAULT '[]',
-        synonyms_text TEXT NOT NULL DEFAULT '',
-        is_billable   INTEGER,
-        parent_code   TEXT,
-        chapter       TEXT,
+        id             INTEGER PRIMARY KEY,
+        system         TEXT NOT NULL,
+        code           TEXT NOT NULL,
+        code_norm      TEXT NOT NULL,
+        display        TEXT NOT NULL,
+        synonyms_json  TEXT NOT NULL DEFAULT '[]',
+        synonyms_text  TEXT NOT NULL DEFAULT '',
+        is_billable    INTEGER,
+        parent_code    TEXT,
+        chapter        TEXT,
+        is_unspecified INTEGER,
         UNIQUE(system, code)
     );
 
@@ -65,17 +66,18 @@ enum Schema {
 
     static let upsertCode = """
     INSERT INTO codes (system, code, code_norm, display, synonyms_json, synonyms_text,
-                       is_billable, parent_code, chapter)
+                       is_billable, parent_code, chapter, is_unspecified)
     VALUES (:system, :code, :code_norm, :display, :synonyms_json, :synonyms_text,
-             :is_billable, :parent_code, :chapter)
+             :is_billable, :parent_code, :chapter, :is_unspecified)
     ON CONFLICT(system, code) DO UPDATE SET
-        code_norm     = excluded.code_norm,
-        display       = excluded.display,
-        synonyms_json = excluded.synonyms_json,
-        synonyms_text = excluded.synonyms_text,
-        is_billable   = COALESCE(excluded.is_billable, codes.is_billable),
-        parent_code   = COALESCE(excluded.parent_code, codes.parent_code),
-        chapter       = COALESCE(excluded.chapter, codes.chapter);
+        code_norm      = excluded.code_norm,
+        display        = excluded.display,
+        synonyms_json  = excluded.synonyms_json,
+        synonyms_text  = excluded.synonyms_text,
+        is_billable    = COALESCE(excluded.is_billable, codes.is_billable),
+        parent_code    = COALESCE(excluded.parent_code, codes.parent_code),
+        chapter        = COALESCE(excluded.chapter, codes.chapter),
+        is_unspecified = COALESCE(excluded.is_unspecified, codes.is_unspecified);
     """
 
     static let migrateV2ToV3 = "ALTER TABLE codes ADD COLUMN is_billable INTEGER;"
@@ -98,8 +100,10 @@ enum Schema {
     CREATE INDEX idx_code_notes ON code_notes(system, code, sort_order);
     """
 
+    static let migrateV4ToV5 = "ALTER TABLE codes ADD COLUMN is_unspecified INTEGER;"
+
     static let selectChildren = """
-    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter, is_unspecified
       FROM codes
      WHERE system = :system AND parent_code IS :parent
      ORDER BY LENGTH(code), code;
@@ -112,7 +116,7 @@ enum Schema {
     """
 
     static let selectCode = """
-    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter, is_unspecified
       FROM codes WHERE system = :system AND code = :code;
     """
 
@@ -131,7 +135,7 @@ enum Schema {
     """
 
     static let selectChapterRoots = """
-    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter
+    SELECT system, code, display, synonyms_json, is_billable, parent_code, chapter, is_unspecified
       FROM codes
      WHERE system = :system AND chapter = :chapter AND parent_code IS NULL
      ORDER BY code;

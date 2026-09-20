@@ -14,6 +14,7 @@ enum CodeBinder {
         try statement.bind(code.isBillable.map { $0 ? 1 : 0 }, to: ":is_billable")
         try statement.bind(code.parent, to: ":parent_code")
         try statement.bind(code.chapter, to: ":chapter")
+        try statement.bind(code.isUnspecified.map { $0 ? 1 : 0 }, to: ":is_unspecified")
     }
 
     static func encodeSynonyms(_ synonyms: [String]) -> String {

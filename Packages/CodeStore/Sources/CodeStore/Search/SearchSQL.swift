@@ -71,7 +71,8 @@ enum SearchSQL {
         SELECT c.system, c.code, c.display, c.synonyms_json, c.is_billable,
                MIN(h.tier) AS tier,
                CASE WHEN c.is_billable = 0 THEN 1 ELSE 0 END AS header_last,
-               \(preference) AS not_preferred
+               \(preference) AS not_preferred,
+               c.is_unspecified
           FROM hits h
           JOIN codes c ON c.id = h.id
         \(systemFilter)

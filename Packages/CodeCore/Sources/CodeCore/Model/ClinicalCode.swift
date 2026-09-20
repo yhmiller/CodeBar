@@ -8,6 +8,10 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
     public let isBillable: Bool?
     public let parent: String?
     public let chapter: String?
+    /// `true` when a TypeSafe Noul judged this code to be an "unspecified" or
+    /// catch-all entry during the import pipeline enrichment pass. `nil` means
+    /// the code set was not enriched; the badge is suppressed in that case.
+    public let isUnspecified: Bool?
 
     public init(
         code: String,
@@ -16,7 +20,8 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
         synonyms: [String] = [],
         isBillable: Bool? = nil,
         parent: String? = nil,
-        chapter: String? = nil
+        chapter: String? = nil,
+        isUnspecified: Bool? = nil
     ) {
         self.code = code
         self.display = display
@@ -25,6 +30,7 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
         self.isBillable = isBillable
         self.parent = parent
         self.chapter = chapter
+        self.isUnspecified = isUnspecified
     }
 
     public var normalizedCode: String {
@@ -32,7 +38,7 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case code, display, system, synonyms, billable, parent, chapter, notes
+        case code, display, system, synonyms, billable, parent, chapter, notes, unspecified
     }
 
     public init(from decoder: any Decoder) throws {
@@ -44,6 +50,7 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
         isBillable = try container.decodeIfPresent(Bool.self, forKey: .billable)
         parent = try container.decodeIfPresent(String.self, forKey: .parent)
         chapter = try container.decodeIfPresent(String.self, forKey: .chapter)
+        isUnspecified = try container.decodeIfPresent(Bool.self, forKey: .unspecified)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -55,5 +62,6 @@ public struct ClinicalCode: Identifiable, Codable, Hashable, Sendable {
         try container.encodeIfPresent(isBillable, forKey: .billable)
         try container.encodeIfPresent(parent, forKey: .parent)
         try container.encodeIfPresent(chapter, forKey: .chapter)
+        try container.encodeIfPresent(isUnspecified, forKey: .unspecified)
     }
 }

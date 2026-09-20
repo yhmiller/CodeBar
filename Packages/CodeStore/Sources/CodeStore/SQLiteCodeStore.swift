@@ -69,7 +69,8 @@ public actor SQLiteCodeStore: CodeRepository {
                         display: display,
                         system: system,
                         synonyms: CodeBinder.decodeSynonyms(statement.string(at: 3)),
-                        isBillable: statement.optionalBool(at: 4)
+                        isBillable: statement.optionalBool(at: 4),
+                        isUnspecified: statement.optionalBool(at: 8)
                     ),
                     matchTier: SearchResult.MatchTier(rawValue: statement.int(at: 5)) ?? .text
                 )
@@ -221,7 +222,8 @@ public actor SQLiteCodeStore: CodeRepository {
             synonyms: CodeBinder.decodeSynonyms(statement.string(at: 3)),
             isBillable: statement.optionalBool(at: 4),
             parent: statement.string(at: 5),
-            chapter: statement.string(at: 6)
+            chapter: statement.string(at: 6),
+            isUnspecified: statement.optionalBool(at: 7)
         )
     }
 
