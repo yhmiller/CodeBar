@@ -5,6 +5,12 @@ public let NOT_BILLABLE_LABEL = "Category — not valid for submission"
 
 public let NOT_BILLABLE_SPOKEN_LABEL = "Category header, not valid for submission"
 
+/// Badge shown on codes that TypeSafe Noul identified as catch-alls ("unspecified" / NOS / NEC).
+/// Uses the same amber `.warning` color as the not-billable chip — a caution, not a prohibition.
+public let UNSPECIFIED_LABEL = "Unspecified - may cause denials"
+
+public let UNSPECIFIED_SPOKEN_LABEL = "Unspecified code, may cause claim denials"
+
 public extension ShapeStyle where Self == Color {
 
     static var prohibition: Color {

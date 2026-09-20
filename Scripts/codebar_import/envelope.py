@@ -27,9 +27,14 @@ class CodeSetWriter:
         self.codes = []
 
     def add(self, code, display, synonyms=None, billable=None,
-            parent=None, chapter=None, notes=None):
+            parent=None, chapter=None, notes=None, unspecified=None):
         """Adds one code. Optional fields stay absent when the source is silent,
-        so "unknown" is never confused with "none"."""
+        so "unknown" is never confused with "none".
+
+        unspecified: when True, marks this code as an unspecified/catch-all entry
+            (e.g. flagged by TypeSafe Noul during an enrichment pass). When None
+            (default), the field is omitted and no badge is shown in CodeBar.
+        """
         if not code or not display:
             return
 
@@ -47,6 +52,8 @@ class CodeSetWriter:
             entry["chapter"] = chapter
         if notes:
             entry["notes"] = notes
+        if unspecified is not None:
+            entry["unspecified"] = bool(unspecified)
         self.codes.append(entry)
 
     def envelope(self):

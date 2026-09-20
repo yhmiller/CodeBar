@@ -17,6 +17,8 @@ enum Migrations {
                 try migrateV2ToV3(database)
             case 3:
                 try migrateV3ToV4(database)
+            case 4:
+                try migrateV4ToV5(database)
             default:
                 throw StoreError.unsupportedSchemaVersion(version)
             }
@@ -66,6 +68,13 @@ enum Migrations {
             try database.execute(Schema.migrateV3ToV4)
         }
         try database.setUserVersion(4)
+    }
+
+    private static func migrateV4ToV5(_ database: Database) throws {
+        try database.transaction {
+            try database.execute(Schema.migrateV4ToV5)
+        }
+        try database.setUserVersion(5)
     }
 
     private static func copyLegacyRows(_ database: Database) throws {

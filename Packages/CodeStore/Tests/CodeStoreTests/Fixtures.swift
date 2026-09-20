@@ -19,7 +19,8 @@ enum Fixtures {
             display: "Type 2 diabetes mellitus without complications",
             system: .icd10cm,
             synonyms: ["type 2 diabetes", "T2DM"],
-            isBillable: true
+            isBillable: true,
+            isUnspecified: true
         ),
         ClinicalCode(
             code: "E11.65",

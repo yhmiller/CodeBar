@@ -71,6 +71,18 @@ class CodeSetWriterTests(unittest.TestCase):
         writer.add("E11", "Type 2 diabetes mellitus", billable=False)
         self.assertIn("will be removed on import", writer.summary("out.json"))
 
+    def test_should_record_unspecified_flag_when_given_one(self):
+        writer = CodeSetWriter("ICD-10-CM")
+        writer.add("E11.9", "Type 2 diabetes mellitus without complications",
+                   unspecified=True)
+        self.assertIs(writer.envelope()["codes"][0]["unspecified"], True)
+
+    def test_should_omit_unspecified_when_not_provided(self):
+        """Backward compatibility: old code sets omit the field entirely."""
+        writer = CodeSetWriter("ICD-10-CM")
+        writer.add("E11.65", "Type 2 diabetes mellitus with hyperglycemia")
+        self.assertNotIn("unspecified", writer.envelope()["codes"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

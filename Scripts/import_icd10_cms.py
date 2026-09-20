@@ -87,6 +87,12 @@ def main():
         help="icd10cm_tabular_YYYY.xml — adds the code hierarchy and the "
              "includes/excludes notes, which the order file does not carry",
     )
+    parser.add_argument(
+        "--enrich-unspecified",
+        action="store_true",
+        help="Run a TypeSafe Noul enrichment pass to badge catch-all codes "
+             "(requires TYPESAFE_API_KEY; see Scripts/enrich_unspecified.py)",
+    )
     args = parser.parse_args()
 
     # Both files describe the same release, and importing them together avoids
@@ -100,6 +106,13 @@ def main():
 
     index = parse_index(args.index) if args.index else {}
 
+    # Optional TypeSafe enrichment pass: annotate catch-all/unspecified codes.
+    # Runs before writing so the enrichment is part of the final file.
+    unspecified_map = {}
+    if args.enrich_unspecified:
+        from enrich_unspecified import enrich_entries
+        unspecified_map = enrich_entries(entries, verbose=True)
+
     writer = CodeSetWriter("ICD-10-CM", release=args.release, mode=args.mode)
     for entry in entries:
         extra = tabular.get(entry["code"], {})
@@ -107,10 +120,12 @@ def main():
                    synonyms=entry["synonyms"] + index.get(entry["code"], []),
                    billable=entry["billable"],
                    parent=extra.get("parent"), chapter=extra.get("chapter"),
-                   notes=extra.get("notes"))
+                   notes=extra.get("notes"),
+                   unspecified=unspecified_map.get(entry["code"]))
 
     print(writer.write(args.output))
 
 
 if __name__ == "__main__":
     main()
+
