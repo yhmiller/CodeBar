@@ -5,11 +5,6 @@ RELEASE_APP := $(BUILD_DIR)/Build/Products/Release/$(APP_NAME).app
 DEBUG_APP   := $(BUILD_DIR)/Build/Products/Debug/$(APP_NAME).app
 INSTALL_DIR := /Applications
 INSTALLED   := $(INSTALL_DIR)/$(APP_NAME).app
-# Read from project.yml rather than repeated here, so a release cannot be named
-# one version while the bundle inside it claims another. Anchored to the
-# definition line and stopping there: a looser match also finds
-# `CFBundleShortVersionString: $(MARKETING_VERSION)`, whose $(...) the shell then
-# tries to run as a command, and the DMG comes out named `CodeBar-.dmg`.
 VERSION     := $(shell awk -F'"' '/^ *MARKETING_VERSION:/ {print $$2; exit}' project.yml)
 PACKAGES    := Packages/SQLiteKit Packages/CodeCore Packages/CodeStore \
                Packages/CodeLibrary Packages/CodeBarUI Packages/CodePlatform
@@ -18,8 +13,6 @@ PACKAGES    := Packages/SQLiteKit Packages/CodeCore Packages/CodeStore \
 
 .PHONY: help install run uninstall release project bootstrap \
         build test test-scripts typecheck layering check check-all uitest clean icon dist
-
-## ---------------------------------------------------------------- using it
 
 help: ## Show this help
 	@echo "CodeBar"
@@ -45,18 +38,6 @@ install: release ## Build Release, install to /Applications, and launch
 	@echo "$(APP_NAME) is installed and running. Press ⌥⌘C from anywhere."
 	@echo "Turn on 'Open at Login' from the menu bar icon so it survives a restart."
 
-## -------------------------------------------------------------- releasing
-
-# Signing and notarising are opt-in through these two, so the same target works
-# before and after enrolling in the Developer Program. Set them and the DMG is
-# something a stranger can open; leave them and it is a DMG that Gatekeeper will
-# refuse, which is still the right thing to build and test.
-#
-#   make dist SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
-#             NOTARY_PROFILE=codebar
-#
-# NOTARY_PROFILE is a keychain profile made once with:
-#   xcrun notarytool store-credentials codebar --apple-id … --team-id … --password …
 SIGN_IDENTITY  ?=
 NOTARY_PROFILE ?=
 DIST_DIR       := dist
@@ -107,12 +88,6 @@ run: project ## Build Debug and launch it, without installing
 	@sleep 1
 	@open "$(DEBUG_APP)"
 
-## ---------------------------------------------------------------- building
-
-# A failed build must stop the pipeline. Piping xcodebuild into grep hides its
-# exit status, and `|| true` discarded what was left — so a build that failed to
-# compile still went on to install and launch the *previous* binary, reporting
-# success. A fix that is silently not installed is worse than a visible failure.
 release: project ## Build a Release copy without installing it
 	@mkdir -p $(BUILD_DIR)
 	@xcodebuild -project $(PROJECT) -scheme $(APP_NAME) -configuration Release \
@@ -142,8 +117,6 @@ build: ## Build every local Swift package
 		( cd $$pkg && swift build ) || exit 1; \
 	done
 
-## ---------------------------------------------------------------- checking
-
 check: test test-scripts typecheck layering ## Everything CI would run
 	@echo
 	@echo "Interaction tests are not in here — they take ~25s and quit a running"
@@ -151,10 +124,6 @@ check: test test-scripts typecheck layering ## Everything CI would run
 
 check-all: check uitest ## check, plus the interaction tests
 
-# These drive the real app: they launch it, close its window, and reopen it.
-# A copy already running under the same bundle identifier makes the run
-# non-deterministic, so the tests quit it first — including the one in
-# /Applications. Relaunch it with 'make install' or from Spotlight afterwards.
 uitest: project ## Interaction tests: window, reopen and panel behaviour
 	@mkdir -p $(BUILD_DIR)
 	@xcodebuild test -project $(PROJECT) -scheme $(APP_NAME) \
@@ -167,10 +136,6 @@ uitest: project ## Interaction tests: window, reopen and panel behaviour
 	@grep -cE "Test Case .* passed" $(BUILD_DIR)/uitest.log \
 		| xargs printf "interaction tests passed: %s\n"
 
-# CI sets SWIFT_TEST_FLAGS='--skip SnapshotTests'. The snapshot references are
-# recorded on one Mac, and fonts, appearance and OS version all move the pixels,
-# so they assert nothing on a runner except that it is a different machine. They
-# stay a local gate; everything else runs everywhere.
 SWIFT_TEST_FLAGS ?=
 
 test: ## Swift tests across the four packages

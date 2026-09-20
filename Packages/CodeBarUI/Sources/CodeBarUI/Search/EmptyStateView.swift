@@ -1,21 +1,11 @@
 import CodeCore
 import SwiftUI
 
-/// What the panel shows before anything is typed.
-///
-/// Pins and recents earn their place here beyond convenience: relevance ranking
-/// cannot tell that E11.9 is the diabetes code someone uses daily, so the codes
-/// they have actually reached for are the fastest correct answer available.
 struct EmptyStateView: View {
     let pinned: [ClinicalCode]
     let recent: [ClinicalCode]
 
-    /// Threaded through rather than decided here, so the empty state and the
-    /// results list can never disagree about whether a row names its system.
     var showsSystemBadge: Bool = true
-
-    /// Which suggestion the arrow keys are on, so ⌥⌘C then Return reaches a
-    /// pinned code without typing — the thing the README has always promised.
     var isSelected: (ClinicalCode) -> Bool = { _ in false }
 
     let onChoose: (ClinicalCode) -> Void
@@ -43,9 +33,6 @@ struct EmptyStateView: View {
     @ViewBuilder
     private func section(_ title: String, codes: [ClinicalCode], isPinnedSection: Bool) -> some View {
         if !codes.isEmpty {
-            // Aligned to `rowLeading`, not to a number that happens to match:
-            // the header sits above rows whose text starts at the row's own
-            // inset plus its padding, and the two have to move together.
             Text(title.uppercased())
                 .font(CodeTypography.sectionLabel)
                 .foregroundStyle(.secondary)
@@ -72,10 +59,6 @@ struct EmptyStateView: View {
         VStack(spacing: Metric.xs) {
             Text("Start typing a term or a code")
                 .foregroundStyle(.secondary)
-            // Secondary, not tertiary. Tertiary is for text on an opaque
-            // surface; over a translucent one its effective contrast depends on
-            // whatever happens to be behind the panel, and this is the line that
-            // tells a first-time user what to type.
             Text("e.g. \"type 2 diabetes\" or \"E11\"")
                 .font(.caption)
                 .foregroundStyle(.secondary)

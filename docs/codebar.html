@@ -1,0 +1,1237 @@
+<title>CodeBar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap">
+
+<style>
+:root{
+  --paper:#F6F8F7;
+  --surface:#FFFFFF;
+  --ink:#14211C;
+  --ink-soft:#495A53;
+  --ink-faint:#7B8A84;
+  --rule:#DBE4E0;
+  --rule-strong:#C2CFC9;
+  --accent:#15603F;
+  --accent-ink:#0F4A31;
+  --accent-soft:#E4EFE9;
+  --warning:#8A4E00;
+  --warning-soft:#F8EEDC;
+  --prohibition:#A31D24;
+  --prohibition-soft:#F7E6E6;
+  --code-bg:#ECF2EF;
+  --shadow:0 1px 2px rgba(20,33,28,.05),0 8px 24px -12px rgba(20,33,28,.12);
+
+  --f-body:"Newsreader",ui-serif,Georgia,"Times New Roman",serif;
+  --f-ui:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  --measure:64ch;
+}
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1411;
+    --surface:#131D18;
+    --ink:#DFE8E3;
+    --ink-soft:#9BABA4;
+    --ink-faint:#6D7D76;
+    --rule:#233029;
+    --rule-strong:#33443B;
+    --accent:#5EC099;
+    --accent-ink:#7FD4B4;
+    --accent-soft:#152A21;
+    --warning:#E0A44E;
+    --warning-soft:#241B0D;
+    --prohibition:#F0868E;
+    --prohibition-soft:#2A1618;
+    --code-bg:#18241F;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+
+:root[data-theme="dark"]{
+  --paper:#0D1411;
+  --surface:#131D18;
+  --ink:#DFE8E3;
+  --ink-soft:#9BABA4;
+  --ink-faint:#6D7D76;
+  --rule:#233029;
+  --rule-strong:#33443B;
+  --accent:#5EC099;
+  --accent-ink:#7FD4B4;
+  --accent-soft:#152A21;
+  --warning:#E0A44E;
+  --warning-soft:#241B0D;
+  --prohibition:#F0868E;
+  --prohibition-soft:#2A1618;
+  --code-bg:#18241F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:19px;
+  line-height:1.68;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  margin:0;
+  padding:0 clamp(20px,5vw,48px) 120px;
+}
+
+/* ---------- shell ---------- */
+
+.shell{
+  max-width:1180px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+}
+
+@media (min-width:1080px){
+  .shell{
+    grid-template-columns:210px minmax(0,1fr);
+    column-gap:64px;
+    align-items:start;
+  }
+  .masthead{grid-column:1 / -1}
+}
+
+article{max-width:var(--measure);min-width:0}
+
+/* ---------- masthead ---------- */
+
+.masthead{
+  padding:clamp(56px,9vw,104px) 0 0;
+  border-bottom:1px solid var(--rule);
+  margin-bottom:clamp(40px,6vw,72px);
+  padding-bottom:clamp(36px,5vw,56px);
+}
+
+.eyebrow{
+  font-family:var(--f-ui);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 22px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.eyebrow::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--rule);
+  max-width:180px;
+}
+
+h1{
+  font-family:var(--f-ui);
+  font-size:clamp(44px,8vw,82px);
+  font-weight:600;
+  letter-spacing:-.035em;
+  line-height:.94;
+  margin:0 0 24px;
+  text-wrap:balance;
+}
+
+.deck{
+  font-size:clamp(21px,2.6vw,27px);
+  line-height:1.42;
+  color:var(--ink-soft);
+  font-weight:300;
+  max-width:32ch;
+  margin:0 0 40px;
+  text-wrap:balance;
+}
+.deck strong{color:var(--ink);font-weight:500}
+
+/* keystroke hero */
+
+.keystroke{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+  padding:24px 0 34px;
+  font-family:var(--f-ui);
+  font-size:14px;
+  color:var(--ink-soft);
+}
+.keys{display:flex;gap:7px}
+
+kbd{
+  font-family:var(--f-mono);
+  font-size:15px;
+  font-weight:500;
+  min-width:36px;
+  height:36px;
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--surface);
+  color:var(--ink);
+  border:1px solid var(--rule-strong);
+  border-bottom-width:2px;
+  border-radius:6px;
+  box-shadow:var(--shadow);
+}
+
+.arrow{color:var(--ink-faint);font-family:var(--f-mono)}
+
+/* meta */
+
+.meta{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:2px;
+  background:var(--rule);
+  border:1px solid var(--rule);
+  border-radius:8px;
+  overflow:hidden;
+}
+.meta div{
+  background:var(--paper);
+  padding:16px 18px;
+}
+.meta dt{
+  font-family:var(--f-ui);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin:0 0 6px;
+}
+.meta dd{
+  margin:0;
+  font-family:var(--f-ui);
+  font-size:14.5px;
+  line-height:1.45;
+  color:var(--ink);
+}
+.meta dd a{color:var(--accent);text-decoration-color:var(--rule-strong)}
+
+/* ---------- toc rail ---------- */
+
+.toc{display:none}
+
+@media (min-width:1080px){
+  .toc{
+    display:block;
+    position:sticky;
+    top:32px;
+    font-family:var(--f-ui);
+    font-size:12.5px;
+    line-height:1.35;
+    padding-right:8px;
+  }
+  .toc p{
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin:0 0 14px;
+  }
+  .toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+  .toc a{
+    color:var(--ink-soft);
+    text-decoration:none;
+    display:grid;
+    grid-template-columns:22px 1fr;
+    gap:6px;
+    padding:2px 0;
+    border-radius:3px;
+  }
+  .toc a:hover,.toc a:focus-visible{color:var(--accent)}
+  .toc a span{
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    color:var(--ink-faint);
+    padding-top:1px;
+  }
+  .toc a:hover span{color:var(--accent)}
+}
+
+/* ---------- article typography ---------- */
+
+h2{
+  font-family:var(--f-ui);
+  font-size:clamp(26px,3.4vw,34px);
+  font-weight:600;
+  letter-spacing:-.02em;
+  line-height:1.14;
+  margin:76px 0 20px;
+  padding-top:26px;
+  border-top:1px solid var(--rule);
+  text-wrap:balance;
+  scroll-margin-top:24px;
+}
+h2 .num{
+  display:block;
+  font-family:var(--f-mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.16em;
+  color:var(--accent);
+  margin-bottom:12px;
+}
+
+h3{
+  font-family:var(--f-ui);
+  font-size:20px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  line-height:1.3;
+  margin:42px 0 12px;
+  text-wrap:balance;
+}
+
+h4{
+  font-family:var(--f-ui);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin:26px 0 8px;
+}
+
+p{margin:0 0 22px}
+p+h3{margin-top:38px}
+
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a:focus-visible,.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+strong{font-weight:600;color:var(--ink)}
+em{font-style:italic}
+
+ul,ol{margin:0 0 24px;padding-left:24px}
+li{margin-bottom:10px}
+li::marker{color:var(--ink-faint)}
+
+blockquote{
+  margin:30px 0;
+  padding:4px 0 4px 24px;
+  border-left:3px solid var(--accent);
+  font-size:21px;
+  line-height:1.5;
+  color:var(--ink);
+}
+blockquote p:last-child{margin-bottom:0}
+
+hr{border:0;border-top:1px solid var(--rule);margin:56px 0}
+
+/* code + inline codes */
+
+code{
+  font-family:var(--f-mono);
+  font-size:.84em;
+  background:var(--code-bg);
+  padding:.14em .38em;
+  border-radius:4px;
+  color:var(--ink);
+}
+
+pre{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:8px;
+  padding:20px 22px;
+  overflow-x:auto;
+  margin:0 0 28px;
+  font-size:13.5px;
+  line-height:1.62;
+  box-shadow:var(--shadow);
+}
+pre code{background:none;padding:0;font-size:inherit;color:var(--ink-soft)}
+pre code .kw{color:var(--accent);font-weight:500}
+pre code .cm{color:var(--ink-faint);font-style:italic}
+
+/* the app's own semantic chips, reused as page furniture */
+
+.chip{
+  font-family:var(--f-mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.02em;
+  padding:2px 7px;
+  border-radius:4px;
+  white-space:nowrap;
+  display:inline-block;
+  vertical-align:.06em;
+}
+.chip.no{background:var(--warning-soft);color:var(--warning);border:1px solid var(--warning)}
+.chip.yes{background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent)}
+
+.codeword{
+  font-family:var(--f-mono);
+  font-size:.86em;
+  font-weight:500;
+  color:var(--ink);
+  background:var(--code-bg);
+  padding:.12em .4em;
+  border-radius:4px;
+}
+
+/* callouts */
+
+.note{
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  background:var(--surface);
+  border-radius:0 8px 8px 0;
+  padding:20px 24px;
+  margin:0 0 28px;
+  font-size:17.5px;
+  line-height:1.6;
+}
+.note.warn{border-left-color:var(--warning)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  font-family:var(--f-ui);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  display:block;
+  margin-bottom:8px;
+}
+
+/* visual placeholder */
+
+.shot{
+  border:1px dashed var(--rule-strong);
+  border-radius:8px;
+  padding:18px 20px;
+  margin:0 0 28px;
+  background:var(--surface);
+  font-family:var(--f-ui);
+  font-size:14px;
+  line-height:1.5;
+  color:var(--ink-soft);
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+}
+.shot b{
+  font-family:var(--f-mono);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  padding-top:3px;
+  white-space:nowrap;
+}
+
+/* decision blocks */
+
+.decision{
+  border:1px solid var(--rule);
+  border-radius:10px;
+  background:var(--surface);
+  padding:26px 28px;
+  margin:0 0 28px;
+  box-shadow:var(--shadow);
+}
+.decision h3{margin:0 0 20px;font-size:19px}
+.decision h3::before{
+  content:"Decision";
+  display:block;
+  font-family:var(--f-mono);
+  font-size:10px;
+  font-weight:500;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:7px;
+}
+.decision dl{margin:0;display:grid;gap:16px}
+.decision dt{
+  font-family:var(--f-ui);
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin-bottom:5px;
+}
+.decision dd{margin:0;font-size:17.5px;line-height:1.58}
+.decision dd:last-child{margin-bottom:0}
+
+/* tables */
+
+.tw{overflow-x:auto;margin:0 0 30px;border:1px solid var(--rule);border-radius:8px;background:var(--surface)}
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-family:var(--f-ui);
+  font-size:14.5px;
+  line-height:1.5;
+}
+th,td{
+  text-align:left;
+  padding:12px 16px;
+  border-bottom:1px solid var(--rule);
+  vertical-align:top;
+}
+th{
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-size:12.5px}
+
+/* mermaid */
+
+.mermaid{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:10px;
+  padding:24px;
+  margin:0 0 30px;
+  overflow-x:auto;
+  text-align:center;
+  box-shadow:var(--shadow);
+}
+
+/* appendix */
+
+.appendix{
+  margin-top:96px;
+  padding-top:0;
+  border-top:3px double var(--rule-strong);
+}
+.appendix h2{border-top:0;margin-top:52px;padding-top:0}
+.appendix h2 .num{color:var(--ink-faint)}
+
+.field{
+  display:grid;
+  gap:5px;
+  padding:14px 0;
+  border-bottom:1px solid var(--rule);
+}
+.field b{
+  font-family:var(--f-ui);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+}
+.field span{font-family:var(--f-ui);font-size:16px;line-height:1.5}
+.field span.mono{font-family:var(--f-mono);font-size:14px}
+
+.colophon{
+  margin-top:64px;
+  padding-top:24px;
+  border-top:1px solid var(--rule);
+  font-family:var(--f-ui);
+  font-size:13px;
+  color:var(--ink-faint);
+  line-height:1.6;
+}
+
+@media (prefers-reduced-motion:no-preference){
+  .toc a{transition:color .15s ease}
+}
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <p class="eyebrow">Side project &middot; Case study</p>
+    <h1>CodeBar</h1>
+    <p class="deck">A native macOS app that puts <strong>98,186 clinical codes</strong> behind one keystroke.</p>
+
+    <div class="keystroke">
+      <span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd></span>
+      <span class="arrow">→</span>
+      <span>type a term or a code</span>
+      <span class="arrow">→</span>
+      <span class="keys"><kbd>↵</kbd></span>
+      <span>on your clipboard</span>
+    </div>
+
+    <dl class="meta">
+      <div><dt>Role</dt><dd>Sole designer and engineer</dd></div>
+      <div><dt>Duration</dt><dd>~1 week on the rebuild<br>50 commits, Aug 2026</dd></div>
+      <div><dt>Status</dt><dd>v0.1.0 &middot; daily driver<br>not yet publicly released</dd></div>
+      <div><dt>Stack</dt><dd>Swift 6, SwiftUI, AppKit, SQLite&nbsp;+&nbsp;FTS5, Python 3</dd></div>
+      <div><dt>Source</dt><dd><a href="https://github.com/yhmiller/CodeBar">github.com/yhmiller/CodeBar</a></dd></div>
+      <div><dt>Live demo</dt><dd>None. Native macOS app, nothing to link in a browser.</dd></div>
+    </dl>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#s01"><span>01</span>Overview</a></li>
+      <li><a href="#s02"><span>02</span>The problem</a></li>
+      <li><a href="#s03"><span>03</span>The idea</a></li>
+      <li><a href="#s04"><span>04</span>Goals</a></li>
+      <li><a href="#s05"><span>05</span>The solution</a></li>
+      <li><a href="#s06"><span>06</span>Key features</a></li>
+      <li><a href="#s07"><span>07</span>UX and design</a></li>
+      <li><a href="#s08"><span>08</span>Architecture</a></li>
+      <li><a href="#s09"><span>09</span>Stack</a></li>
+      <li><a href="#s10"><span>10</span>Decisions</a></li>
+      <li><a href="#s11"><span>11</span>Deep dive</a></li>
+      <li><a href="#s12"><span>12</span>A hard problem</a></li>
+      <li><a href="#s13"><span>13</span>What didn't work</a></li>
+      <li><a href="#s14"><span>14</span>Reliability</a></li>
+      <li><a href="#s15"><span>15</span>Testing</a></li>
+      <li><a href="#s16"><span>16</span>Deployment</a></li>
+      <li><a href="#s17"><span>17</span>Results</a></li>
+      <li><a href="#s18"><span>18</span>What I learned</a></li>
+      <li><a href="#s19"><span>19</span>Done differently</a></li>
+      <li><a href="#s20"><span>20</span>What's next</a></li>
+      <li><a href="#s21"><span>21</span>Takeaway</a></li>
+    </ol>
+  </nav>
+
+  <article>
+
+    <h2 id="s01"><span class="num">01</span>Overview</h2>
+
+    <p>CodeBar is a menu bar app for looking up clinical codes: ICD-10-CM, LOINC, SNOMED CT and CPT.</p>
+
+    <p>Clinical coding systems are enormous. The current CMS ICD-10-CM release is 98,186 codes. Nobody memorises them, so every clinician and coder ends up doing the same thing: stop what you are writing, open a browser, search a web tool, copy the code, come back, paste it, find your place again.</p>
+
+    <p>CodeBar collapses that into a keystroke. It ships with a small starter set so it works the moment you build it, and imports the full official releases when you want them. Everything runs locally. Nothing about a patient leaves the machine.</p>
+
+    <p>The part I find most interesting is not the app. It is the search ranking, which turned out to be a genuinely hard problem with no clean technical answer, and where the fix I shipped is a product decision rather than an algorithmic one.</p>
+
+    <h2 id="s02"><span class="num">02</span>The problem</h2>
+
+    <p>I am an MSc Health Informatics candidate, finishing September 2026. Clinical code lookup is not an abstract problem to me. It is a thing I do, and a thing I watched consume more attention than it deserved.</p>
+
+    <p>The friction is not that the codes are hard to find. Plenty of web tools find them. The friction is that finding them costs you your place. You are mid-sentence in a note, you need a code, and getting it means leaving the thing you were doing, using a completely different interface, and coming back to reconstruct where you were. Multiply that by a clinic session.</p>
+
+    <p>There is a second problem underneath the first, and it is the one that made me want to build this properly rather than as a toy.</p>
+
+    <blockquote><p>The code text does not tell you whether the code is legal to submit.</p></blockquote>
+
+    <p>ICD-10-CM contains category headers that must never go on a claim. <span class="codeword">E11</span> is "Type 2 diabetes mellitus". It looks like a code. It reads like a code. It requires a further character before it is valid, and submitting it is a denial. Nothing about <span class="codeword">E11</span> distinguishes it from <span class="codeword">A09</span> or <span class="codeword">I10</span>, which are three characters and perfectly billable. CMS marks the difference in column 14 of a fixed-width text file. Almost a quarter of the official release, <strong>23,467 of 98,186 codes</strong>, are these headers.</p>
+
+    <p>A lookup tool that hands you <span class="codeword">E11</span> and says nothing has actively made your day worse.</p>
+
+    <div class="shot"><b>Screenshot</b><span>A result row showing the <span class="chip no">Category — not valid for submission</span> badge, with a billable sibling directly beneath it.</span></div>
+
+    <h2 id="s03"><span class="num">03</span>The idea</h2>
+
+    <p>The first version was small and slightly embarrassing. Seven Swift files, roughly 400 lines, no Xcode project, no tests, no version control. A <code>MenuBarExtra</code>, a singleton wrapping SQLite, a global event monitor for the hotkey, and a hardcoded panel. It worked well enough to prove the shape was right, which was all I wanted from it.</p>
+
+    <p>The shape was: <strong>the panel is the fast path, and speed is the entire product.</strong> If it is not faster than opening a browser tab, it has no reason to exist.</p>
+
+    <p>What I deliberately left out at the start:</p>
+
+    <ul>
+      <li><strong>Any network call at lookup time.</strong> Not a performance decision, a privacy one. The app is sandboxed and never talks to anything. That constraint has since killed more feature ideas than anything else, including the obvious one, natural-language search, which every commercial competitor now leads with.</li>
+      <li><strong>Anything that makes a clinical judgement.</strong> CodeBar re-presents what the publisher says. It never decides what the patient has.</li>
+      <li><strong>Bundling the code sets.</strong> ICD-10-CM is public domain, but LOINC needs a licence acceptance, SNOMED CT needs a UMLS affiliate account and CPT is proprietary AMA content. Shipping converters and letting people import their own licensed copies is the only version of this that is legally clean.</li>
+    </ul>
+
+    <p>The scope grew in one significant way. It started as a panel and became a full app with a browse window, once it was clear that "copy a code fast" and "understand a code" are two different jobs. Fast lookup is a floating panel that gets out of your way. Understanding a code means the hierarchy, the publisher's coding notes, and your own annotations, which needs a real window with real navigation. Trying to serve both from one surface would have compromised both.</p>
+
+    <h2 id="s04"><span class="num">04</span>Goals</h2>
+
+    <h4>Product</h4>
+    <ul>
+      <li>Lookup should feel like a system reflex, not like using an application.</li>
+      <li>Never hand someone a code that cannot go on a claim without saying so.</li>
+      <li>The user's own data must be permanently safe from a code-set reimport.</li>
+      <li>Useful immediately on first launch, with no setup.</li>
+    </ul>
+
+    <h4>Technical</h4>
+    <ul>
+      <li>Full-text search over ~100k rows that stays responsive while typing.</li>
+      <li>A storage boundary clean enough that the UI can be tested without a database.</li>
+      <li>Swift 6 strict concurrency, with the compiler enforcing thread safety rather than a convention doing it.</li>
+      <li>Idempotent imports. Running the same file twice must be a no-op.</li>
+    </ul>
+
+    <h4>Learning</h4>
+    <ul>
+      <li>Native macOS at a level past tutorial code: <code>NSPanel</code> behaviour, activation policy, Carbon hotkeys, sandbox entitlements, notarisation.</li>
+      <li>SQLite FTS5 in earnest, including where relevance ranking stops being the right tool.</li>
+      <li>Whether I could hold a design system together in a codebase this small without it collapsing into ad-hoc values.</li>
+    </ul>
+
+    <h2 id="s05"><span class="num">05</span>The solution</h2>
+
+    <p>Two surfaces, reached deliberately differently.</p>
+
+    <p><strong>The panel</strong> is summoned by <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> or the menu bar icon. It floats above everything, sizes itself to its results, copies, and disappears.</p>
+
+    <ol>
+      <li>Press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> from whatever app you are in.</li>
+      <li>Type a term, a code, or clinical shorthand. <span class="codeword">diabetes</span>, <span class="codeword">E119</span> and <span class="codeword">t2dm</span> all work, and both a code pass and a text pass run against the same query.</li>
+      <li>Arrow to a result, or press <kbd>⌘1</kbd> through <kbd>⌘9</kbd> to take a numbered row outright.</li>
+      <li><kbd>↵</kbd> copies the code. <kbd>⇧↵</kbd> copies <span class="codeword">ICD-10-CM E11.9 — Type 2 diabetes mellitus without complications</span> instead, for pasting into a note rather than a code field.</li>
+      <li>A confirmation appears showing exactly what reached the clipboard, because the two formats are easy to confuse and a silent copy is one you verify by hand.</li>
+      <li>The panel dismisses itself and you are back where you were.</li>
+    </ol>
+
+    <p><strong>The window</strong> is opened from the Dock or the menu bar. Three columns: chapters, the code tree, and a detail pane carrying ancestry, children, billability and the publisher's own coding notes, including the <span class="codeword">Excludes 1</span> rules that mean <em>never code these together</em>. Lists live in the sidebar, so you can build a problem list or an encounter template and export it as text or CSV.</p>
+
+    <div class="shot"><b>Screenshot</b><span>The browse window: all three columns populated, a code selected, publisher notes visible in the detail pane.</span></div>
+    <div class="shot"><b>Screenshot</b><span>The panel empty state, showing pinned codes ready to copy before anything is typed.</span></div>
+
+    <h2 id="s06"><span class="num">06</span>Key features</h2>
+
+    <p><strong>One keystroke from anywhere.</strong> The value is that lookup costs you nothing, so you actually do it instead of guessing. It is a Carbon <code>RegisterEventHotKey</code> registration, which needs no Accessibility permission, works inside the App Sandbox and consumes the event so it does not also reach whatever app is in front. If another app already owns <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd>, CodeBar says so at launch instead of failing quietly.</p>
+
+    <p><strong>Codes and text search at the same time.</strong> You do not have to decide what kind of thing you are typing. <span class="codeword">E119</span> finds <span class="codeword">E11.9</span> because codes are indexed in a normalised, punctuation-free form alongside their display form. One SQL statement runs both passes and merges them under an explicit ordering.</p>
+
+    <p><strong>Clinical shorthand that actually resolves.</strong> <span class="codeword">uti</span> appears in no ICD-10-CM description, so searching it finds nothing however well the results rank. CodeBar expands about two dozen abbreviations nobody argues about, and Settings takes your own. Crucially it expands the <em>query</em>, never the code: <span class="codeword">pcn</span> searching as "penicillin" is a fact about vocabulary, whereas pointing <span class="codeword">pcn</span> at a specific code would be a clinical judgement made on your behalf, and a wrong one reaches a claim.</p>
+
+    <p><strong>Billability, surfaced.</strong> Codes CMS marks as category headers carry an amber badge and sort below their billable siblings within a tier. They are still shown, because someone searching for a category deserves to find it, but a billable code wins a tie.</p>
+
+    <p><strong>Pins that survive everything.</strong> Pin a code and it waits in the empty state next time you open the panel, so <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> then <kbd>↵</kbd> copies it with nothing typed. Pins live in a separate database file from the code index, so importing a new yearly release cannot touch them.</p>
+
+    <p><strong>Lists you can get back out.</strong> Right-click a list for Copy as Text or Export as CSV. The text form is worded exactly as <kbd>⇧↵</kbd> writes a single code, so a list looks like something you have already pasted. A curated list you can only read inside the app that holds it is worth much less than one you can hand to someone.</p>
+
+    <h2 id="s07"><span class="num">07</span>UX and design</h2>
+
+    <p>I ran a full design review against the working app about halfway through, and it found something uncomfortable: the panel truncated the end of a code's description at one line inside a fixed 560pt window.</p>
+
+    <p>In most apps that is a cosmetic bug. Here it is the interface withholding the exact information the user opened it for. The clinical distinction in ICD-10-CM lives in the <em>tail</em> of the description. "Type 2 diabetes mellitus <strong>without complications</strong>" versus "<strong>with hyperglycemia</strong>". "Initial encounter for <strong>closed</strong> fracture". Truncating that is worse than showing nothing, because it looks like an answer.</p>
+
+    <p>That produced the first of eight design principles I now hold the app to:</p>
+
+    <blockquote><p><strong>Never truncate a code's meaning.</strong> Wrap, widen or reflow. The end of a description is where the clinical distinction lives. Nothing in the layout outranks it.</p></blockquote>
+
+    <p>The panel is 680pt now. Rows wrap. The others that earned their place:</p>
+
+    <blockquote><p><strong>Colour is a safety channel.</strong> Amber, red and green mean billability and exclusion. They are never spent on taxonomy, decoration or brand.</p></blockquote>
+
+    <blockquote><p><strong>The publisher outranks the user's note.</strong> An always-open note editor used to sit between the code and the <span class="codeword">Excludes 1</span> rules that mean never code these together. A personal reminder was outranking the fact that gets a claim denied.</p></blockquote>
+
+    <p>Other decisions worth naming:</p>
+
+    <p><strong>No colour means "ICD-10".</strong> The palette originally used orange for the CPT system badge and orange for "not billable", so on a CPT row two orange chips sat inches apart meaning unrelated things. System identity is carried by a neutral badge distinguished by its label. And the badge only appears at all when more than one code system is installed, because otherwise it reads "ICD-10" on every row forever while costing the description 84 points of row width.</p>
+
+    <p><strong>One row design, two densities.</strong> The panel and the window were rendering the same object with two unrelated row designs. They share a component now. Density may change; anatomy may not.</p>
+
+    <p><strong>A 4pt spacing scale, because there wasn't one.</strong> Five view files between them used padding of 1, 2, 3, 4, 6, 8, 9, 10, 12, 14, 18, 20 and 24. Each locally reasonable, collectively no rule, so nothing lined up and every new view was a fresh negotiation.</p>
+
+    <p><strong>Accessibility.</strong> Result rows are proper accessibility elements. Reduce Motion suppresses the panel's fade. Every semantic colour has a high-contrast variant for Increase Contrast, and there is a snapshot test that renders the rows under it. The "not billable" label has a separate spoken form that leads with the noun a screen reader user is scanning for.</p>
+
+    <p><strong>Liquid Glass, mostly declined.</strong> macOS 26's glass material goes on the panel root behind an availability shim, so macOS 14 and 15 keep <code>.ultraThinMaterial</code> and the deployment target never moved. It does not go on the footer, because the footer sits inside the root and that would be glass on glass. It does not go behind dense text anywhere. Apple's own guidance puts glass on the navigation layer and warns against it behind text you have to read carefully, which is nearly all of this app.</p>
+
+    <div class="shot"><b>Screenshot</b><span>The same result row before and after: the truncated one-line 560pt version against the wrapped 680pt version. The single most persuasive image in the piece.</span></div>
+
+    <h2 id="s08"><span class="num">08</span>Architecture</h2>
+
+    <p>In plain terms: six small Swift packages with enforced boundaries, two SQLite databases with opposite lifecycles, and a set of Python converters that turn official publisher files into a JSON format the app can read.</p>
+
+    <p>The app target itself is thin. It builds the object graph once, owns the floating panel and the window, and hands everything else to a package.</p>
+
+<pre class="mermaid">
+flowchart TB
+    subgraph Publisher["Official releases"]
+        CMS["CMS ICD-10-CM"]
+        LOINC["LOINC CSV"]
+        SNOMED["SNOMED CT RF2"]
+    end
+
+    subgraph Converters["Scripts/ (Python)"]
+        PY["import_*.py"]
+    end
+
+    subgraph App["CodeBar.app · sandboxed · offline"]
+        UI["CodeBarUI"]
+        CORE["CodeCore"]
+        PLAT["CodePlatform"]
+        STORE["CodeStore (actor)"]
+        LIB["CodeLibrary (actor)"]
+        SQL["SQLiteKit"]
+    end
+
+    CODES[("codes.sqlite
+disposable")]
+    LIBDB[("library.sqlite
+irreplaceable")]
+
+    CMS --> PY
+    LOINC --> PY
+    SNOMED --> PY
+    PY --> STORE
+
+    UI --> CORE
+    PLAT --> CORE
+    STORE --> CORE
+    LIB --> CORE
+    STORE --> SQL
+    LIB --> SQL
+    STORE --> CODES
+    LIB --> LIBDB
+</pre>
+
+    <p>The important detail in that diagram is what is <em>missing</em>: there is no arrow from <code>CodeBarUI</code> to <code>CodeStore</code>. The UI depends on the <code>CodeRepository</code> protocol in <code>CodeCore</code> and never sees a concrete store. That is enforced by a shell script in the build gate, not by discipline.</p>
+
+<pre><code><span class="cm"># Tools/check-layering.sh — 21 rules, all of this shape</span>
+FORBIDDEN=(
+  "CodeBarUI:CodeStore"
+  "CodeCore:AppKit"
+  "CodeCore:SwiftUI"
+  "CodeLibrary:CodeStore"
+  ...
+)</code></pre>
+
+    <p>If the UI can reach the concrete store, the seam stops meaning anything and the view models stop being testable without SQLite. A rule nobody checks is a rule that decays, so <code>make check</code> fails the build on a violation.</p>
+
+    <h3>Storage: two files, not two tables</h3>
+
+<pre><code>codes.sqlite     the code index. Rebuildable. Replaced by each yearly release.
+library.sqlite   pins, usage, lists, notes, abbreviations. Irreplaceable.</code></pre>
+
+    <p>Both live inside the sandbox container. Importing a new release can never reach your own data, because the code doing the replacing has no handle on the other file.</p>
+
+    <p><strong>Concurrency.</strong> Both stores are actors, not singletons. Search runs off the main thread, and actor isolation is what serialises access to a non-<code>Sendable</code> SQLite connection. The whole app target typechecks under Swift 6 strict concurrency as part of the build gate.</p>
+
+    <h2 id="s09"><span class="num">09</span>Technology stack</h2>
+
+    <div class="tw">
+    <table>
+      <thead><tr><th>Technology</th><th>Purpose</th><th>Why I used it</th></tr></thead>
+      <tbody>
+        <tr><td>Swift 6</td><td>The entire app</td><td>Strict concurrency checking turns "is this thread safe?" from a code review question into a compiler error. Worth the migration friction.</td></tr>
+        <tr><td>SwiftUI</td><td>Panel, window, settings</td><td>Fast to build, and it inherits OS refinements including Liquid Glass for free.</td></tr>
+        <tr><td>AppKit</td><td><code>NSPanel</code>, activation policy, pasteboard</td><td>SwiftUI has no floating non-activating panel, no control over Dock icon presence, and no reopen hook. All three are load-bearing here.</td></tr>
+        <tr><td>SQLite + FTS5</td><td>Code index and user library</td><td>Ships with the OS, needs no server, handles 98k rows with room to spare. <code>porter unicode61</code> tokenising means "diabetic" matches "diabetes".</td></tr>
+        <tr><td>Carbon <code>RegisterEventHotKey</code></td><td>The global shortcut</td><td>The only macOS API that gives a system-wide hotkey without an Accessibility grant and without breaking the sandbox. Ancient, and still correct.</td></tr>
+        <tr><td>Python 3</td><td>Code-set converters</td><td>The publisher files are fixed-width text, CSV and XML. Doing that parsing in the app would mean shipping parsers for formats that change once a year.</td></tr>
+        <tr><td>XcodeGen</td><td>Project generation</td><td>The <code>.xcodeproj</code> is generated, so build settings live in reviewable YAML instead of a merge-hostile XML blob.</td></tr>
+        <tr><td>swift-snapshot-testing</td><td>Rendered-image tests</td><td>Covers the class of bug a view model genuinely cannot see, and it caught two.</td></tr>
+        <tr><td>GitHub Actions</td><td>Build gate and release</td><td>Runs the same <code>make check</code> locally and on a runner, then builds, signs and notarises a DMG.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="s10"><span class="num">10</span>Important technical decisions</h2>
+
+    <div class="decision">
+      <h3>Two databases, not one</h3>
+      <dl>
+        <div><dt>The problem</dt><dd>An official yearly release is the complete code set for its year, so importing one should <em>delete</em> codes the publisher retired. Otherwise a retired code stays searchable forever, and a retired code copied onto a claim is a denial. But a user's pins, notes, lists and history must survive that reimport untouched.</dd></div>
+        <div><dt>Options</dt><dd>One database with an ownership column on each table. One database with separate table namespaces. Two separate database files.</dd></div>
+        <div><dt>Decision</dt><dd>Two files: <code>codes.sqlite</code> and <code>library.sqlite</code>.</dd></div>
+        <div><dt>Why</dt><dd>With one database, "delete everything not in this file" is a query I have to get right every single time, forever, under every future schema change. With two files, the destructive operation physically cannot reach the data I care about. It is a safety property enforced by structure rather than by care.</dd></div>
+        <div><dt>Trade-offs</dt><dd>No foreign keys across the boundary and no single-transaction consistency. The visible consequence is real: after a yearly release, <code>library.sqlite</code> can hold pins pointing at codes that no longer exist, and nothing currently notices. That is the direct cost of the split.</dd></div>
+      </dl>
+    </div>
+
+    <div class="decision">
+      <h3>FTS5 as an index, not as the source of truth</h3>
+      <dl>
+        <div><dt>The problem</dt><dd>Version one stored codes <em>in</em> an FTS5 virtual table. That made imports non-idempotent, because an FTS5 table cannot carry a uniqueness constraint, so reimporting the same file doubled every row. Code-prefix search was also a full scan.</dd></div>
+        <div><dt>Options</dt><dd>Deduplicate in Swift before insert. Keep FTS5 authoritative and accept the duplicates. Move to a real table with an external-content FTS5 index.</dd></div>
+        <div><dt>Decision</dt><dd>A real <code>codes</code> table with <code>UNIQUE(system, code)</code> and a B-tree index on the normalised code, plus an external-content FTS5 index kept in sync by triggers.</dd></div>
+        <div><dt>Why</dt><dd>It makes imports idempotent at the database level via an upsert, rather than idempotent because the calling code remembered. It turns code-prefix search into an index range scan. And it lets me store things FTS5 has no room for: billability, parent, chapter.</dd></div>
+        <div><dt>Trade-offs</dt><dd>Three triggers to maintain, and a migration path from the old shape. The migration streams old rows through the normal upsert path rather than <code>INSERT ... SELECT</code>, which costs speed but collapses the duplicates version one left behind.</dd></div>
+      </dl>
+    </div>
+
+    <div class="decision">
+      <h3>Carbon over <code>NSEvent.addGlobalMonitorForEvents</code></h3>
+      <dl>
+        <div><dt>The problem</dt><dd>The original hotkey used a global event monitor. It appeared to do nothing.</dd></div>
+        <div><dt>Options</dt><dd>Request Accessibility permission and keep the monitor. Ship without a global shortcut. Use the Carbon Event Manager.</dd></div>
+        <div><dt>Decision</dt><dd><code>RegisterEventHotKey</code>.</dd></div>
+        <div><dt>Why</dt><dd>The monitor was wrong in four ways at once. It required an Accessibility grant, which meant a permission prompt on first launch and no sandbox. It observed <em>every</em> keystroke system-wide to find one combination. It did not consume the event, so the shortcut also reached whatever app was in front. And it failed <strong>silently</strong>: without permission it simply never fires, with no error to report. <code>RegisterEventHotKey</code> needs no entitlement, works sandboxed, watches only the combination it claims, consumes the event, and returns an <code>OSStatus</code> I can actually show the user.</dd></div>
+        <div><dt>Trade-offs</dt><dd>Carbon is a deprecated C API, which means <code>Unmanaged</code> pointers, a global event handler function and a <code>MainActor.assumeIsolated</code> call. It also cannot be reassigned to an arbitrary key combination without more work, which is why the shortcut is still fixed. Worth it: this is what let the whole app be sandboxed.</dd></div>
+      </dl>
+    </div>
+
+    <div class="decision">
+      <h3>Three-state billability</h3>
+      <dl>
+        <div><dt>The problem</dt><dd>Is this code valid to submit on a claim?</dd></div>
+        <div><dt>Options</dt><dd>A boolean defaulting to false. A boolean defaulting to true. An optional.</dd></div>
+        <div><dt>Decision</dt><dd><code>Bool?</code>. True, false, or the source did not say.</dd></div>
+        <div><dt>Why</dt><dd>A boolean forces a lie in one direction or the other. Defaulting to <code>false</code> marks perfectly billable codes as headers. Defaulting to <code>true</code> is worse, because it tells someone a category header is safe to submit. LOINC and SNOMED CT have no billability concept at all, so their converters genuinely cannot answer. Absent is a real, distinct state and modelling it as one is the honest option. It propagates all the way out: the CSV export writes an empty field for unknown, because writing <code>no</code> would turn a silence into a claim.</dd></div>
+        <div><dt>Trade-offs</dt><dd>Every consumer handles three cases instead of two. In ranking, unknown sorts with billable rather than being penalised, which is a judgement call I could defend either way.</dd></div>
+      </dl>
+    </div>
+
+    <div class="decision">
+      <h3>Expand the query, never the code</h3>
+      <dl>
+        <div><dt>The problem</dt><dd><span class="codeword">uti</span> appears in no ICD-10-CM description. Neither does <span class="codeword">t2dm</span>. Ranking cannot help you: a code has to <em>match</em> before ranking gets a turn.</dd></div>
+        <div><dt>Options</dt><dd>Map each abbreviation to a specific code. Map each abbreviation to its expansion in words. Import a synonym set and hope it covers shorthand.</dd></div>
+        <div><dt>Decision</dt><dd>Expand to words. <span class="codeword">uti</span> searches as <span class="codeword">urinary tract infection</span>, and normal ranking decides which code fits.</dd></div>
+        <div><dt>Why</dt><dd>Mapping <span class="codeword">uti</span> to a code is a clinical judgement made on the user's behalf, and a wrong one puts a wrong code on a claim. Mapping it to its own expansion is a fact about vocabulary, and the clinician still chooses from what comes back. The abbreviation is kept alongside the expansion rather than replaced, so a code set that does spell out <span class="codeword">GERD</span> still matches someone typing it.</dd></div>
+        <div><dt>Trade-offs</dt><dd>More work for the user at the last step, which is the correct place for the work to be. And the built-in table has to stay small: only expansions nobody argues about. <span class="codeword">RA</span> is rheumatoid arthritis on most wards and the right atrium on some, so users add their own, and their entry wins.</dd></div>
+      </dl>
+    </div>
+
+    <h2 id="s11"><span class="num">11</span>Implementation deep dive</h2>
+
+    <h3>One statement, explicit tiers</h3>
+
+    <p>Version one ran two separate queries with different limits and orderings and stitched the arrays together in Swift. Relative ranking between a code hit and a text hit was therefore an accident of iteration order.</p>
+
+    <p>Now both passes feed one statement, and the ordering is stated rather than emergent:</p>
+
+<pre><code><span class="kw">WITH</span> code_hits <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> id,
+           <span class="kw">CASE WHEN</span> code_norm = :norm <span class="kw">THEN</span> 0 <span class="kw">ELSE</span> 1 <span class="kw">END</span> <span class="kw">AS</span> tier,
+           0.0 <span class="kw">AS</span> score
+      <span class="kw">FROM</span> codes
+     <span class="kw">WHERE</span> code_norm &gt;= :norm <span class="kw">AND</span> code_norm &lt; :norm_upper   <span class="cm">-- range, not LIKE</span>
+     <span class="kw">LIMIT</span> :code_limit
+),
+text_hits <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> rowid <span class="kw">AS</span> id, 2 <span class="kw">AS</span> tier,
+           bm25(codes_fts, 1.0, 1.0) <span class="kw">AS</span> score
+      <span class="kw">FROM</span> codes_fts <span class="kw">WHERE</span> codes_fts <span class="kw">MATCH</span> :match
+     <span class="kw">ORDER BY</span> bm25(codes_fts, 1.0, 1.0) <span class="kw">LIMIT</span> :text_limit
+),
+hits <span class="kw">AS</span> (<span class="kw">SELECT</span> * <span class="kw">FROM</span> code_hits <span class="kw">UNION ALL</span> <span class="kw">SELECT</span> * <span class="kw">FROM</span> text_hits)
+<span class="kw">SELECT</span> ...
+ <span class="kw">GROUP BY</span> c.id
+ <span class="kw">ORDER BY</span> tier, not_preferred, header_last, <span class="kw">MIN</span>(h.score), <span class="kw">LENGTH</span>(c.code), c.code
+ <span class="kw">LIMIT</span> :limit;</code></pre>
+
+    <p>Three details in there that took work to get right:</p>
+
+    <p>The prefix match is a <strong>half-open range</strong>, not <code>LIKE 'E11%'</code>. <code>LIKE</code> is only index-optimised under specific collation and pragma conditions. The range form always is.</p>
+
+    <p>The <code>GROUP BY</code> collapses a code that matched both passes onto its best tier, which is what deduplicates the merged set.</p>
+
+    <p>And the sort keys are in a deliberate order: exact code first, then personal preference, then billability, then relevance, then code length. Preference applies <em>within</em> a tier and never across one, because someone typing <span class="codeword">E11</span> means <span class="codeword">E11</span>, however often they have used something else.</p>
+
+    <h3>Debounce with two cancellation points</h3>
+
+<pre><code>pending?.cancel()
+pending = Task { [debounce] <span class="kw">in</span>
+    <span class="kw">do</span> { <span class="kw">try await</span> Task.sleep(for: debounce) } <span class="kw">catch</span> { <span class="kw">return</span> }  <span class="cm">// 1</span>
+    <span class="kw">let</span> found = (<span class="kw">try</span>? <span class="kw">await</span> repository.search(query)) ?? []
+    <span class="kw">guard</span> !Task.isCancelled <span class="kw">else</span> { <span class="kw">return</span> }                      <span class="cm">// 2</span>
+    onResults(found)
+}</code></pre>
+
+    <p>Point one collapses a burst of keystrokes into a single query, and it is the common case. Point two is the one that matters for correctness: without the re-check after the <code>await</code>, a slow query for "dia" can land on top of a faster one for "diabetes" and overwrite it. Both are mutation tested, and the runner was extracted into its own type once the main window needed searching too, because two copies of that logic would be two chances to quietly lose it.</p>
+
+    <h3>Migrations that step forward one version at a time</h3>
+
+    <p>Both databases migrate by stepping, so a database from <em>any</em> earlier build arrives intact rather than only from the immediately previous one. The code index is on schema v4, the library on v3.</p>
+
+    <p>The interesting case is detecting version one, which never set <code>user_version</code> and therefore reports 0, exactly like a brand new file. The tell is structural: a bare <code>codes_fts</code> table with no companion <code>codes</code> table can only have come from the old shape.</p>
+
+    <h3>Import as a versioned envelope</h3>
+
+<pre><code>{ "formatVersion": 1, "system": "ICD-10-CM", "release": "2026",
+  "mode": "replace", "codes": [ ... ] }</code></pre>
+
+    <p><code>mode: "replace"</code> is the default for a full official release, because a merge-only import leaves retired codes searchable forever. The app confirms before acting on it, showing how many codes are installed against how many the file contains.</p>
+
+    <p>The declared <code>system</code> is <strong>checked against the codes</strong>, not trusted. A mislabelled file under replace semantics would delete the wrong system's codes entirely, so a file claiming to be LOINC while containing ICD-10 rows is rejected outright. A higher <code>formatVersion</code> than the build understands is also refused rather than half-read.</p>
+
+    <h3>The converters do real work</h3>
+
+    <p>The CMS order file alone gives you flat codes. Two optional files change the app entirely: <code>--tabular</code> adds the hierarchy and the includes/excludes notes, and <code>--index</code> adds the alphabetic index as search synonyms, 63,138 phrasings clinicians actually look codes up by. Without it, <span class="codeword">chalasia</span> and <span class="codeword">childhood asthma</span> match nothing, because those words appear in no description.</p>
+
+    <div class="note warn">
+      <span class="lbl">The subtlety that cost an evening</span>
+      <p>The tabular file does not enumerate everything. Seventh-character extensions like <span class="codeword">S72.001A</span> are defined by rule rather than listed, which left <strong>53,223 of 98,186 codes with no stated parent</strong>, and every one of them looking like a top-level category in the tree. The fix fills a missing parent with the longest code that is a proper prefix, strictly as a fallback where the publisher is silent, never overriding a stated parent. Root count went from 53,223 to 1,918, which matches ICD-10-CM's actual count of three-character categories.</p>
+    </div>
+
+    <p>Parents are read from the publisher, never derived, for a reason worth stating: <span class="codeword">E11.21</span>'s parent is <span class="codeword">E11.2</span>, not <span class="codeword">E11</span>. Trimming characters would build a confidently wrong tree.</p>
+
+    <h2 id="s12"><span class="num">12</span>A difficult problem I solved</h2>
+
+    <h3>The situation</h3>
+
+    <p>Type "diabetes" against the real 98,186-code set and <span class="codeword">E11.9</span>, "Type 2 diabetes mellitus without complications", does not appear near the top. Obscure, highly specific codes do.</p>
+
+    <p>This is the single most common lookup in outpatient practice, and the tool was burying it.</p>
+
+    <h3>Why it was difficult</h3>
+
+    <p>BM25 was working exactly as designed. It ranks by how well text matches a query, and a code whose description repeats "diabetes" and "diabetic" several times scores higher than the plain one. There was no bug to fix.</p>
+
+    <p>The mismatch is conceptual. <strong>Relevance and clinical frequency are different things, and the search engine only knows one of them.</strong> No amount of tuning teaches BM25 that <span class="codeword">E11.9</span> is the diabetes code a given clinician reaches for every day, because that fact is not in the text.</p>
+
+    <p>Worse, <span class="codeword">E11.9</span> was not merely ranked low. It never entered the candidate set at all: it scored below the top 50 text hits, so anything that only <em>reordered</em> results could never rescue it.</p>
+
+    <h3>Investigation</h3>
+
+    <p>I tried the structural fixes first, and measured each one rather than eyeballing it. The headline case was the BM25 column weighting between a code's description and its synonyms. The original 2:1 was a guess made before there was anything to measure against, so I swept it across fifteen queries against the real set:</p>
+
+    <div class="tw">
+    <table>
+      <thead><tr><th>Description : synonym weight</th><th class="num">Total rank</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>1 : 1 (equal)</td><td class="num">41</td><td><span class="chip yes">best on every metric</span></td></tr>
+        <tr><td>2 : 1</td><td class="num">65</td><td>the original guess</td></tr>
+        <tr><td>10 : 1</td><td class="num">154</td><td>monotonically worse as weight rose</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>That result is counterintuitive until you see why. The alphabetic index is what makes many codes findable at all. Weighting descriptions above synonyms buries exactly the phrasings the index was imported to provide.</p>
+
+    <p>Preferring shorter codes: measured, worse than nothing. Capping synonyms per code: measured, worse.</p>
+
+    <p>Then a narrower finding closed the door properly. Within a code family, <span class="codeword">N18.1</span>, <span class="codeword">N18.31</span>, <span class="codeword">N18.32</span> and <span class="codeword">N18.5</span> tie on BM25 to two decimal places. There is no signal in the text to separate them. The tiebreak is arbitrary because the data is genuinely silent.</p>
+
+    <div class="note">
+      <span class="lbl">The conclusion, which was worth more than the fix</span>
+      <p>No structural property of the text fixes this.</p>
+    </div>
+
+    <h3>Solution</h3>
+
+    <p>If the data cannot know which code you mean, use the one signal that does: your own behaviour.</p>
+
+    <p>Pins and usage history became a ranking input. But the important part is <em>how</em> it is applied, because the obvious implementation does not work. Reordering results is not enough, since <span class="codeword">E11.9</span> never entered the result set. So preferred codes get their own admission path:</p>
+
+<pre><code>preferred_hits <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> c.id, 2 <span class="kw">AS</span> tier, 0.0 <span class="kw">AS</span> score
+      <span class="kw">FROM</span> codes c
+     <span class="kw">WHERE</span> (c.system || '-' || c.code) <span class="kw">IN</span> (:pref0, :pref1, ...)
+       <span class="kw">AND</span> c.id <span class="kw">IN</span> (<span class="kw">SELECT</span> rowid <span class="kw">FROM</span> codes_fts <span class="kw">WHERE</span> codes_fts <span class="kw">MATCH</span> :match)
+)</code></pre>
+
+    <p>Any code you use that matches the query at all is admitted, regardless of BM25 score, then ranked by preference within its tier. Two constraints on it: preference applies within a tier and never across one, so an exact code match still wins outright; and pins count immediately alongside accumulated usage, because pinning is an explicit statement that a code matters and waiting for usage to build up would ignore it.</p>
+
+    <p>This also fixed a second bug it was not aimed at. Selection in the panel was defined over <code>results</code>, which is empty until you type something, so <kbd>↵</kbd> in the empty state silently did nothing. The README had promised "<kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> then <kbd>↵</kbd>, no typing" since the first version and it had <strong>never worked</strong>. Selection is now defined over pinned and recent codes before a query exists.</p>
+
+    <h3>Result</h3>
+
+    <p>The codes you use are the codes you find. Cold start is unchanged, which I come back to below.</p>
+
+    <p>I want to be careful about what I claim here. I have the BM25 sweep numbers because I measured that specific question against the real code set. I do not have before-and-after task timings, because I did not instrument the app and I am not going to invent numbers. What I can say is that the behaviour I built the fix for, common codes buried under specific ones, does not happen for codes I have used, and does still happen on a fresh install.</p>
+
+    <p>The honest version of this result is in the repository's own README under "Known limits", where it stays.</p>
+
+    <h2 id="s13"><span class="num">13</span>Things that didn't work</h2>
+
+    <p><strong>A 2:1 BM25 weighting.</strong> A guess dressed as a decision, made before there was a real code set to measure against. It was 60% worse than equal weighting on the metric I eventually used, and it sat in the code looking deliberate for weeks.</p>
+
+    <p><strong>Every structural ranking fix.</strong> Weighting descriptions, capping synonyms, preferring shorter codes. Three plausible ideas, three measurements, three regressions. The code-length heuristic is now explicitly marked "do not retry this" in the product notes, because it is the one that keeps sounding reasonable.</p>
+
+    <p><strong>FTS5 as the source of truth.</strong> Cost me idempotent imports and index-optimised prefix search. Fixed by a schema rewrite and a migration.</p>
+
+    <p><strong>The global event monitor.</strong> Cost a permission prompt, the sandbox, and a shortcut that failed silently.</p>
+
+    <div class="note warn">
+      <span class="lbl">My favourite failure</span>
+      <p><strong>Colours in an asset catalogue.</strong> <code>swift build</code> copies an <code>.xcassets</code> into the resource bundle <em>verbatim</em>. It never runs <code>actool</code>, so no compiled asset is produced and the colour lookup finds nothing at runtime. <code>xcodebuild</code> does compile it. So the app rendered the "not billable" chip correctly while <code>make check</code> rendered it as <em>nothing</em>, and the snapshot references would have locked that in as correct. The chip had gone invisible in the test suite and looked fine in the app. Colours are defined in Swift now, which resolves identically under both build systems.</p>
+    </div>
+
+    <p><strong>Autosaving the panel's frame.</strong> The panel grows downwards as results arrive, that taller frame got saved, and every search nudged it further down the screen until it opened somewhere you had to drag it back from. It is placed fresh every time now. A panel you type into blind is better off landing in the same place than remembering a position nobody chose.</p>
+
+    <p><strong>Rebuilding the panel on every show.</strong> The SwiftUI content was laid out only <em>after</em> the panel took key focus, so the first keystroke went missing. The panel and its hosting view are built once and reused.</p>
+
+    <p><strong>Liquid Glass on the footer.</strong> The footer sits inside the panel root, so applying glass to both is glass on glass, which Apple's own adoption guide names as a mistake.</p>
+
+    <p><strong><code>.focusable()</code> on result rows.</strong> It would have fought the Tab-to-autocomplete behaviour added a phase earlier, and the accessibility need it was meant to serve was already met by <kbd>⌘P</kbd>. The real gap was somewhere else entirely: the detail pane's child codes were tap-gesture only, so they were reachable by pointer and by nothing else.</p>
+
+    <p><strong>Piping <code>xcodebuild</code> into <code>grep</code>.</strong> This one shipped a lie. The pipe hides the compiler's exit status, and a trailing <code>|| true</code> discarded what was left, so a build that failed to compile went on to install and launch the <em>previous</em> binary and report success. A fix that is silently not installed is worse than a visible failure.</p>
+
+    <h2 id="s14"><span class="num">14</span>Performance, reliability and security</h2>
+
+    <p><strong>Privacy is the architecture, not a policy.</strong> The app is sandboxed with exactly two entitlements: the sandbox itself, and read/write access to files the user explicitly picks. There is no network entitlement, so there is no network. No telemetry, no analytics, no crash reporting, no account. A clinical tool that phones home is a different risk category, and the cheapest way to stay out of that category is to be unable to.</p>
+
+    <p><strong>Measured import performance</strong>, against the real CMS ICD-10-CM FY2026 file, 98,186 codes:</p>
+
+    <div class="tw">
+    <table>
+      <thead><tr><th>Step</th><th class="num">Order file only</th><th class="num">With tabular + index</th></tr></thead>
+      <tbody>
+        <tr><td>Python conversion</td><td class="num">0.9 s · 28 MB</td><td class="num">1.7 s · 44 MB</td></tr>
+        <tr><td>Decode</td><td class="num">382 ms · 112 MB peak</td><td class="num">569 ms · 159 MB peak</td></tr>
+        <tr><td>Ingest</td><td class="num">218 ms</td><td class="num">331 ms</td></tr>
+        <tr><td>Database on disk</td><td class="num">33 MB</td><td class="num">57 MB</td></tr>
+        <tr><td>Search</td><td class="num">0.1–64 ms</td><td class="num">0.1–47 ms</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>The extra 24 MB buys the hierarchy, 23,910 coding notes and 63,138 index phrasings. Worth it.</p>
+
+    <p><strong>Input validation at the boundary.</strong> The decoder refuses an unsupported format version, refuses a file whose declared system disagrees with its contents, and refuses an empty file. All three exist because the replace path is destructive.</p>
+
+    <p><strong>Error handling that surfaces.</strong> If a database fails to open, the app says so in an alert and reports that search will not work, rather than returning empty results forever, which is what the first version did. A failed hotkey registration produces a warning naming the likely cause and pointing at the menu bar icon as the fallback.</p>
+
+    <p><strong>Hardened runtime is on</strong>, and Release builds explicitly suppress the debugger-attach entitlement Xcode would otherwise inject, which Apple's notarisation requirements name as disqualifying. I turned both on before enrolling in the Developer Program specifically so the first <em>signed</em> build would not also be the first build under a different runtime.</p>
+
+    <p><strong>What is honestly not there.</strong> No rate limiting, because there is no network surface to rate limit. No authentication, because there is no server and no multi-user story. No encryption at rest beyond the sandbox container and FileVault, which is a real gap if you consider a pinned code list to be patient-adjacent data, and I do not currently have a good answer for that.</p>
+
+    <p><strong>One known reliability limit.</strong> Migrations run synchronously on the main actor at launch. Imperceptible at 98,186 codes, but a future schema change that rewrites rows rather than adding columns would block the app while it ran.</p>
+
+    <h2 id="s15"><span class="num">15</span>Testing</h2>
+
+    <div class="tw">
+    <table>
+      <thead><tr><th>Suite</th><th class="num">Count</th><th>What it covers</th></tr></thead>
+      <tbody>
+        <tr><td>Swift unit tests</td><td class="num">340</td><td>Search SQL, ranking, migrations, ingest, envelope decoding, hierarchy, library, view models, key combos, panel placement</td></tr>
+        <tr><td>Rendered-image snapshots</td><td class="num">16</td><td>Rows, empty states, detail pane, footer, copy confirmation, Increase Contrast variants (inside the 340)</td></tr>
+        <tr><td>Python converter tests</td><td class="num">45</td><td>Fixed-width parsing, tabular XML, index synonyms, envelope output, parent inference</td></tr>
+        <tr><td>Interaction tests</td><td class="num">6</td><td>Which window opens on launch, what reopening does, whether the panel stays out of the way</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p><code>make check</code> runs the unit tests, the Python tests, a Swift 6 strict-concurrency typecheck of the app target and the module-boundary assertion. It passes clean. GitHub Actions runs the same gate on every push and pull request.</p>
+
+    <p><strong>The snapshots earned their place twice.</strong> They caught the invisible billability chip, and they caught a Liquid Glass problem I could not have reasoned my way to: applying the glass modifier inside the view rather than at the window collapsed the placeholder text's luminance range from 105 to <strong>23</strong>. The text was obscured, not dimmed, and changing its foreground style did nothing. Both were found by <em>looking at a re-recorded reference</em> rather than by a test failing, which is an argument for reviewing snapshot diffs rather than accepting them.</p>
+
+    <p><strong>Some of it is mutation tested.</strong> The two cancellation points in the search runner, and the case-insensitivity of abbreviation storage. In the second case, removing the <code>COLLATE NOCASE</code> changed nothing, which correctly told me the collation was redundant because every write path lowercases already.</p>
+
+    <p><strong>What is not covered, plainly.</strong> Typing, expanding the tree, selecting and copying are still verified by opening the app and using it. Snapshot references are machine specific, so they are skipped on CI and are a local gate only. And there is one case that cannot be covered at all: restoring a <em>minimised</em> window from the Dock. A test has to post the reopen event itself, and every way of doing that either restores the window as a side effect or is refused to the test runner.</p>
+
+    <h2 id="s16"><span class="num">16</span>Deployment</h2>
+
+<pre><code>project.yml ──xcodegen──▶ CodeBar.xcodeproj ──xcodebuild──▶ CodeBar.app
+                                                                 │
+                                        make dist ───────────────┤
+                                                                 ▼
+                                  sign ▶ DMG ▶ notarise ▶ staple ▶ verify</code></pre>
+
+    <p>The Xcode project is generated and gitignored, so build settings live in reviewable YAML. <code>make install</code> builds Release, installs to <code>/Applications</code> and launches it. <code>make dist</code> produces a DMG.</p>
+
+    <p>The part I am happiest with is that <strong>signing is opt-in and the same target works before and after enrolling in the Developer Program.</strong> Set <code>SIGN_IDENTITY</code> and it signs. Set <code>NOTARY_PROFILE</code> and it notarises. Set neither and you get an unsigned DMG that Gatekeeper will refuse, which is still the right thing to build and test. The release workflow mirrors that exactly: it answers "have we a certificate" and "have we notarisation credentials" once at job level, because the secrets context is not available inside a step's <code>if</code> and a step-level check would never fire, quietly producing an unsigned DMG forever.</p>
+
+    <p>Packaging is the kind of thing that breaks silently and gets discovered on release day, so any change to the Makefile, the project file or the workflow rebuilds the DMG on a pull request. Nothing is published unless the trigger is a tag.</p>
+
+    <div class="note warn">
+      <span class="lbl">Where it actually stands</span>
+      <p>The pipeline runs green and produces <code>CodeBar-0.1.0.dmg</code>. That DMG is unsigned, because I have not enrolled in the Developer Program yet. Gatekeeper will refuse it, and the workflow says so out loud rather than shipping it quietly. Enrolment is the only thing standing between the current state and a downloadable build.</p>
+    </div>
+
+    <h2 id="s17"><span class="num">17</span>Results</h2>
+
+    <p><strong>Product.</strong> A working macOS app I use. Full official code sets import in under a second and search in tens of milliseconds. The starter set means it does something useful the moment it is built.</p>
+
+    <p><strong>Technical.</strong> A six-package Swift 6 codebase with machine-enforced boundaries, 340 passing tests, actor-isolated storage, a migration path that handles every schema version the app has ever written, and a release pipeline that signs and notarises when credentials exist.</p>
+
+    <p><strong>Personal.</strong> I now know where full-text relevance stops being the right tool, which is a more useful thing to know than how to tune BM25. And I learned that measuring a ranking change is cheap, while reasoning about one is unreliable: three out of three of my plausible structural fixes made results worse, and I would have shipped at least two of them on intuition.</p>
+
+    <p><strong>Practical.</strong> It solves the problem I built it for. I stop losing my place.</p>
+
+    <p>I am not going to claim users, downloads, or a workflow improvement I have not measured. The repository is private, there is no published release, and the only person using it is me. That is the accurate result.</p>
+
+    <h2 id="s18"><span class="num">18</span>What I learned</h2>
+
+    <p><strong>Measure ranking changes; do not reason about them.</strong> Three structural fixes, all defensible, all worse. The 2:1 BM25 weighting sat in the code looking deliberate for weeks and was 60% worse than the equal weighting I replaced it with. My intuition about relevance was not just imperfect, it was consistently wrong in the same direction.</p>
+
+    <p><strong>"There is no technical fix" is a legitimate conclusion.</strong> The most valuable output of the ranking investigation was not the fix. It was establishing that no structural property of the data could solve it, which is what made a product answer, your own pins, obviously correct rather than a cop-out.</p>
+
+    <p><strong>The build system is part of the correctness story.</strong> Two of my most memorable bugs were build artefacts, not code: a colour that compiled under one build system and not the other, and a pipe that swallowed a compiler's exit status and reported a failed build as a successful install. Neither would have been found by reading the source.</p>
+
+    <p><strong>Enforce boundaries with a script, not with intent.</strong> I wrote down the module rules in an architecture document and then wrote a shell script that fails the build on a violation. Only one of those two things is still true a month later.</p>
+
+    <p><strong>Domain constraints are design constraints.</strong> Almost every good decision here came from the domain rather than from software engineering. Three-state billability, expanding abbreviations to words but never to codes, <code>excludes1</code> and <code>excludes2</code> kept distinct through the converter and the schema and the UI, the publisher's rules outranking the user's own note. None of that came from thinking about Swift.</p>
+
+    <p><strong>Optional is a modelling tool, not a nuisance.</strong> <code>Bool?</code> for billability propagates through the schema, the ranking, the badge and the CSV export, and at every one of those points the third state is the <em>correct</em> answer rather than an inconvenience.</p>
+
+    <p><strong>A design review against a running app finds different bugs than a code review.</strong> The description truncation had been there since the first version. It is invisible in the source, because the code says <code>lineLimit(1)</code> and that is obviously what it does. It is unmissable the moment you look at the screen while thinking about what the user came for.</p>
+
+    <h2 id="s19"><span class="num">19</span>What I would do differently</h2>
+
+    <p><strong>Design the orphan case at the same time as the split.</strong> Two databases was the right call and I still think so. But the consequence, that a yearly release deletes codes while pins keep pointing at them, was foreseeable on day one and I did not design for it. A pinned code that no longer exists should read "retired in FY2027", not silently become an opaque identifier. CMS ships a retired-to-successor conversion table in the same download, so the fix was always available. I just did not think about it until the research phase.</p>
+
+    <p><strong>Instrument before optimising perception.</strong> I have BM25 sweep numbers because I deliberately measured one question. I have no timing data on anything else, so several statements I would like to make about the app I cannot honestly make. A couple of <code>signpost</code> intervals around search would have cost an hour.</p>
+
+    <p><strong>Take the design pass earlier.</strong> The token layer had to be built first and every later phase written against it, which meant redoing work that had already shipped. Doing that in week one would have cost less than doing it in week two.</p>
+
+    <p><strong>Not defer the interaction tests.</strong> Every window and panel defect I hit was found by building the app and looking at it. The tests that would have caught them were written afterwards, which means they document bugs I already fixed rather than preventing new ones.</p>
+
+    <p><strong>Reconsider holding the whole import in memory.</strong> Fine at 98k codes and fine for LOINC. SNOMED CT is several times larger and would push peak memory well past 159 MB. I would still not build streaming today, because an earlier estimate built on synthetic data was out by a factor of two in both code count and memory, and building for an unmeasured number is how you get the wrong abstraction. But I would want the measurement before someone imports a real SNOMED distribution.</p>
+
+    <p><strong>Write a LICENSE on day one.</strong> The repository has none, which makes "I will open source this" more complicated than it needed to be.</p>
+
+    <h2 id="s20"><span class="num">20</span>Future improvements</h2>
+
+    <h3>Short term</h3>
+    <ul>
+      <li><strong>Enrol in the Apple Developer Program.</strong> The signing and notarisation pipeline is written and tested. It is one credential away from producing a build a stranger can open, and nothing else can ship until it does.</li>
+      <li><strong>Reconcile orphaned pins after import.</strong> The FY2027 release lands 1 October 2026: 190 new codes, 30 deleted, 4 revised. Those 30 deletions will orphan pins on that date. This is the only item on this list with an external deadline.</li>
+      <li><strong>Show which release is installed.</strong> Nothing currently says whether you are on FY2026, and a date of service before 1 October still needs the old set.</li>
+      <li><strong>Correct the README.</strong> It still says "No CI" and quotes stale test counts. Both were true when written.</li>
+    </ul>
+
+    <h3>Medium term</h3>
+    <ul>
+      <li><strong>A frequency-weighted tiebreak.</strong> AHRQ publishes annual discharge counts per ICD-10-CM code, free and without a data use agreement. Swapping <em>only</em> the arbitrary <code>LENGTH(code)</code> tiebreak for a frequency weight cannot regress queries that already rank correctly, does not promote unspecified codes by rule, and fixes the one thing pinning cannot: cold start, where a fresh install has no history to rank on.</li>
+      <li><strong>A seventh-character and laterality guard.</strong> Decline to copy an incomplete code and offer the initial/subsequent/sequela picker inline. This is the <span class="codeword">Excludes 1</span> idea carried one step further, and it is the difference between a fast search box and an actual coding tool.</li>
+      <li><strong>Add to a list from the panel</strong>, not only from the window.</li>
+      <li><strong>A configurable hotkey</strong>, which needs the Carbon registration to accept an arbitrary key combination.</li>
+    </ul>
+
+    <h3>Long term</h3>
+    <ul>
+      <li><strong>iCloud sync of the library.</strong> The one parity gap competing tools advertise.</li>
+      <li><strong>A Raycast or Alfred extension, and Shortcuts support.</strong> Same index, almost no new surface, and it meets people where they already type.</li>
+      <li><strong>SNOMED CT to ICD-10-CM crosswalks.</strong> NLM publishes the map and both terminologies are free for US use, so this needs a UMLS account rather than a commercial licence.</li>
+    </ul>
+
+    <div class="note">
+      <span class="lbl">Deliberately refused</span>
+      <p>AI natural-language to code, which several commercial tools now lead with. It needs the network, which breaks the privacy constraint the whole architecture is built on, and it puts the app in the business of clinical judgement that it exists to stay out of.</p>
+    </div>
+
+    <h2 id="s21"><span class="num">21</span>Final takeaway</h2>
+
+    <p>I built CodeBar because looking up a clinical code cost me my place in whatever I was writing, and because the tools that solve that problem quickly do not tell you when a code cannot legally go on a claim.</p>
+
+    <p>The interesting engineering turned out to be somewhere I did not expect. Not the hotkey, not the panel, not the SQLite schema, though all three took real work. It was the discovery that full-text relevance is structurally the wrong signal for this domain, that three plausible fixes for it all made things measurably worse, and that the correct answer was to stop looking for a technical fix and use the one signal the system actually had: what this particular person actually uses.</p>
+
+    <p>That is the thing I would want someone to take from this. The measurements are in the code comments, the failures are written down in the repository, and the limits are in the README where a user will see them before they rely on the tool.</p>
+
+    <p>It also happens to be exactly the kind of problem I want to work on: a real clinical workflow, a hard constraint that is about safety rather than performance, and a domain where getting it subtly wrong has consequences beyond a bad user experience.</p>
+
+    <div class="appendix">
+
+      <h2 id="meta"><span class="num">Appendix</span>Portfolio metadata</h2>
+
+      <div class="field"><b>SEO title (56 chars)</b><span class="mono">CodeBar: A Native macOS Clinical Code Lookup Tool</span></div>
+      <div class="field"><b>Meta description (154 chars)</b><span class="mono">I built a macOS menu bar app for ICD-10 lookup, then found that full-text relevance ranks clinical codes wrong. Here is what I measured and what I shipped.</span></div>
+      <div class="field"><b>Card description</b><span>A native macOS app that puts 98,186 clinical codes behind one keystroke. Sandboxed, offline, and honest about which codes cannot go on a claim.</span></div>
+      <div class="field"><b>Tags</b><span class="mono">Swift 6 · SwiftUI · AppKit · SQLite FTS5 · Python · macOS · Health Informatics</span></div>
+      <div class="field"><b>Slug</b><span class="mono">/projects/codebar</span></div>
+
+      <h2><span class="num">Appendix</span>Thirty-second version</h2>
+
+      <p><strong>CodeBar is a macOS menu bar app that puts 98,186 clinical codes behind one keystroke.</strong> Press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> from any app, type a term or a code, hit <kbd>↵</kbd>, and it is on your clipboard.</p>
+
+      <p><strong>Why I built it.</strong> I am an MSc Health Informatics candidate. Looking up an ICD-10 code meant leaving whatever I was writing for a browser tab, and the web tools that do it quickly do not warn you that roughly a quarter of ICD-10 codes are category headers that cannot legally go on a claim.</p>
+
+      <p><strong>Built with</strong> Swift 6, SwiftUI, AppKit, SQLite with FTS5 full-text search, and Python converters for the official CMS, LOINC and SNOMED releases. Sandboxed, entirely offline, no telemetry.</p>
+
+      <p><strong>The hardest problem.</strong> Full-text relevance ranked the common diabetes code below obscure specific ones. I measured three structural fixes: weighting descriptions over synonyms, capping synonyms, preferring shorter codes. All three made results worse, one of them by 60%. The text simply does not contain the signal. So I used the one that does, the user's own pins and history, admitted into the result set through a dedicated query path rather than merely reordering what was already there.</p>
+
+      <p><strong>What I learned.</strong> Measure ranking changes rather than reasoning about them. "There is no technical fix" is a legitimate engineering conclusion. And enforce architectural boundaries with a script in the build gate, because a rule nobody checks decays.</p>
+
+      <p><strong>Why it is interesting.</strong> It is a small app with real safety constraints. Every good decision came from the clinical domain rather than from software engineering: three-state billability instead of a boolean, expanding abbreviations to words but never to codes, and two separate database files so a yearly code release can never reach a clinician's own data.</p>
+
+      <p class="colophon">340 Swift tests, 45 Python tests and 6 interaction tests verified passing on 26 August 2026. All performance figures were measured against the real CMS ICD-10-CM FY2026 release. No metrics on this page are estimated.</p>
+
+    </div>
+
+  </article>
+</div>

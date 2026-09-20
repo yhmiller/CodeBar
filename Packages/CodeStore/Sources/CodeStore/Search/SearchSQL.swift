@@ -1,38 +1,11 @@
-/// Builds the ranked search statement.
-///
-/// v1 ran two separate queries with different limits and orderings and stitched
-/// the arrays together in Swift, so relative ranking between a code hit and a
-/// text hit was an accident of iteration order. Here both passes feed one
-/// statement and ordering is explicit: tier first, then BM25, then code length.
 enum SearchSQL {
 
-    /// Caps applied inside each pass before the passes are merged. Both are
-    /// larger than a typical result limit so that merging and de-duplication
-    /// have material to work with.
     static let codePassLimit = 25
     static let textPassLimit = 50
 
-    /// BM25 column weights: description, then synonyms.
-    ///
-    /// Equal, and measured rather than chosen. The original 2:1 was a guess made
-    /// before there was anything to measure against. Once the alphabetic index
-    /// was imported, sweeping 1 / 2 / 4 / 6 / 10 against the real 98k set over
-    /// fifteen queries showed equal weighting best on every metric — total rank
-    /// 41 versus 65 at 2:1 and 154 at 10:1 — and rising weights monotonically
-    /// worse.
-    ///
-    /// The reason is that the index is what makes many codes findable at all.
-    /// "Chalasia" appears in no description; weighting descriptions above
-    /// synonyms buries exactly the phrasings the index was imported to provide.
-    ///
-    /// Not swept below 1.0: that would say a synonym match counts for more than
-    /// the publisher's own description, which is hard to justify however it
-    /// scores on fifteen queries.
     static let displayWeight = 1.0
     static let synonymWeight = 1.0
 
-    /// Enough to cover what one clinician actually reuses without turning the
-    /// query into hundreds of bind parameters.
     static let preferredLimit = 50
 
     static func build(codePass: Bool, textPass: Bool, systemCount: Int,
@@ -41,9 +14,6 @@ enum SearchSQL {
         var unions: [String] = []
 
         if codePass {
-            // The half-open range is what lets SQLite use idx_codes_code_norm.
-            // LIKE 'E11%' is only index-optimized under specific collation and
-            // pragma conditions; the range form always is.
             commonTables.append("""
             code_hits AS (
                 SELECT id,
@@ -72,11 +42,6 @@ enum SearchSQL {
             unions.append("SELECT id, tier, score FROM text_hits")
         }
 
-        // A preferred code has to be able to *enter* the result set, not merely
-        // be reordered once inside it. E11.9 scores well below the codes that
-        // repeat "diabetes"/"diabetic", so it never reached the inner passes'
-        // top 50 and preference could not rescue it. This pass admits any
-        // preferred code that matches the query at all.
         if textPass && preferredCount > 0 {
             let placeholders = (0..<preferredCount).map { ":pref\($0)" }.joined(separator: ", ")
             commonTables.append("""
@@ -94,23 +59,12 @@ enum SearchSQL {
             ? "WHERE c.system IN (\((0..<systemCount).map { ":sys\($0)" }.joined(separator: ", ")))"
             : ""
 
-        // Applied *within* a tier, never across one. An exact code match still
-        // wins outright: someone typing E11 means E11, however often they have
-        // used something else.
         let preference = preferredCount > 0
             ? "CASE WHEN (c.system || '-' || c.code) IN "
               + "(\((0..<preferredCount).map { ":pref\($0)" }.joined(separator: ", ")))"
               + " THEN 0 ELSE 1 END"
             : "0"
 
-        // GROUP BY collapses a code that matched both passes onto its best tier,
-        // which is what de-duplicates the merged result set.
-        //
-        // Codes the publisher marks as not submittable sort last within a tier.
-        // They are still shown — a clinician searching for a category deserves to
-        // find it — but a billable code wins a tie, because the billable one is
-        // almost always what belongs on the claim. Unknown billability (NULL)
-        // ranks with the billable codes rather than being penalised.
         return """
         WITH \(commonTables.joined(separator: ",\n")),
         hits AS (\(unions.joined(separator: "\n UNION ALL ")))

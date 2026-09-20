@@ -1,11 +1,5 @@
 #!/usr/bin/env swift
-//
-// Renders CodeBar's app icon and writes the .appiconset.
-//
-// The icon is generated rather than hand-drawn so it stays in step with the menu
-// bar symbol: same stethoscope glyph, on the rounded-square ground macOS expects.
-// Re-run with `make icon` after changing anything here.
-//
+
 import AppKit
 
 let SYMBOL = "stethoscope"
@@ -17,8 +11,6 @@ let SIZES: [(size: Int, scale: Int)] = [
 let output = URL(fileURLWithPath: CommandLine.arguments[1])
 try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
-/// Apple's icon grid insets the artwork inside the rounded square rather than
-/// filling it edge to edge.
 func drawIcon(pixels: Int) -> NSBitmapImageRep? {
     guard let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
@@ -33,7 +25,7 @@ func drawIcon(pixels: Int) -> NSBitmapImageRep? {
     let side = CGFloat(pixels)
     let inset = side * 0.06
     let plate = NSRect(x: inset, y: inset, width: side - inset * 2, height: side - inset * 2)
-    let corner = plate.width * 0.2237  // matches the macOS squircle closely enough
+    let corner = plate.width * 0.2237
 
     let background = NSBezierPath(roundedRect: plate, xRadius: corner, yRadius: corner)
     let gradient = NSGradient(

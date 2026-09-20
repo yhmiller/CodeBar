@@ -3,10 +3,6 @@ import CodeCore
 import CodePlatform
 import UniformTypeIdentifiers
 
-/// Gets a saved list out of CodeBar: onto the clipboard, or into a file.
-///
-/// A curated list that can only be read inside the app that holds it is worth
-/// much less than one that can be pasted into a note or opened in a spreadsheet.
 @MainActor
 enum ListExporter {
 
@@ -14,11 +10,6 @@ enum ListExporter {
         SystemPasteboard().write(content)
     }
 
-    /// Asks where to put it, then writes it.
-    ///
-    /// Writing needs `files.user-selected.read-write` in the entitlements. The
-    /// read-only variant is enough to *choose* a file and would fail at the
-    /// write, which is the worst place to find out.
     static func save(_ content: String, as format: ListExportFormat, suggestedName: String) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [format == .csv ? .commaSeparatedText : .plainText]
@@ -37,8 +28,6 @@ enum ListExporter {
         }
     }
 
-    /// A list is named by the user, so it can hold anything a text field allows.
-    /// `/` and `:` are the two that a file name cannot.
     private static func sanitised(_ name: String) -> String {
         let cleaned = name
             .replacingOccurrences(of: "/", with: "-")

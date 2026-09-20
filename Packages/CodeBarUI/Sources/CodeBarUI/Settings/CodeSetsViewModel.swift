@@ -1,12 +1,6 @@
 import CodeCore
 import Observation
 
-/// Backs the Code Sets settings pane.
-///
-/// The installed release matters clinically: a code set a year out of date still
-/// answers every query confidently, and the only visible symptom is a code the
-/// publisher has since retired. Surfacing release and row count is what makes
-/// that checkable rather than assumed.
 @MainActor
 @Observable
 public final class CodeSetsViewModel {
@@ -36,7 +30,6 @@ public final class CodeSetsViewModel {
         }
     }
 
-    /// Removes an installed code set. Destructive, so the caller confirms first.
     public func remove(_ system: CodeSystem) async {
         guard let repository else { return }
         isWorking = true
@@ -61,7 +54,5 @@ public final class CodeSetsViewModel {
         preferenceRevision += 1
     }
 
-    /// Bumped so SwiftUI re-reads values that live in the preferences store
-    /// rather than in observed properties here.
     public private(set) var preferenceRevision = 0
 }

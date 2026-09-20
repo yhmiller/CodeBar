@@ -1,17 +1,6 @@
-/// How a saved list leaves CodeBar.
-///
-/// A curated list is worth little if it can only be read inside the app that
-/// holds it. These are the two shapes it is actually wanted in: pasted into a
-/// note, or opened in a spreadsheet.
 public enum ListExportFormat: String, CaseIterable, Sendable {
 
-    /// One line per code, worded exactly as ⇧Return writes a single one.
-    ///
-    /// Deliberately the same wording rather than a third one: a clinician who
-    /// has pasted one code should recognise a pasted list.
     case text
-
-    /// RFC 4180, for a spreadsheet.
     case csv
 
     public var label: String {
@@ -49,12 +38,6 @@ public enum ListExportFormat: String, CaseIterable, Sendable {
         .joined(separator: ",")
     }
 
-    /// Empty for unknown, which is not the same as "no".
-    ///
-    /// Billability is three-state: the publisher says a code is submittable, says
-    /// it is a category header, or does not say. Writing `no` for the third would
-    /// turn a silence into a claim, and the whole point of the field is that a
-    /// category header must never reach a claim form.
     private static func billableField(for code: ClinicalCode) -> String {
         switch code.isBillable {
         case true: "yes"
@@ -63,12 +46,6 @@ public enum ListExportFormat: String, CaseIterable, Sendable {
         }
     }
 
-    /// RFC 4180: a field containing a comma, a quote or a newline is wrapped in
-    /// quotes, and any quote inside it is doubled.
-    ///
-    /// Not optional politeness — ICD-10-CM descriptions are full of commas
-    /// ("Unspecified asthma, uncomplicated"), so an unescaped export would put
-    /// the second half of nearly every description in the wrong column.
     private static func escaped(_ field: String) -> String {
         guard field.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" })
         else { return field }

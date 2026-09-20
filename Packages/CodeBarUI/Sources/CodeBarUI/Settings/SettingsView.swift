@@ -1,10 +1,6 @@
 import CodeCore
 import SwiftUI
 
-/// The app's first real window, and the shell later panes plug into.
-///
-/// See docs/ARCHITECTURE.md §11 — CodeBar is growing into a full app that keeps
-/// the menu bar panel, and this is step one of that.
 public struct SettingsView: View {
     @State private var codeSets: CodeSetsViewModel
     @State private var abbreviations: AbbreviationsViewModel
@@ -64,8 +60,6 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle("Open CodeBar at login", isOn: $opensAtLogin)
                     .onChange(of: opensAtLogin) { _, enabled in
-                        // Revert if macOS refused, rather than showing a state
-                        // the system does not actually have.
                         guard setOpenAtLogin(enabled) else {
                             opensAtLogin = isOpenAtLoginEnabled()
                             return

@@ -4,7 +4,6 @@ import SQLiteKit
 import Testing
 @testable import CodeStore
 
-/// Real ICD-10-CM shape: E11.21's parent is E11.2, not E11.
 @Suite("Hierarchy and notes")
 struct HierarchyTests {
 

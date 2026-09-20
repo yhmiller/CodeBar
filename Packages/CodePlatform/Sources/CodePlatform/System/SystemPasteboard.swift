@@ -1,7 +1,6 @@
 import AppKit
 import CodeCore
 
-/// Writes to the real system pasteboard.
 @MainActor
 public struct SystemPasteboard: PasteboardWriting {
     public init() {}

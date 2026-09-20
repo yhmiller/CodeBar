@@ -1,13 +1,6 @@
 import CodeCore
 import SwiftUI
 
-/// Everything the publisher says about one code.
-///
-/// Reading surface only. Copy, pin and list actions used to live here as four
-/// equal-weight buttons inside the scroll view — no primary among them, no
-/// shortcuts, and they scrolled away with the content. They belong to the
-/// window, so they are in its toolbar now and this view has no action callbacks
-/// left except navigation and the user's own note.
 public struct CodeDetailView: View {
     let detail: CodeDetail?
     let note: String
@@ -33,11 +26,6 @@ public struct CodeDetailView: View {
     public var body: some View {
         if let detail {
             ScrollView {
-                // Order is the point. The publisher's coding rules come before
-                // the user's own note: an always-open editor used to sit between
-                // the code and the `Excludes 1` rules that mean *never code
-                // these together*, so a personal reminder outranked the fact
-                // that gets a claim denied.
                 VStack(alignment: .leading, spacing: Metric.l) {
                     header(detail)
                     if !detail.notes.isEmpty { publisherNotes(detail) }
@@ -61,7 +49,6 @@ public struct CodeDetailView: View {
     private func header(_ detail: CodeDetail) -> some View {
         VStack(alignment: .leading, spacing: Metric.m) {
             if !detail.ancestors.isEmpty {
-                // Nearest parent last, so it reads root → leaf.
                 HStack(spacing: Metric.xs) {
                     ForEach(detail.ancestors.reversed()) { ancestor in
                         Button(ancestor.code) { onSelectCode(ancestor) }
@@ -99,7 +86,6 @@ public struct CodeDetailView: View {
         }
     }
 
-    /// Grouped by kind so the coding rules read as rules rather than a list.
     private func publisherNotes(_ detail: CodeDetail) -> some View {
         VStack(alignment: .leading, spacing: Metric.l) {
             ForEach(CodeNote.Kind.allCases, id: \.self) { kind in
@@ -111,12 +97,6 @@ public struct CodeDetailView: View {
         }
     }
 
-    /// `Excludes 1` gets a container; the other kinds do not.
-    ///
-    /// It is the only content in the app that means "this combination will be
-    /// rejected", and red label text alone does not survive being skimmed. The
-    /// contrast against the plainer kinds is the point — if everything were
-    /// boxed, nothing would read as the rule that stops a claim.
     @ViewBuilder
     private func noteGroup(_ kind: CodeNote.Kind, _ notes: [CodeNote]) -> some View {
         let isProhibition = kind == .excludes1
@@ -146,12 +126,6 @@ public struct CodeDetailView: View {
                  : "\(detail.children.count) codes beneath this")
                 .font(CodeTypography.sectionLabel)
                 .foregroundStyle(.secondary)
-            // Real rows, not bare labels: these are the fastest path from a
-            // category to the billable child that can actually go on a claim.
-            //
-            // Buttons rather than a tap gesture, so they are focusable, reachable
-            // under Full Keyboard Access and activated by Return. A gesture is
-            // invisible to every input except the pointer.
             ForEach(detail.children) { child in
                 Button { onSelectCode(child) } label: {
                     CodeRow(code: child, density: .compact, showsSystemBadge: false)
@@ -162,13 +136,6 @@ public struct CodeDetailView: View {
         }
     }
 
-    /// The user's own note, kept visually distinct from the publisher's — one is
-    /// authoritative, the other is a personal reminder, and confusing them in a
-    /// clinical tool would be careless.
-    ///
-    /// Collapsed to a single button until there is something to show. The
-    /// permanently-open editor paid about 140 points on every code for a feature
-    /// used on a few, and it paid them above the coding rules.
     @ViewBuilder
     private var noteEditor: some View {
         if draft.isEmpty && !isWritingNote {
@@ -198,7 +165,6 @@ public struct CodeDetailView: View {
                     )
                     .focused($isEditingNote)
                     .onChange(of: isEditingNote) { _, editing in
-                        // Committed when focus leaves, rather than per keystroke.
                         guard !editing else { return }
                         if draft != note { onSaveNote(draft) }
                         if draft.isEmpty { isWritingNote = false }
@@ -214,10 +180,6 @@ public struct CodeDetailView: View {
     }
 }
 
-/// Wraps a note group in the prohibition colour, or leaves it alone.
-///
-/// A modifier rather than a branch at the call site, so the two paths cannot
-/// drift apart in padding and the group's own layout is written once.
 private struct ProhibitionContainer: ViewModifier {
     let isActive: Bool
 
@@ -229,9 +191,6 @@ private struct ProhibitionContainer: ViewModifier {
                 .padding(.leading, Metric.m)
                 .padding(.vertical, Metric.s)
                 .padding(.trailing, Metric.s)
-                // The left rule carries the meaning on its own, so under
-                // Increase Contrast the tint simply goes rather than being
-                // replaced — a fill and a border would fight each other here.
                 .background(contrast == .increased
                             ? Color.clear
                             : Color.prohibition.opacity(0.10))

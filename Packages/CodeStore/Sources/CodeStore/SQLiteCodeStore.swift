@@ -2,23 +2,12 @@ import CodeCore
 import SQLiteKit
 import Foundation
 
-/// Guards the ancestor walk against a cyclic parent in a malformed import. The
-/// real ICD-10-CM tabular nests five deep.
 private let MAX_HIERARCHY_DEPTH = 16
 
-/// SQLite + FTS5 implementation of `CodeRepository`.
-///
-/// An actor rather than a shared singleton: search runs off the main thread, and
-/// actor isolation is what serializes access to the non-`Sendable` connection.
 public actor SQLiteCodeStore: CodeRepository {
 
     public enum Location: Sendable {
         case inMemory
-        /// `~/Library/Application Support/CodeBar/codes.sqlite`.
-        ///
-        /// Treat this file as disposable: it is rebuildable from the bundled seed
-        /// plus the user's import files. Pinned codes and preferences deliberately
-        /// live elsewhere so that discarding the index is never destructive.
         case applicationSupport
         case file(URL)
     }
@@ -97,7 +86,6 @@ public actor SQLiteCodeStore: CodeRepository {
         return statement.int(at: 0)
     }
 
-    /// Codes installed for the given systems. An empty set counts everything.
     private func codeCount(in systems: Set<CodeSystem>) throws -> Int {
         guard !systems.isEmpty else { return try codeCount() }
 
@@ -181,9 +169,6 @@ public actor SQLiteCodeStore: CodeRepository {
         return codes
     }
 
-    /// Walks up the tree, nearest parent first. Depth is bounded by the file —
-    /// the real ICD-10-CM tabular nests five deep — but the loop is capped
-    /// anyway so a cyclic parent in a malformed import cannot hang the app.
     private func ancestors(of code: ClinicalCode) throws -> [ClinicalCode] {
         var ancestors: [ClinicalCode] = []
         var seen: Set<String> = [code.code]
@@ -245,8 +230,6 @@ public actor SQLiteCodeStore: CodeRepository {
     @discardableResult
     public func ingest(_ codeSet: CodeSetImport) throws -> IngestSummary {
         let systems = codeSet.systems
-        // Scoped to the systems this file touches: importing LOINC should not
-        // report a change in how many ICD-10 codes are installed.
         let installedBefore = try codeCount(in: systems)
 
         try database.transaction {
@@ -303,9 +286,6 @@ public actor SQLiteCodeStore: CodeRepository {
         return deleted
     }
 
-    /// Notes are rewritten wholesale for each system the file covers, rather
-    /// than merged. They are publisher content, so the incoming file is the
-    /// authority; merging would accumulate notes from superseded releases.
     private func replaceNotes(from codeSet: CodeSetImport, systems: Set<CodeSystem>) throws {
         guard !codeSet.notes.isEmpty else { return }
 
@@ -343,8 +323,6 @@ public actor SQLiteCodeStore: CodeRepository {
         }
     }
 
-    /// Merges the FTS index's b-tree segments after a bulk write. Skipping this
-    /// leaves a freshly imported set querying through hundreds of segments.
     private func optimize() throws {
         try database.execute("INSERT INTO codes_fts(codes_fts) VALUES('optimize');")
         try database.execute("PRAGMA optimize;")

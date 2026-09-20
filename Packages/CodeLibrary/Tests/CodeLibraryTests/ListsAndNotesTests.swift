@@ -150,7 +150,6 @@ struct ListsAndNotesTests {
 
     @Test("should keep a note when the code is unpinned")
     func noteSurvivesUnpin() async throws {
-        // Unpinning prunes leftovers, and a note is a reason to keep the row.
         let library = try library()
         try await library.togglePin(diabetes)
         try await library.setNote("Keep me", for: diabetes)
@@ -182,8 +181,6 @@ struct ListsAndNotesTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("library.sqlite")
 
-        // A v1 library: the hub, pins and usage, but no lists, notes or
-        // abbreviations.
         let database = try Database(path: url.path)
         try database.execute(LibrarySchema.createV1)
         try database.setUserVersion(1)

@@ -18,9 +18,6 @@ struct MigrationTests {
 
     @Test("should collapse duplicate rows left behind by v1's non-idempotent import")
     func collapsesLegacyDuplicates() async throws {
-        // v1 had no uniqueness constraint, so importing a file twice doubled
-        // every row. The migration routes rows through the upsert, which merges
-        // them back down.
         let fixture = try LegacyDatabaseFixture(rows: Fixtures.icd10 + Fixtures.icd10)
         defer { fixture.cleanUp() }
 
@@ -131,7 +128,6 @@ struct MigrationTests {
         let fixture = try V2DatabaseFixture(rows: Fixtures.icd10)
         defer { fixture.cleanUp() }
 
-        // V2 fixture migrates all the way forward through the ladder.
         _ = try SQLiteCodeStore(location: .file(fixture.url))
 
         let database = try Database(path: fixture.url.path)

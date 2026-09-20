@@ -1,12 +1,6 @@
 import CodeCore
 import SwiftUI
 
-/// Add and remove the shorthand a particular clinic writes.
-///
-/// The built-in table stops at expansions nobody argues about, which leaves out
-/// most of what gets written on a real form. Everything here expands the
-/// *query*, never the code: `pcn` searches as "penicillin" and the clinician
-/// still chooses from what comes back.
 struct AbbreviationsSettingsView: View {
     @State var model: AbbreviationsViewModel
 
@@ -43,12 +37,6 @@ struct AbbreviationsSettingsView: View {
         .task { await model.load() }
     }
 
-    /// Eagerly-built rows rather than a `List`.
-    ///
-    /// `List` is lazy: in a hosting controller it draws its frame and no rows at
-    /// all, so the first recorded snapshot of a populated pane was an empty box —
-    /// a reference that would have passed forever while hiding every regression
-    /// in the rows it was supposed to cover.
     @ViewBuilder
     private var entryList: some View {
         if model.abbreviations.isEmpty {
@@ -87,9 +75,6 @@ struct AbbreviationsSettingsView: View {
 
             VStack(alignment: .leading, spacing: Metric.xxs) {
                 Text(abbreviation.expansion)
-                // Naming what was replaced, so an override is visible rather than
-                // silent — the two readings of a letter pair usually belong to
-                // different specialties.
                 if let builtIn = model.overriddenBuiltIn(for: abbreviation) {
                     Text("replaces CodeBar's “\(builtIn)”")
                         .font(.caption)

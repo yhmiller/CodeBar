@@ -139,8 +139,6 @@ struct CodeLibraryTests {
 
     @Test("should keep a pinned code's description after the code set drops it")
     func survivesCodeSetRemoval() async throws {
-        // The library never consults the index, so a code retired by the
-        // publisher keeps its snapshot here and stays readable.
         let library = try library()
         try await library.togglePin(diabetes)
 

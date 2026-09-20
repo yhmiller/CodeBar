@@ -1,22 +1,8 @@
 import CodeCore
 import Foundation
 
-/// Reads a code-set file into a `CodeSetImport`.
-///
-/// Two shapes are accepted. The current one is a versioned envelope carrying the
-/// publisher's release and how the batch should be applied:
-///
-/// ```json
-/// { "formatVersion": 1, "system": "ICD-10-CM", "release": "2026",
-///   "mode": "replace", "codes": [ … ] }
-/// ```
-///
-/// The other is a bare array of codes, which is what earlier converter scripts
-/// emitted. Those files are still readable; they simply cannot express a release
-/// or ask for replace semantics, so they merge.
 public enum CodeSetDecoder {
 
-    /// Envelope revisions this build understands.
     public static let supportedFormatVersion = 1
 
     public enum DecodingError: Error, CustomStringConvertible, Equatable {
@@ -50,9 +36,6 @@ public enum CodeSetDecoder {
             case formatVersion, system, release, mode, codes
         }
 
-        /// Notes are written inline per code in the file, but held beside the
-        /// codes in memory. Decoding the array twice is the simplest way to
-        /// split them without giving `ClinicalCode` a field it does not want.
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             formatVersion = try container.decode(Int.self, forKey: .formatVersion)
@@ -64,7 +47,6 @@ public enum CodeSetDecoder {
         }
     }
 
-    /// Reads only the notes from a code entry, ignoring everything else.
     private struct NoteCarrier: Decodable {
         let notes: [CodeNote]?
     }
@@ -81,8 +63,6 @@ public enum CodeSetDecoder {
 
     private static func decodeShape(_ data: Data) throws -> CodeSetImport {
         guard isEnvelope(data) else {
-            // Legacy bare array: no release, and merge is the only safe default
-            // since the file cannot say whether it is a complete set.
             return CodeSetImport(codes: try JSONDecoder().decode([ClinicalCode].self, from: data))
         }
 
@@ -91,8 +71,6 @@ public enum CodeSetDecoder {
             throw DecodingError.unsupportedFormatVersion(envelope.formatVersion)
         }
 
-        // A mislabelled file could delete the wrong system's codes under replace
-        // mode, so the declared system is checked rather than trusted.
         if let declared = envelope.system,
            let mismatch = envelope.codes.first(where: { $0.system != declared }) {
             throw DecodingError.systemMismatch(declared: declared, found: mismatch.system)
@@ -111,7 +89,6 @@ public enum CodeSetDecoder {
         )
     }
 
-    /// Distinguishes `{ … }` from `[ … ]` without parsing the whole document.
     private static func isEnvelope(_ data: Data) -> Bool {
         let whitespace: Set<UInt8> = [0x20, 0x09, 0x0A, 0x0D]
         return data.first { !whitespace.contains($0) } == UInt8(ascii: "{")

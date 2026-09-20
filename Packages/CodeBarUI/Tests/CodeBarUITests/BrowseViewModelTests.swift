@@ -2,7 +2,6 @@ import CodeCore
 import Testing
 @testable import CodeBarUI
 
-/// A repository with a real ICD-10-shaped tree behind it.
 actor TreeRepository: CodeRepository {
     private let tree: [ClinicalCode] = [
         ClinicalCode(code: "E11", display: "Type 2 diabetes mellitus", system: .icd10cm,
@@ -57,7 +56,6 @@ actor TreeRepository: CodeRepository {
     }
 }
 
-/// A tree repository that also answers searches, for the window's search column.
 actor SearchableTreeRepository: CodeRepository {
     private let tree = TreeRepository()
     private(set) var searchCount = 0
@@ -300,9 +298,6 @@ struct BrowseViewModelTests {
     }
 }
 
-/// Exporting a saved list. The formatting itself is covered in CodeCore; what
-/// matters here is that the whole list is read from the library rather than
-/// whatever a pane happens to be showing.
 @Suite("Exporting a list")
 @MainActor
 struct ListExportViewModelTests {
