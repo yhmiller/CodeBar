@@ -1,9 +1,12 @@
 import AppKit
+import CodeCore
 
 @MainActor
 enum BrowseWindow {
 
     static let id = "browse"
+
+    static var openAction: (() -> Void)?
 
     static var existing: NSWindow? {
         NSApp.windows.first { $0.identifier?.rawValue.hasPrefix("\(id)-") == true }
@@ -19,5 +22,14 @@ enum BrowseWindow {
         }
         window.makeKeyAndOrderFront(nil)
         return true
+    }
+
+    static func show(code: ClinicalCode? = nil) {
+        if let code, let appDelegate = NSApp.delegate as? AppDelegate {
+            appDelegate.browseModel.selectedCode = code
+        }
+        if !focusExisting() {
+            openAction?()
+        }
     }
 }

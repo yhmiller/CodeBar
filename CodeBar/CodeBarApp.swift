@@ -12,11 +12,7 @@ struct CodeBarApp: App {
     var body: some Scene {
         WindowGroup("CodeBar", id: BrowseWindow.id) {
             MainWindowView(
-                model: BrowseViewModel(
-                    repository: appDelegate.environment.repository,
-                    library: appDelegate.environment.library,
-                    preferences: SearchPanelController.shared.preferences
-                ),
+                model: appDelegate.browseModel,
                 isPinned: { appDelegate.actions.isPinned($0) },
                 onCopy: { code, format in appDelegate.actions.copy(code, format: format) },
                 onTogglePin: { appDelegate.actions.togglePin($0) },
@@ -29,7 +25,10 @@ struct CodeBarApp: App {
                 }
             )
             .frame(minWidth: 900, minHeight: 560)
-            .task { await appDelegate.actions.refresh() }
+            .task {
+                BrowseWindow.openAction = { openWindow(id: BrowseWindow.id) }
+                await appDelegate.actions.refresh()
+            }
         }
         .defaultSize(width: 1080, height: 680)
         .commands {
@@ -143,8 +142,7 @@ struct CodeBarApp: App {
 
 private extension CodeBarApp {
     func showBrowseWindow() {
-        if !BrowseWindow.focusExisting() {
-            openWindow(id: BrowseWindow.id)
-        }
+        BrowseWindow.openAction = { openWindow(id: BrowseWindow.id) }
+        BrowseWindow.show()
     }
 }

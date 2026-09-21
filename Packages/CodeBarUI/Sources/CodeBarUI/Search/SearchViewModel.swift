@@ -136,9 +136,13 @@ public final class SearchViewModel {
     }
 
     public var selectedCodeText: String? {
+        selectedCode?.code
+    }
+
+    public var selectedCode: ClinicalCode? {
         let codes = selectableCodes
         guard codes.indices.contains(selectedIndex) else { return nil }
-        return codes[selectedIndex].code
+        return codes[selectedIndex]
     }
 
     @discardableResult

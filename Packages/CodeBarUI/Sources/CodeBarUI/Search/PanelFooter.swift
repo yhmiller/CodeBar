@@ -32,10 +32,12 @@ struct PanelFooter: View {
         case .results:
             [Shortcut(key: "↵", label: "Copy"),
              Shortcut(key: "⇧↵", label: "With description"),
+             Shortcut(key: "⌘↵", label: "Open"),
              Shortcut(key: "⌘1–9", label: "Copy nth"),
              Shortcut(key: "⌘P", label: "Pin")]
         case .suggestions:
             [Shortcut(key: "↵", label: "Copy"),
+             Shortcut(key: "⌘↵", label: "Open"),
              Shortcut(key: "⌘P", label: "Pin")]
         }
     }

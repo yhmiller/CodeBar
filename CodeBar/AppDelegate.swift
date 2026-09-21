@@ -1,4 +1,6 @@
 import AppKit
+import CodeBarUI
+import CodeCore
 import CodePlatform
 
 @MainActor
@@ -9,6 +11,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         library: environment.library ?? EmptyCodeLibrary(),
         repository: environment.repository
     )
+
+    lazy var browseModel = BrowseViewModel(
+        repository: environment.repository,
+        library: environment.library,
+        preferences: SearchPanelController.shared.preferences
+    )
+
+    func handoffToBrowseWindow(_ code: ClinicalCode) {
+        BrowseWindow.show(code: code)
+    }
 
     private let hotkeyRegistrar = CarbonHotkeyRegistrar()
 

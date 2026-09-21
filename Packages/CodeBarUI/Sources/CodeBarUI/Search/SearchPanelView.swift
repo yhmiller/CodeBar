@@ -15,15 +15,18 @@ public struct SearchPanelView: View {
 
     private let onDismiss: () -> Void
     private let onCopied: (String) -> Void
+    private let onOpenInWindow: ((ClinicalCode) -> Void)?
 
     public init(
         model: SearchViewModel,
         onCopied: @escaping (String) -> Void = { _ in },
-        onDismiss: @escaping () -> Void
+        onDismiss: @escaping () -> Void,
+        onOpenInWindow: ((ClinicalCode) -> Void)? = nil
     ) {
         _model = State(initialValue: model)
         self.onCopied = onCopied
         self.onDismiss = onDismiss
+        self.onOpenInWindow = onOpenInWindow
     }
 
     public var body: some View {
@@ -155,6 +158,12 @@ public struct SearchPanelView: View {
             return .handled
 
         case .return:
+            if press.modifiers.contains(.command) {
+                guard let code = model.selectedCode else { return .ignored }
+                onOpenInWindow?(code)
+                onDismiss()
+                return .handled
+            }
             copySelected(format: press.modifiers.contains(.shift) ? .codeAndDisplay : .codeOnly)
             return .handled
 

@@ -57,6 +57,7 @@ struct CodeRow: View {
         .padding(.horizontal, density.inset)
         .contentShape(Rectangle())
         .onHover { isHovering = $0 }
+        .draggable(code.code)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(code.system.shortLabel) \(code.code). \(code.display)")
         .accessibilityValue(accessibilityValueString)

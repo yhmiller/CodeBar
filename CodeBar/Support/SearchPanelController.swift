@@ -85,7 +85,11 @@ final class SearchPanelController {
             rootView: SearchPanelView(
                 model: model,
                 onCopied: { [weak self] copied in self?.confirmation.show(copied) },
-                onDismiss: { [weak self] in self?.hide() }
+                onDismiss: { [weak self] in self?.hide() },
+                onOpenInWindow: { [weak self] code in
+                    self?.hide()
+                    (NSApp.delegate as? AppDelegate)?.handoffToBrowseWindow(code)
+                }
             )
             .panelSurface()
         )
