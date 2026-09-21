@@ -93,7 +93,11 @@ struct CodeRow: View {
         .clipShape(RoundedRectangle(cornerRadius: Metric.rowRadius))
         .padding(.horizontal, density.inset)
         .contentShape(Rectangle())
-        .onHover { isHovering = $0 }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) {
+                isHovering = hovering
+            }
+        }
         .draggable(code.code)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(code.system.shortLabel) \(code.code). \(code.display)")
@@ -131,6 +135,7 @@ struct CodeRow: View {
                 .font(CodeTypography.metadata)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(x: 4)), removal: .opacity))
         }
     }
 
@@ -193,35 +198,5 @@ struct CodeRow: View {
         if code.isBillable == false { return NOT_BILLABLE_SPOKEN_LABEL }
         if code.isUnspecified == true { return UNSPECIFIED_SPOKEN_LABEL }
         return ""
-    }
-}
-
-private extension CodeRow.Density {
-    var descriptionLines: Int {
-        self == .panel ? 2 : 1
-    }
-
-    var usesFixedCodeColumn: Bool {
-        self == .panel
-    }
-
-    var horizontalPadding: CGFloat {
-        switch self {
-        case .panel: Metric.rowPadding
-        case .list: 0
-        case .compact: Metric.s
-        }
-    }
-
-    var verticalPadding: CGFloat {
-        switch self {
-        case .panel: Metric.s
-        case .list: 0
-        case .compact: Metric.xs
-        }
-    }
-
-    var inset: CGFloat {
-        self == .panel ? Metric.rowInset : 0
     }
 }

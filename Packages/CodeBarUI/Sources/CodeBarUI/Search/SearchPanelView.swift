@@ -7,7 +7,6 @@ public struct SearchPanelView: View {
     @State private var model: SearchViewModel
 
     @State private var text: String = ""
-    @State private var listHeight: CGFloat = 0
 
     @FocusState private var isFocused: Bool
 
@@ -39,7 +38,7 @@ public struct SearchPanelView: View {
                     model.setSystemScope(system)
                 }
             )
-            Divider()
+            scopeAccentDivider
             content
             if let footerContext {
                 Divider()
@@ -58,16 +57,64 @@ public struct SearchPanelView: View {
 
     private var searchField: some View {
         HStack(spacing: Metric.m) {
-            Image(systemName: "stethoscope")
-                .foregroundStyle(.secondary)
+            // Safe icon: single persistent view that swaps symbol name/color via direct property
+            // animation, avoiding structural branch swaps inside Group that can collide.
+            Image(systemName: model.activeSystemScope?.iconName ?? "stethoscope")
+                .font(.system(
+                    size: 16,
+                    weight: model.activeSystemScope != nil ? .semibold : .regular
+                ))
+                .foregroundStyle(
+                    model.activeSystemScope != nil
+                        ? AnyShapeStyle(model.activeSystemScope!.themeColor)
+                        : AnyShapeStyle(Color.secondary)
+                )
+                .frame(width: 20, height: 20)
+                .animation(.spring(response: 0.25, dampingFraction: 0.75), value: model.activeSystemScope)
                 .accessibilityHidden(true)
+
             TextField("Search ICD-10, LOINC, SNOMED, CPT…", text: $text)
                 .textFieldStyle(.plain)
                 .font(CodeTypography.searchField)
                 .focused($isFocused)
                 .onChange(of: text) { _, newValue in model.setQuery(newValue) }
+
+            // Safe clear button: always present, opacity-animated rather than
+            // inserted/removed, to avoid transition identity assertion crashes.
+            Button(action: {
+                text = ""
+                model.setSystemScope(nil)
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .opacity(text.isEmpty ? 0 : 1)
+            .scaleEffect(text.isEmpty ? 0.7 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: text.isEmpty)
+            .allowsHitTesting(!text.isEmpty)
         }
         .padding(Metric.l)
+    }
+
+    private var scopeAccentDivider: some View {
+        ZStack {
+            Divider()
+            if let scope = model.activeSystemScope {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [scope.themeColor.opacity(0.55), scope.themeColor.opacity(0.12), .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 1.5)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: model.activeSystemScope)
     }
 
     private var footerContext: PanelFooter.Context? {
@@ -88,7 +135,11 @@ public struct SearchPanelView: View {
                     model.copy(code)
                     confirmAndDismiss()
                 },
-                onTogglePin: { model.togglePin($0) }
+                onTogglePin: { model.togglePin($0) },
+                onSearchExample: { exampleTerm in
+                    text = exampleTerm
+                    model.setQuery(exampleTerm)
+                }
             )
         } else if model.results.isEmpty {
             Text("No matches")
@@ -139,10 +190,8 @@ public struct SearchPanelView: View {
                     }
                 }
                 .padding(.vertical, Metric.s)
-                .measuringHeight()
             }
-            .frame(height: min(listHeight, Metric.resultListMaxHeight))
-            .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
+            .frame(maxHeight: Metric.resultListMaxHeight)
             .onChange(of: model.selectedResultID) { _, newValue in
                 guard let newValue else { return }
                 withAnimation(reduceMotion ? nil : .easeOut(duration: SCROLL_ANIMATION_DURATION)) {
