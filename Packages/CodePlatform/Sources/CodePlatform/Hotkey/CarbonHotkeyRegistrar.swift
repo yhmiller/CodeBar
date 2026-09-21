@@ -50,7 +50,7 @@ public final class CarbonHotkeyRegistrar {
             throw RegistrationError.handlerInstallFailed(installStatus)
         }
 
-        var hotKeyID = EventHotKeyID(signature: HOTKEY_SIGNATURE, id: HOTKEY_ID)
+        let hotKeyID = EventHotKeyID(signature: HOTKEY_SIGNATURE, id: HOTKEY_ID)
         let registerStatus = RegisterEventHotKey(
             combo.keyCode,
             combo.carbonModifiers,

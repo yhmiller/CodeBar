@@ -28,6 +28,11 @@ public final class UserDefaultsPreferences: PreferencesStoring {
         set { defaults.set(newValue, forKey: SHOWS_DOCK_ICON_KEY) }
     }
 
+    public var hotkey: KeyCombo {
+        get { KeyCombo.load(from: defaults) }
+        set { newValue.save(to: defaults) }
+    }
+
     public func setSystem(_ system: CodeSystem, enabled: Bool) {
         if enabled {
             disabledSystems.remove(system)

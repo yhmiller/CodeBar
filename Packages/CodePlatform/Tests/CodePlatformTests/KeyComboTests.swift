@@ -76,4 +76,46 @@ struct KeyComboTests {
 
         #expect(combo.displayString == "⌃⌥⇧⌘C")
     }
+
+    @Test("should generate keycap tokens array")
+    func generatesKeycapTokens() {
+        let combo = KeyCombo(keyCode: UInt32(kVK_Space), modifiers: [.option])
+        #expect(combo.keycapTokens == ["⌥", "Space"])
+        #expect(KeyCombo.default.keycapTokens == ["⌥", "⌘", "C"])
+    }
+
+    @Test("should map letters, numbers, and function keys")
+    func mapsKeyLabels() {
+        #expect(KeyCombo(keyCode: UInt32(kVK_ANSI_A), modifiers: .command).displayString == "⌘A")
+        #expect(KeyCombo(keyCode: UInt32(kVK_ANSI_0), modifiers: .command).displayString == "⌘0")
+        #expect(KeyCombo(keyCode: UInt32(kVK_F1), modifiers: []).displayString == "F1")
+        #expect(KeyCombo(keyCode: UInt32(kVK_Space), modifiers: .option).displayString == "⌥Space")
+    }
+
+    @Test("should validate hotkeys correctly")
+    func validatesHotkeys() {
+        // Function keys are valid without modifiers
+        #expect(KeyCombo(keyCode: UInt32(kVK_F1), modifiers: []).isValidHotkey)
+        #expect(KeyCombo(keyCode: UInt32(kVK_F12), modifiers: [.shift]).isValidHotkey)
+
+        // Standard keys require Command, Option, or Control
+        #expect(!KeyCombo(keyCode: UInt32(kVK_ANSI_A), modifiers: []).isValidHotkey)
+        #expect(!KeyCombo(keyCode: UInt32(kVK_ANSI_A), modifiers: [.shift]).isValidHotkey)
+        #expect(KeyCombo(keyCode: UInt32(kVK_ANSI_A), modifiers: [.command]).isValidHotkey)
+        #expect(KeyCombo(keyCode: UInt32(kVK_Space), modifiers: [.option]).isValidHotkey)
+        #expect(KeyCombo(keyCode: UInt32(kVK_ANSI_C), modifiers: [.control]).isValidHotkey)
+    }
+
+    @Test("should persist and restore hotkey through UserDefaults")
+    func persistsThroughUserDefaults() {
+        let defaults = UserDefaults(suiteName: "CodePlatformTestDefaults-\(UUID().uuidString)")!
+        defer { defaults.removePersistentDomain(forName: defaults.description) }
+
+        #expect(KeyCombo.load(from: defaults) == KeyCombo.default)
+
+        let custom = KeyCombo(keyCode: UInt32(kVK_Space), modifiers: [.option])
+        custom.save(to: defaults)
+
+        #expect(KeyCombo.load(from: defaults) == custom)
+    }
 }

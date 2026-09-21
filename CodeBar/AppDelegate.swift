@@ -4,7 +4,7 @@ import CodeCore
 import CodePlatform
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     let environment = AppEnvironment()
 
     lazy var actions = LibraryActions(
@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         library: environment.library,
         preferences: SearchPanelController.shared.preferences
     )
+
+    @Published public private(set) var currentHotkey: KeyCombo = .default
 
     func handoffToBrowseWindow(_ code: ClinicalCode) {
         BrowseWindow.show(code: code)
@@ -31,7 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ActivationPolicyController.setShowsDockIcon(
             SearchPanelController.shared.preferences.showsDockIcon
         )
-        registerHotkey()
+        currentHotkey = SearchPanelController.shared.preferences.hotkey
+        registerHotkey(currentHotkey)
 
         if let failure = environment.startupFailure {
             presentAlert(
@@ -61,15 +64,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
-    private func registerHotkey() {
+    @discardableResult
+    func updateHotkey(keyCode: UInt32, carbonModifiers: UInt32) -> Result<Void, HotkeyRecordingError> {
+        let candidate = KeyCombo(keyCode: keyCode, carbonModifiers: carbonModifiers)
+        guard candidate.isValidHotkey else {
+            return .failure(HotkeyRecordingError("Include ⌘, ⌥, or ⌃"))
+        }
+
+        let previous = currentHotkey
         do {
-            try hotkeyRegistrar.register(.default) {
+            try hotkeyRegistrar.register(candidate) {
+                SearchPanelController.shared.toggle()
+            }
+            SearchPanelController.shared.preferences.hotkey = candidate
+            currentHotkey = candidate
+            return .success(())
+        } catch {
+            try? hotkeyRegistrar.register(previous) {
+                SearchPanelController.shared.toggle()
+            }
+            return .failure(HotkeyRecordingError("Shortcut already in use"))
+        }
+    }
+
+    func resetHotkey() {
+        _ = updateHotkey(keyCode: KeyCombo.default.keyCode, carbonModifiers: KeyCombo.default.carbonModifiers)
+    }
+
+    private func registerHotkey(_ combo: KeyCombo) {
+        do {
+            try hotkeyRegistrar.register(combo) {
                 SearchPanelController.shared.toggle()
             }
         } catch {
             presentAlert(
                 style: .warning,
-                title: "The \(KeyCombo.default.displayString) shortcut is unavailable",
+                title: "The \(combo.displayString) shortcut is unavailable",
                 message: "\(error)\n\nCodeBar still works from the menu bar icon."
             )
         }

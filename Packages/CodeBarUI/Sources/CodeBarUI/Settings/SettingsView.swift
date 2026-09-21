@@ -8,6 +8,10 @@ public struct SettingsView: View {
     private let setOpenAtLogin: (Bool) -> Bool
     private let isDockIconShown: () -> Bool
     private let setDockIconShown: (Bool) -> Void
+    private let currentHotkeyTokens: () -> [String]
+    private let isDefaultHotkey: () -> Bool
+    private let onRecordHotkey: (UInt32, UInt32) -> Result<Void, HotkeyRecordingError>
+    private let onResetHotkey: () -> Void
     private let onImportCodeSet: (() -> Void)?
 
     public init(
@@ -17,6 +21,10 @@ public struct SettingsView: View {
         setOpenAtLogin: @escaping (Bool) -> Bool,
         isDockIconShown: @escaping () -> Bool,
         setDockIconShown: @escaping (Bool) -> Void,
+        currentHotkeyTokens: @escaping () -> [String] = { ["⌥", "⌘", "C"] },
+        isDefaultHotkey: @escaping () -> Bool = { true },
+        onRecordHotkey: @escaping (UInt32, UInt32) -> Result<Void, HotkeyRecordingError> = { _, _ in .success(()) },
+        onResetHotkey: @escaping () -> Void = {},
         onImportCodeSet: (() -> Void)? = nil
     ) {
         _codeSets = State(initialValue: codeSets)
@@ -25,6 +33,10 @@ public struct SettingsView: View {
         self.setOpenAtLogin = setOpenAtLogin
         self.isDockIconShown = isDockIconShown
         self.setDockIconShown = setDockIconShown
+        self.currentHotkeyTokens = currentHotkeyTokens
+        self.isDefaultHotkey = isDefaultHotkey
+        self.onRecordHotkey = onRecordHotkey
+        self.onResetHotkey = onResetHotkey
         self.onImportCodeSet = onImportCodeSet
     }
 
@@ -34,7 +46,11 @@ public struct SettingsView: View {
                 isOpenAtLoginEnabled: isOpenAtLoginEnabled,
                 setOpenAtLogin: setOpenAtLogin,
                 isDockIconShown: isDockIconShown,
-                setDockIconShown: setDockIconShown
+                setDockIconShown: setDockIconShown,
+                currentHotkeyTokens: currentHotkeyTokens,
+                isDefaultHotkey: isDefaultHotkey,
+                onRecordHotkey: onRecordHotkey,
+                onResetHotkey: onResetHotkey
             )
             .tabItem { Label("General", systemImage: "gearshape") }
 
@@ -57,9 +73,39 @@ struct GeneralSettingsView: View {
     let setOpenAtLogin: (Bool) -> Bool
     let isDockIconShown: () -> Bool
     let setDockIconShown: (Bool) -> Void
+    let currentHotkeyTokens: () -> [String]
+    let isDefaultHotkey: () -> Bool
+    let onRecordHotkey: (UInt32, UInt32) -> Result<Void, HotkeyRecordingError>
+    let onResetHotkey: () -> Void
 
-    @State private var opensAtLogin = false
-    @State private var showsDockIcon = false
+    @State private var opensAtLogin: Bool
+    @State private var showsDockIcon: Bool
+    @State private var hotkeyTokens: [String]
+    @State private var isDefault: Bool
+
+    init(
+        isOpenAtLoginEnabled: @escaping () -> Bool,
+        setOpenAtLogin: @escaping (Bool) -> Bool,
+        isDockIconShown: @escaping () -> Bool,
+        setDockIconShown: @escaping (Bool) -> Void,
+        currentHotkeyTokens: @escaping () -> [String],
+        isDefaultHotkey: @escaping () -> Bool,
+        onRecordHotkey: @escaping (UInt32, UInt32) -> Result<Void, HotkeyRecordingError>,
+        onResetHotkey: @escaping () -> Void
+    ) {
+        self.isOpenAtLoginEnabled = isOpenAtLoginEnabled
+        self.setOpenAtLogin = setOpenAtLogin
+        self.isDockIconShown = isDockIconShown
+        self.setDockIconShown = setDockIconShown
+        self.currentHotkeyTokens = currentHotkeyTokens
+        self.isDefaultHotkey = isDefaultHotkey
+        self.onRecordHotkey = onRecordHotkey
+        self.onResetHotkey = onResetHotkey
+        _opensAtLogin = State(initialValue: isOpenAtLoginEnabled())
+        _showsDockIcon = State(initialValue: isDockIconShown())
+        _hotkeyTokens = State(initialValue: currentHotkeyTokens())
+        _isDefault = State(initialValue: isDefaultHotkey())
+    }
 
     var body: some View {
         Form {
@@ -128,21 +174,39 @@ struct GeneralSettingsView: View {
 
                     Spacer()
 
-                    KeycapGroup(symbols: "⌥⌘C")
+                    ShortcutRecorderView(
+                        tokens: hotkeyTokens,
+                        isDefault: isDefault,
+                        onRecord: { keyCode, modifiers in
+                            let result = onRecordHotkey(keyCode, modifiers)
+                            if case .success = result {
+                                hotkeyTokens = currentHotkeyTokens()
+                                isDefault = isDefaultHotkey()
+                            }
+                            return result
+                        },
+                        onReset: {
+                            onResetHotkey()
+                            hotkeyTokens = currentHotkeyTokens()
+                            isDefault = isDefaultHotkey()
+                        }
+                    )
                 }
                 .padding(.vertical, Metric.xxs)
             } header: {
                 Text("Keyboard Shortcut")
             } footer: {
-                Text("Customizable global hotkey support is planned for a future update.")
+                Text("Click the shortcut to record a new key combination. Press Escape to cancel, or Backspace to restore default.")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .onAppear {
             opensAtLogin = isOpenAtLoginEnabled()
             showsDockIcon = isDockIconShown()
+            hotkeyTokens = currentHotkeyTokens()
+            isDefault = isDefaultHotkey()
         }
     }
 }

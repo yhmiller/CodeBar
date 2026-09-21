@@ -39,7 +39,7 @@ struct CodeBarApp: App {
             }
 
             CommandGroup(after: .newItem) {
-                Button("Open Search  \(KeyCombo.default.displayString)") {
+                Button("Open Search  \(appDelegate.currentHotkey.displayString)") {
                     SearchPanelController.shared.show()
                 }
             }
@@ -59,7 +59,7 @@ struct CodeBarApp: App {
 
             Divider()
 
-            Button("Open Search  (\(KeyCombo.default.displayString))") {
+            Button("Open Search  (\(appDelegate.currentHotkey.displayString))") {
                 SearchPanelController.shared.show()
             }
             Button("Browse Codes…") {
@@ -130,6 +130,14 @@ struct CodeBarApp: App {
                 setDockIconShown: { shows in
                     SearchPanelController.shared.preferences.showsDockIcon = shows
                     ActivationPolicyController.setShowsDockIcon(shows)
+                },
+                currentHotkeyTokens: { appDelegate.currentHotkey.keycapTokens },
+                isDefaultHotkey: { appDelegate.currentHotkey == .default },
+                onRecordHotkey: { keyCode, modifiers in
+                    appDelegate.updateHotkey(keyCode: keyCode, carbonModifiers: modifiers)
+                },
+                onResetHotkey: {
+                    appDelegate.resetHotkey()
                 },
                 onImportCodeSet: {
                     CodeImporter.presentImportPanel(repository: appDelegate.environment.repository)
