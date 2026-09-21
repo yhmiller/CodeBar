@@ -4,6 +4,9 @@ public struct SearchQuery: Sendable, Equatable {
     public static let defaultLimit = 30
 
     public let raw: String
+    public let text: String
+    public let scopedSystem: CodeSystem?
+    public let scopeTag: String?
     public let normalizedCode: String
     public let matchExpression: String?
     public let systems: Set<CodeSystem>
@@ -17,6 +20,7 @@ public struct SearchQuery: Sendable, Equatable {
     public init(
         raw: String,
         systems: Set<CodeSystem> = [],
+        scopedSystem: CodeSystem? = nil,
         limit: Int = SearchQuery.defaultLimit,
         preferredCodes: Set<String> = [],
         abbreviations: [String: String] = [:]
@@ -24,9 +28,18 @@ public struct SearchQuery: Sendable, Equatable {
         self.preferredCodes = preferredCodes
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         self.raw = trimmed
-        self.normalizedCode = CodeNormalizer.normalize(trimmed)
-        self.matchExpression = Self.matchExpression(for: trimmed, abbreviations: abbreviations)
-        self.systems = systems
+        let parsed = QueryScoper.parse(trimmed)
+        let effectiveScope = scopedSystem ?? parsed.scopedSystem
+        self.scopedSystem = effectiveScope
+        self.scopeTag = parsed.tag
+        self.text = parsed.cleanText
+        self.normalizedCode = CodeNormalizer.normalize(parsed.cleanText)
+        self.matchExpression = Self.matchExpression(for: parsed.cleanText, abbreviations: abbreviations)
+        if let effectiveScope {
+            self.systems = [effectiveScope]
+        } else {
+            self.systems = systems
+        }
         self.limit = limit
     }
 

@@ -32,6 +32,13 @@ public struct SearchPanelView: View {
     public var body: some View {
         VStack(spacing: 0) {
             searchField
+            SystemScopeFilterBar(
+                availableSystems: model.availableSystems,
+                activeScope: model.activeSystemScope,
+                onSelectScope: { system in
+                    model.setSystemScope(system)
+                }
+            )
             Divider()
             content
             if let footerContext {
@@ -65,15 +72,16 @@ public struct SearchPanelView: View {
 
     private var footerContext: PanelFooter.Context? {
         if model.selectableCodes.isEmpty { return nil }
-        return text.isEmpty ? .suggestions : .results
+        return model.cleanQuery.isEmpty ? .suggestions : .results
     }
 
     @ViewBuilder
     private var content: some View {
-        if text.isEmpty {
+        if model.cleanQuery.isEmpty {
             EmptyStateView(
-                pinned: model.pinnedCodes,
-                recent: model.recentCodes,
+                pinned: model.scopedPinnedCodes,
+                recent: model.scopedRecentCodes,
+                scopedSystem: model.activeSystemScope,
                 showsSystemBadge: model.showsSystemBadge,
                 isSelected: { model.isSelected($0) },
                 onChoose: { code in
@@ -107,7 +115,7 @@ public struct SearchPanelView: View {
                                 NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
                                 model.togglePin(result.code)
                             },
-                            highlightQuery: text
+                            highlightQuery: model.cleanQuery
                         )
                         .onTapGesture {
                             model.copy(result)
@@ -147,10 +155,12 @@ public struct SearchPanelView: View {
     private func handle(_ press: KeyPress) -> KeyPress.Result {
         switch press.key {
         case .escape:
-            if text.isEmpty {
-                onDismiss()
-            } else {
+            if !text.isEmpty {
                 text = ""
+            } else if model.activeSystemScope != nil {
+                model.setSystemScope(nil)
+            } else {
+                onDismiss()
             }
             return .handled
 

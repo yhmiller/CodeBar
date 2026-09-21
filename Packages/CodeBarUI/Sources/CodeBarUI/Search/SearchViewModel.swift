@@ -10,8 +10,21 @@ public let PREFERRED_CODE_LIMIT = 50
 public final class SearchViewModel {
 
     public private(set) var query: String = ""
+    public private(set) var cleanQuery: String = ""
+    public private(set) var selectedSystemScope: CodeSystem?
+    public private(set) var typedSystemScope: CodeSystem?
     public private(set) var results: [SearchResult] = []
     public private(set) var selectedIndex: Int = 0
+
+    public var activeSystemScope: CodeSystem? {
+        typedSystemScope ?? selectedSystemScope
+    }
+
+    public var availableSystems: [CodeSystem] {
+        let order: [CodeSystem] = [.icd10cm, .cpt, .loinc, .snomed]
+        let enabled = preferences.enabledSystems
+        return order.filter { enabled.contains($0) }
+    }
 
     public private(set) var displaySessionID = 0
 
@@ -68,7 +81,7 @@ public final class SearchViewModel {
 
     public func togglePin(_ code: ClinicalCode) {
         pendingLibraryWork = Task {
-            try? await library.togglePin(code)
+            _ = try? await library.togglePin(code)
             await refreshLibrary()
         }
     }
@@ -90,29 +103,57 @@ public final class SearchViewModel {
         query = text
         selectedIndex = 0
 
-        let query = SearchQuery(
+        let parsed = QueryScoper.parse(text)
+        typedSystemScope = parsed.scopedSystem
+        cleanQuery = parsed.cleanText
+
+        let effectiveScope = typedSystemScope ?? selectedSystemScope
+        let targetSystems = effectiveScope.map { Set([$0]) } ?? preferences.enabledSystems
+
+        let searchQuery = SearchQuery(
             raw: text,
-            systems: preferences.enabledSystems,
+            systems: targetSystems,
+            scopedSystem: effectiveScope,
             preferredCodes: preferredIDs,
             abbreviations: ownAbbreviations
         )
 
-        searchRunner.run(query) { [weak self] found in
+        searchRunner.run(searchQuery) { [weak self] found in
             self?.results = found
             self?.selectedIndex = 0
         }
     }
 
+    public func setSystemScope(_ system: CodeSystem?) {
+        selectedSystemScope = system
+        setQuery(query)
+    }
+
     public func prepareForDisplay() {
         displaySessionID += 1
+        selectedSystemScope = nil
+        typedSystemScope = nil
         setQuery("")
         pendingLibraryWork = Task { await refreshLibrary() }
     }
 
     // MARK: - Selection
 
+    public var scopedPinnedCodes: [ClinicalCode] {
+        guard let scope = activeSystemScope else { return pinnedCodes }
+        return pinnedCodes.filter { $0.system == scope }
+    }
+
+    public var scopedRecentCodes: [ClinicalCode] {
+        guard let scope = activeSystemScope else { return recentCodes }
+        return recentCodes.filter { $0.system == scope }
+    }
+
     public var selectableCodes: [ClinicalCode] {
-        query.isEmpty ? pinnedCodes + recentCodes : results.map(\.code)
+        if cleanQuery.isEmpty {
+            return scopedPinnedCodes + scopedRecentCodes
+        }
+        return results.map(\.code)
     }
 
     public func moveSelection(_ delta: Int) {

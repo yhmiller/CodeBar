@@ -4,6 +4,7 @@ import SwiftUI
 struct EmptyStateView: View {
     let pinned: [ClinicalCode]
     let recent: [ClinicalCode]
+    var scopedSystem: CodeSystem? = nil
 
     var showsSystemBadge: Bool = true
     var isSelected: (ClinicalCode) -> Bool = { _ in false }
@@ -57,13 +58,30 @@ struct EmptyStateView: View {
 
     private var hint: some View {
         VStack(spacing: Metric.xs) {
-            Text("Start typing a term or a code")
-                .foregroundStyle(.secondary)
-            Text("e.g. \"type 2 diabetes\" or \"E11\"")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if let scopedSystem {
+                Text("Search \(scopedSystem.shortLabel) codes")
+                    .foregroundStyle(.secondary)
+                Text("e.g. \(scopedExample(for: scopedSystem))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Start typing a term or a code")
+                    .foregroundStyle(.secondary)
+                Text("e.g. \"type 2 diabetes\" or \"E11\"")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(Metric.xl)
         .frame(maxWidth: .infinity)
+    }
+
+    private func scopedExample(for system: CodeSystem) -> String {
+        switch system {
+        case .cpt: "\"99214\" or \"office visit\""
+        case .loinc: "\"glucose\" or \"hemoglobin a1c\""
+        case .icd10cm: "\"type 2 diabetes\" or \"E11.9\""
+        case .snomed: "\"asthma\" or \"195967001\""
+        }
     }
 }
