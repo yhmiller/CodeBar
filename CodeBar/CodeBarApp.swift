@@ -47,12 +47,56 @@ struct CodeBarApp: App {
         }
 
         MenuBarExtra("CodeBar", systemImage: "stethoscope") {
+            if appDelegate.actions.manifests.isEmpty {
+                Button("No Code Sets Installed") {}
+                    .disabled(true)
+            } else {
+                ForEach(appDelegate.actions.manifests) { manifest in
+                    let releaseStr = manifest.release.map { " · Release \($0)" } ?? ""
+                    Button("\(manifest.system.rawValue)\(releaseStr) (\(manifest.rowCount.formatted()) codes)") {}
+                        .disabled(true)
+                }
+            }
+
+            Divider()
+
             Button("Open Search  (\(KeyCombo.default.displayString))") {
                 SearchPanelController.shared.show()
             }
             Button("Browse Codes…") {
                 showBrowseWindow()
             }
+
+            Divider()
+
+            Menu("Pinned Codes") {
+                if appDelegate.actions.pinnedCodes.isEmpty {
+                    Button("No Pinned Codes") {}
+                        .disabled(true)
+                    Text("Pin codes in search or browse to access them here")
+                } else {
+                    ForEach(appDelegate.actions.pinnedCodes) { code in
+                        Button {
+                            appDelegate.actions.copy(code, format: .codeOnly)
+                        } label: {
+                            Text("\(code.code)  \(code.display)")
+                        }
+                    }
+
+                    Divider()
+
+                    Menu("Copy with Description…") {
+                        ForEach(appDelegate.actions.pinnedCodes) { code in
+                            Button {
+                                appDelegate.actions.copy(code, format: .codeAndDisplay)
+                            } label: {
+                                Text("\(code.code)  \(code.display)")
+                            }
+                        }
+                    }
+                }
+            }
+
             Divider()
 
             Button("Import Code Set…") {
@@ -68,6 +112,7 @@ struct CodeBarApp: App {
             Button("Quit CodeBar") {
                 NSApplication.shared.terminate(nil)
             }
+            .keyboardShortcut("q", modifiers: .command)
         }
         .menuBarExtraStyle(.menu)
 

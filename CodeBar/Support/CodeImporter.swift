@@ -36,6 +36,7 @@ enum CodeImporter {
             }
 
             let summary = try await repository.ingest(codeSet)
+            await (NSApp.delegate as? AppDelegate)?.actions.refresh()
             presentAlert(style: .informational, title: "Import complete",
                          message: describe(summary, release: codeSet.release))
         } catch {

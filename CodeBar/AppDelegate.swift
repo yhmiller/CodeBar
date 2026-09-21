@@ -5,7 +5,10 @@ import CodePlatform
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let environment = AppEnvironment()
 
-    lazy var actions = LibraryActions(library: environment.library ?? EmptyCodeLibrary())
+    lazy var actions = LibraryActions(
+        library: environment.library ?? EmptyCodeLibrary(),
+        repository: environment.repository
+    )
 
     private let hotkeyRegistrar = CarbonHotkeyRegistrar()
 
@@ -30,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await environment.adoptLegacyLibraryData()
             await environment.loadSeedIfNeeded()
+            await actions.refresh()
         }
     }
 
