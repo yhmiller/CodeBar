@@ -24,3 +24,8 @@ Package.resolved
 __pycache__/
 *.pyc
 .gstack/
+
+# Local-only — kept out of version control
+Scripts/
+Tools/
+docs/
