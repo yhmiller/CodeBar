@@ -3,39 +3,84 @@ import SwiftUI
 
 struct CodeSetsSettingsView: View {
     @State var model: CodeSetsViewModel
+    let onImport: (() -> Void)?
+
     @State private var pendingRemoval: CodeSetManifest?
+
+    init(model: CodeSetsViewModel, onImport: (() -> Void)? = nil) {
+        self.model = model
+        self.onImport = onImport
+    }
 
     var body: some View {
         Form {
             if let failure = model.failure {
                 Section {
-                    Label(failure, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.secondary)
+                    Label(failure, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
                 }
             }
 
             if model.manifests.isEmpty {
                 Section {
-                    Text("No code sets installed.")
-                        .foregroundStyle(.secondary)
-                    Text("Use Import Code Set… from the menu bar. Converters for the "
-                         + "official releases are in Scripts/.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                    ContentUnavailableView {
+                        Label("No Code Sets Installed", systemImage: "cylinder.split.1x2")
+                    } description: {
+                        Text("Import ICD-10-CM, CPT, LOINC, or SNOMED CT datasets to begin clinical code searches.")
+                    } actions: {
+                        if let onImport {
+                            Button("Import Code Set…", action: onImport)
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Metric.m)
                 }
             } else {
-                Section("Installed") {
+                Section {
                     ForEach(model.manifests) { manifest in
                         row(for: manifest)
                     }
+                } header: {
+                    HStack {
+                        Text("Installed Clinical Sets")
+                        Spacer()
+                        if let onImport {
+                            Button {
+                                onImport()
+                            } label: {
+                                Label("Import Set…", systemImage: "plus")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                } footer: {
+                    Text("Turning a system off hides it from quick search without deleting data. Removing deletes its codes; your pinned favorites are always preserved.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 .id(model.preferenceRevision)
 
                 Section {
-                    Text("Turning a system off hides it from search without deleting "
-                         + "anything. Removing deletes its codes; your pins are kept.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: Metric.m) {
+                        SettingsIconBadge(systemName: "internaldrive.fill", color: .gray)
+
+                        VStack(alignment: .leading, spacing: Metric.xxs) {
+                            Text("SQLite FTS5 Search Engine")
+                                .font(.body)
+                            Text("\(totalCodesCount.formatted()) total clinical codes indexed")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        StatusPill(text: "Optimized", systemImage: "bolt.fill", color: .green)
+                    }
+                    .padding(.vertical, Metric.xxs)
+                } header: {
+                    Text("Repository Status")
                 }
             }
         }
@@ -62,36 +107,61 @@ struct CodeSetsSettingsView: View {
         }
     }
 
+    private var totalCodesCount: Int {
+        model.manifests.reduce(0) { $0 + $1.rowCount }
+    }
+
     private func row(for manifest: CodeSetManifest) -> some View {
-        HStack(spacing: Metric.m) {
-            Toggle(
-                isOn: .init(
-                    get: { model.isSearchEnabled(manifest.system) },
-                    set: { model.setSearchEnabled(manifest.system, $0) }
-                )
-            ) {
-                VStack(alignment: .leading, spacing: Metric.xxs) {
+        let isEnabled = model.isSearchEnabled(manifest.system)
+
+        return HStack(alignment: .center, spacing: Metric.m) {
+            SettingsIconBadge(
+                systemName: manifest.system.iconName,
+                color: manifest.system.themeColor
+            )
+
+            VStack(alignment: .leading, spacing: Metric.xs) {
+                HStack(spacing: Metric.s) {
                     Text(manifest.system.rawValue)
-                    Text(subtitle(for: manifest))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.body)
+                        .fontWeight(.semibold)
+
+                    if let release = manifest.release {
+                        StatusPill(text: "Release \(release)", color: .secondary)
+                    }
+
+                    StatusPill(text: "\(manifest.rowCount.formatted()) codes", color: .secondary)
                 }
+
+                Text(manifest.system.categorySubtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Button("Remove") { pendingRemoval = manifest }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.red)
-        }
-        .padding(.vertical, Metric.xxs)
-    }
+            Toggle("", isOn: .init(
+                get: { model.isSearchEnabled(manifest.system) },
+                set: { model.setSearchEnabled(manifest.system, $0) }
+            ))
+            .labelsHidden()
+            .help(isEnabled ? "Disable in search" : "Enable in search")
 
-    private func subtitle(for manifest: CodeSetManifest) -> String {
-        let count = "\(manifest.rowCount.formatted()) codes"
-        guard let release = manifest.release else {
-            return "\(count) · release unknown"
+            Menu {
+                Button(role: .destructive) {
+                    pendingRemoval = manifest
+                } label: {
+                    Label("Remove Code Set…", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .frame(width: 20)
+            .help("More actions for \(manifest.system.rawValue)")
         }
-        return "Release \(release) · \(count)"
+        .padding(.vertical, Metric.xs)
     }
 }

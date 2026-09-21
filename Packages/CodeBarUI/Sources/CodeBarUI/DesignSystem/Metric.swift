@@ -45,8 +45,11 @@ public enum Metric {
 
     // MARK: - Settings
 
-    public static let settingsWidth: CGFloat = 540
-    public static let settingsHeight: CGFloat = 380
+    public static let settingsWidth: CGFloat = 560
+    public static let settingsHeight: CGFloat = 460
+    public static let settingsIconSize: CGFloat = 28
+    public static let settingsIconRadius: CGFloat = 7
+    public static let keycapRadius: CGFloat = 4
     public static let abbreviationTermColumn: CGFloat = 100
     public static let abbreviationTermField: CGFloat = 110
 }

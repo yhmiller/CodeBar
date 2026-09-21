@@ -86,6 +86,9 @@ struct CodeBarApp: App {
                 setDockIconShown: { shows in
                     SearchPanelController.shared.preferences.showsDockIcon = shows
                     ActivationPolicyController.setShowsDockIcon(shows)
+                },
+                onImportCodeSet: {
+                    CodeImporter.presentImportPanel(repository: appDelegate.environment.repository)
                 }
             )
         }

@@ -8,6 +8,7 @@ public struct SettingsView: View {
     private let setOpenAtLogin: (Bool) -> Bool
     private let isDockIconShown: () -> Bool
     private let setDockIconShown: (Bool) -> Void
+    private let onImportCodeSet: (() -> Void)?
 
     public init(
         codeSets: CodeSetsViewModel,
@@ -15,7 +16,8 @@ public struct SettingsView: View {
         isOpenAtLoginEnabled: @escaping () -> Bool,
         setOpenAtLogin: @escaping (Bool) -> Bool,
         isDockIconShown: @escaping () -> Bool,
-        setDockIconShown: @escaping (Bool) -> Void
+        setDockIconShown: @escaping (Bool) -> Void,
+        onImportCodeSet: (() -> Void)? = nil
     ) {
         _codeSets = State(initialValue: codeSets)
         _abbreviations = State(initialValue: abbreviations)
@@ -23,6 +25,7 @@ public struct SettingsView: View {
         self.setOpenAtLogin = setOpenAtLogin
         self.isDockIconShown = isDockIconShown
         self.setDockIconShown = setDockIconShown
+        self.onImportCodeSet = onImportCodeSet
     }
 
     public var body: some View {
@@ -35,11 +38,14 @@ public struct SettingsView: View {
             )
             .tabItem { Label("General", systemImage: "gearshape") }
 
-            CodeSetsSettingsView(model: codeSets)
-                .tabItem { Label("Code Sets", systemImage: "list.bullet.rectangle") }
+            CodeSetsSettingsView(
+                model: codeSets,
+                onImport: onImportCodeSet
+            )
+            .tabItem { Label("Code Sets", systemImage: "cylinder.split.1x2") }
 
             AbbreviationsSettingsView(model: abbreviations)
-                .tabItem { Label("Abbreviations", systemImage: "textformat.abc") }
+                .tabItem { Label("Abbreviations", systemImage: "character.book.closed") }
         }
         .frame(width: Metric.settingsWidth, height: Metric.settingsHeight)
         .task { await codeSets.load() }
@@ -58,33 +64,79 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Open CodeBar at login", isOn: $opensAtLogin)
-                    .onChange(of: opensAtLogin) { _, enabled in
-                        guard setOpenAtLogin(enabled) else {
-                            opensAtLogin = isOpenAtLoginEnabled()
-                            return
-                        }
+                HStack(alignment: .center, spacing: Metric.m) {
+                    SettingsIconBadge(systemName: "arrow.clockwise.circle.fill", color: .blue)
+
+                    VStack(alignment: .leading, spacing: Metric.xxs) {
+                        Text("Open CodeBar at login")
+                            .font(.body)
+                        Text("Launches automatically on sign-in so keyboard shortcuts remain instantly responsive.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                Text("A menu bar app that is not running looks broken: the shortcut "
-                     + "silently does nothing.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Toggle("", isOn: $opensAtLogin)
+                        .labelsHidden()
+                        .onChange(of: opensAtLogin) { _, enabled in
+                            guard setOpenAtLogin(enabled) else {
+                                opensAtLogin = isOpenAtLoginEnabled()
+                                return
+                            }
+                        }
+                }
+                .padding(.vertical, Metric.xxs)
+            } header: {
+                Text("Startup & Behavior")
             }
 
-            Section("Appearance") {
-                Toggle("Show CodeBar in the Dock", isOn: $showsDockIcon)
-                    .onChange(of: showsDockIcon) { _, shows in setDockIconShown(shows) }
-                Text("Off keeps CodeBar in the menu bar only, reachable by ⌥⌘C and "
-                     + "the menu bar icon. On, opening CodeBar opens the browse window.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section {
+                HStack(alignment: .center, spacing: Metric.m) {
+                    SettingsIconBadge(systemName: "dock.rectangle", color: .indigo)
+
+                    VStack(alignment: .leading, spacing: Metric.xxs) {
+                        Text("Show CodeBar in the Dock")
+                            .font(.body)
+                        Text("When disabled, CodeBar lives exclusively in your menu bar and opens via shortcut.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $showsDockIcon)
+                        .labelsHidden()
+                        .onChange(of: showsDockIcon) { _, shows in setDockIconShown(shows) }
+                }
+                .padding(.vertical, Metric.xxs)
+            } header: {
+                Text("Appearance")
             }
 
-            Section("Shortcut") {
-                LabeledContent("Open search", value: "⌥⌘C")
-                Text("Fixed for now. Configurable shortcuts are planned.")
+            Section {
+                HStack(alignment: .center, spacing: Metric.m) {
+                    SettingsIconBadge(systemName: "command", color: .orange)
+
+                    VStack(alignment: .leading, spacing: Metric.xxs) {
+                        Text("Open Search Panel")
+                            .font(.body)
+                        Text("Summon the clinical code search HUD from any application.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    KeycapGroup(symbols: "⌥⌘C")
+                }
+                .padding(.vertical, Metric.xxs)
+            } header: {
+                Text("Keyboard Shortcut")
+            } footer: {
+                Text("Customizable global hotkey support is planned for a future update.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
         }
         .formStyle(.grouped)
