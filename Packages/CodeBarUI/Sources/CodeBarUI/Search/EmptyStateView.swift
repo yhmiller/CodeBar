@@ -9,9 +9,11 @@ struct EmptyStateView: View {
 
     var showsSystemBadge: Bool = true
     var isSelected: (ClinicalCode) -> Bool = { _ in false }
+    var isPeeking: (ClinicalCode) -> Bool = { _ in false }
 
     let onChoose: (ClinicalCode) -> Void
     let onTogglePin: (ClinicalCode) -> Void
+    var onTogglePeek: ((ClinicalCode) -> Void)? = nil
     var onSearchExample: ((String) -> Void)? = nil
 
     @State private var listHeight: CGFloat = 0
@@ -78,8 +80,10 @@ struct EmptyStateView: View {
                     density: .panel,
                     isSelected: isSelected(code),
                     isPinned: isPinnedSection,
+                    isPeeking: isPeeking(code),
                     showsSystemBadge: showsSystemBadge,
-                    onTogglePin: { onTogglePin(code) }
+                    onTogglePin: { onTogglePin(code) },
+                    onTogglePeek: onTogglePeek == nil ? nil : { onTogglePeek?(code) }
                 )
                 .onTapGesture { onChoose(code) }
                 .accessibilityHint("Press Return to copy")

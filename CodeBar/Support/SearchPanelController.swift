@@ -40,6 +40,15 @@ final class SearchPanelController {
 
     func show() {
         let panel = self.panel ?? makePanel()
+        if abs(panel.frame.width - Metric.panelWidth) > 1 {
+            let targetSize = CGSize(width: Metric.panelWidth, height: panel.frame.height)
+            let pointer = NSEvent.mouseLocation
+            let screen = NSScreen.screens.first { $0.frame.contains(pointer) } ?? .main
+            if let visibleFrame = screen?.visibleFrame {
+                let newOrigin = PanelPlacement.origin(for: targetSize, in: visibleFrame)
+                panel.setFrame(NSRect(origin: newOrigin, size: targetSize), display: false)
+            }
+        }
         viewModel?.prepareForDisplay()
         position(panel)
         NSApp.activate(ignoringOtherApps: true)
@@ -52,6 +61,30 @@ final class SearchPanelController {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = APPEARANCE_DURATION
             panel.animator().alphaValue = 1
+        }
+    }
+
+    func setPeeking(_ isPeeking: Bool) {
+        guard let panel else { return }
+        let targetWidth = isPeeking ? Metric.peekPanelWidth : Metric.panelWidth
+        guard abs(panel.frame.width - targetWidth) > 1 else { return }
+
+        let screen = panel.screen ?? NSScreen.main
+        guard let visibleFrame = screen?.visibleFrame else { return }
+
+        let targetSize = CGSize(width: targetWidth, height: panel.frame.height)
+        let newOrigin = PanelPlacement.origin(for: targetSize, in: visibleFrame)
+        let newFrame = NSRect(origin: newOrigin, size: targetSize)
+
+        let animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if animates {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.18
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                panel.animator().setFrame(newFrame, display: true)
+            }
+        } else {
+            panel.setFrame(newFrame, display: true)
         }
     }
 
@@ -89,6 +122,9 @@ final class SearchPanelController {
                 onOpenInWindow: { [weak self] code in
                     self?.hide()
                     (NSApp.delegate as? AppDelegate)?.handoffToBrowseWindow(code)
+                },
+                onTogglePeek: { [weak self] isPeeking in
+                    self?.setPeeking(isPeeking)
                 }
             )
             .panelSurface()

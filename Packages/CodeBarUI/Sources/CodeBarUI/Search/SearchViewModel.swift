@@ -28,6 +28,14 @@ public final class SearchViewModel {
 
     public private(set) var displaySessionID = 0
 
+    // MARK: - Spacebar Peek
+
+    public private(set) var isPeeking: Bool = false
+    public private(set) var peekDetail: CodeDetail?
+    public private(set) var peekNote: String?
+    public private(set) var isPeekLoading: Bool = false
+    @ObservationIgnored private var peekTask: Task<Void, Never>?
+
     private let repository: (any CodeRepository)?
     private let pasteboard: any PasteboardWriting
     private let library: any CodeLibraryStoring
@@ -119,8 +127,12 @@ public final class SearchViewModel {
         )
 
         searchRunner.run(searchQuery) { [weak self] found in
-            self?.results = found
-            self?.selectedIndex = 0
+            guard let self else { return }
+            self.results = found
+            self.selectedIndex = 0
+            if self.isPeeking {
+                self.loadPeekDetail()
+            }
         }
     }
 
@@ -133,8 +145,54 @@ public final class SearchViewModel {
         displaySessionID += 1
         selectedSystemScope = nil
         typedSystemScope = nil
+        isPeeking = false
+        peekDetail = nil
+        peekNote = nil
+        isPeekLoading = false
+        peekTask?.cancel()
         setQuery("")
         pendingLibraryWork = Task { await refreshLibrary() }
+    }
+
+    // MARK: - Spacebar Peek Methods
+
+    public func togglePeek() {
+        setPeeking(!isPeeking)
+    }
+
+    public func dismissPeek() {
+        setPeeking(false)
+    }
+
+    public func setPeeking(_ peeking: Bool) {
+        guard isPeeking != peeking else { return }
+        isPeeking = peeking
+        if peeking {
+            loadPeekDetail()
+        } else {
+            peekTask?.cancel()
+            peekTask = nil
+        }
+    }
+
+    public func loadPeekDetail() {
+        guard let code = selectedCode else {
+            peekDetail = nil
+            peekNote = nil
+            isPeekLoading = false
+            return
+        }
+
+        peekTask?.cancel()
+        isPeekLoading = true
+        peekTask = Task {
+            let detail = try? await repository?.detail(for: code)
+            let note = try? await library.note(for: code)
+            guard !Task.isCancelled else { return }
+            self.peekDetail = detail
+            self.peekNote = note
+            self.isPeekLoading = false
+        }
     }
 
     // MARK: - Selection
@@ -160,6 +218,9 @@ public final class SearchViewModel {
         let codes = selectableCodes
         guard !codes.isEmpty else { return }
         selectedIndex = max(0, min(codes.count - 1, selectedIndex + delta))
+        if isPeeking {
+            loadPeekDetail()
+        }
     }
 
     public func isSelected(_ code: ClinicalCode) -> Bool {

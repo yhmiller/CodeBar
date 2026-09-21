@@ -7,6 +7,8 @@ struct PanelFooter: View {
     }
 
     let context: Context
+    var isPeeking: Bool = false
+    var showsPeek: Bool = false
 
     var body: some View {
         HStack(spacing: Metric.l) {
@@ -28,18 +30,27 @@ struct PanelFooter: View {
     }
 
     private var shortcuts: [Shortcut] {
+        var items: [Shortcut]
         switch context {
         case .results:
-            [Shortcut(key: "↵", label: "Copy"),
-             Shortcut(key: "⇧↵", label: "With description"),
-             Shortcut(key: "⌘↵", label: "Open"),
-             Shortcut(key: "⌘1–9", label: "Copy nth"),
-             Shortcut(key: "⌘P", label: "Pin")]
+            items = [
+                Shortcut(key: "↵", label: "Copy"),
+                Shortcut(key: "⇧↵", label: "With description"),
+                Shortcut(key: "⌘↵", label: "Open"),
+                Shortcut(key: "⌘1–9", label: "Copy nth"),
+                Shortcut(key: "⌘P", label: "Pin")
+            ]
         case .suggestions:
-            [Shortcut(key: "↵", label: "Copy"),
-             Shortcut(key: "⌘↵", label: "Open"),
-             Shortcut(key: "⌘P", label: "Pin")]
+            items = [
+                Shortcut(key: "↵", label: "Copy"),
+                Shortcut(key: "⌘↵", label: "Open"),
+                Shortcut(key: "⌘P", label: "Pin")
+            ]
         }
+        if showsPeek {
+            items.append(Shortcut(key: "Space", label: isPeeking ? "Close peek" : "Peek"))
+        }
+        return items
     }
 
     private func item(_ shortcut: Shortcut) -> some View {

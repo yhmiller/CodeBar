@@ -13,10 +13,12 @@ struct CodeRow: View {
     let density: Density
     var isSelected: Bool = false
     var isPinned: Bool = false
+    var isPeeking: Bool = false
 
     var showsSystemBadge: Bool = true
 
     var onTogglePin: (() -> Void)? = nil
+    var onTogglePeek: (() -> Void)? = nil
 
     @State private var isHovering = false
     @Environment(\.controlActiveState) private var controlState
@@ -117,6 +119,17 @@ struct CodeRow: View {
                 .padding(.vertical, Metric.xxs)
                 .semanticChip(Color.systemBadge, in: Capsule())
                 .fixedSize()
+        }
+
+        if let onTogglePeek, density == .panel, isHovering || isSelected {
+            Button(action: onTogglePeek) {
+                Image(systemName: isPeeking ? "eye.fill" : "eye")
+                    .font(.caption)
+                    .foregroundStyle(isPeeking ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(isPeeking ? "Close peek (Space)" : "Peek details (Space)")
+            .accessibilityHidden(true)
         }
 
         if let onTogglePin, density == .panel, isPinned || isHovering {

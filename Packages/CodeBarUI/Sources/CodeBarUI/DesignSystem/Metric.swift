@@ -24,6 +24,12 @@ public enum Metric {
     public static let resultListMaxHeight: CGFloat = 340
     public static let copyConfirmationMaxWidth: CGFloat = 460
 
+    // MARK: - Spacebar Peek
+
+    public static let peekPanelWidth: CGFloat = 940
+    public static let peekListWidth: CGFloat = 520
+    public static let peekInspectorWidth: CGFloat = 420
+
     // MARK: - Rows
 
     public static let rowInset: CGFloat = s

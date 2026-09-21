@@ -8,6 +8,7 @@ public struct SearchPanelView: View {
 
     @State private var text: String = ""
     @State private var listHeight: CGFloat = 0
+    @State private var isNavigatingList: Bool = false
 
     @FocusState private var isFocused: Bool
 
@@ -16,17 +17,20 @@ public struct SearchPanelView: View {
     private let onDismiss: () -> Void
     private let onCopied: (String) -> Void
     private let onOpenInWindow: ((ClinicalCode) -> Void)?
+    private let onTogglePeek: ((Bool) -> Void)?
 
     public init(
         model: SearchViewModel,
         onCopied: @escaping (String) -> Void = { _ in },
         onDismiss: @escaping () -> Void,
-        onOpenInWindow: ((ClinicalCode) -> Void)? = nil
+        onOpenInWindow: ((ClinicalCode) -> Void)? = nil,
+        onTogglePeek: ((Bool) -> Void)? = nil
     ) {
         _model = State(initialValue: model)
         self.onCopied = onCopied
         self.onDismiss = onDismiss
         self.onOpenInWindow = onOpenInWindow
+        self.onTogglePeek = onTogglePeek
     }
 
     public var body: some View {
@@ -40,18 +44,23 @@ public struct SearchPanelView: View {
                 }
             )
             scopeAccentDivider
-            content
+            mainContent
             if let footerContext {
                 Divider()
-                PanelFooter(context: footerContext)
+                PanelFooter(context: footerContext, isPeeking: model.isPeeking, showsPeek: true)
             }
         }
-        .frame(width: Metric.panelWidth)
+        .frame(width: model.isPeeking ? Metric.peekPanelWidth : Metric.panelWidth)
         .ignoresSafeArea()
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: model.isPeeking)
         .onAppear { isFocused = true }
         .onChange(of: model.displaySessionID) { _, _ in
             text = ""
+            isNavigatingList = false
             isFocused = true
+        }
+        .onChange(of: model.isPeeking) { _, peeking in
+            onTogglePeek?(peeking)
         }
         .onKeyPress { press in handle(press) }
     }
@@ -74,12 +83,16 @@ public struct SearchPanelView: View {
                 .textFieldStyle(.plain)
                 .font(CodeTypography.searchField)
                 .focused($isFocused)
-                .onChange(of: text) { _, newValue in model.setQuery(newValue) }
+                .onChange(of: text) { _, newValue in
+                    isNavigatingList = false
+                    model.setQuery(newValue)
+                }
 
             // Safe clear button: always present, opacity-animated rather than
             // inserted/removed, to avoid transition identity assertion crashes.
             Button(action: {
                 text = ""
+                isNavigatingList = false
             }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
@@ -119,6 +132,43 @@ public struct SearchPanelView: View {
     }
 
     @ViewBuilder
+    private var mainContent: some View {
+        if model.isPeeking, let selectedCode = model.selectedCode {
+            HStack(alignment: .top, spacing: 0) {
+                content
+                    .frame(width: Metric.peekListWidth)
+
+                Divider()
+
+                PeekInspectorView(
+                    code: selectedCode,
+                    detail: model.peekDetail,
+                    note: model.peekNote,
+                    isLoading: model.isPeekLoading,
+                    isPinned: model.isPinned(selectedCode),
+                    onCopy: { format in
+                        model.copy(selectedCode, format: format)
+                        confirmAndDismiss()
+                    },
+                    onTogglePin: {
+                        model.togglePin(selectedCode)
+                    },
+                    onOpenInWindow: onOpenInWindow == nil ? nil : {
+                        onOpenInWindow?(selectedCode)
+                        onDismiss()
+                    },
+                    onDismiss: {
+                        model.dismissPeek()
+                    }
+                )
+                .frame(width: Metric.peekInspectorWidth)
+            }
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
     private var content: some View {
         if model.cleanQuery.isEmpty {
             EmptyStateView(
@@ -127,11 +177,21 @@ public struct SearchPanelView: View {
                 scopedSystem: model.activeSystemScope,
                 showsSystemBadge: model.showsSystemBadge,
                 isSelected: { model.isSelected($0) },
+                isPeeking: { model.isPeeking && model.isSelected($0) },
                 onChoose: { code in
                     model.copy(code)
                     confirmAndDismiss()
                 },
                 onTogglePin: { model.togglePin($0) },
+                onTogglePeek: { code in
+                    if !model.isSelected(code) {
+                        let selectable = model.selectableCodes
+                        if let idx = selectable.firstIndex(where: { $0.id == code.id }) {
+                            model.moveSelection(idx - model.selectedIndex)
+                        }
+                    }
+                    model.togglePeek()
+                },
                 onSearchExample: { exampleTerm in
                     if let parsedSystem = QueryScoper.parse(exampleTerm).scopedSystem {
                         model.setSystemScope(parsedSystem)
@@ -164,10 +224,19 @@ public struct SearchPanelView: View {
                             density: .panel,
                             isSelected: model.isSelected(result),
                             isPinned: model.isPinned(result.code),
+                            isPeeking: model.isPeeking && model.isSelected(result),
                             showsSystemBadge: model.showsSystemBadge,
                             onTogglePin: {
                                 NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
                                 model.togglePin(result.code)
+                            },
+                            onTogglePeek: {
+                                if !model.isSelected(result) {
+                                    if let idx = model.results.firstIndex(where: { $0.id == result.id }) {
+                                        model.moveSelection(idx - model.selectedIndex)
+                                    }
+                                }
+                                model.togglePeek()
                             },
                             highlightQuery: model.cleanQuery
                         )
@@ -177,6 +246,15 @@ public struct SearchPanelView: View {
                         }
                         .accessibilityHint("Press Return to copy")
                         .contextMenu {
+                            Button(model.isPeeking && model.isSelected(result) ? "Close Peek (Space)" : "Peek Details (Space)") {
+                                if !model.isSelected(result) {
+                                    if let idx = model.results.firstIndex(where: { $0.id == result.id }) {
+                                        model.moveSelection(idx - model.selectedIndex)
+                                    }
+                                }
+                                model.togglePeek()
+                            }
+                            Divider()
                             Button("Copy Code") {
                                 model.copy(result)
                                 confirmAndDismiss()
@@ -209,6 +287,10 @@ public struct SearchPanelView: View {
     private func handle(_ press: KeyPress) -> KeyPress.Result {
         switch press.key {
         case .escape:
+            if model.isPeeking {
+                model.dismissPeek()
+                return .handled
+            }
             if !text.isEmpty {
                 text = ""
             } else if model.activeSystemScope != nil {
@@ -218,11 +300,28 @@ public struct SearchPanelView: View {
             }
             return .handled
 
+        case .space:
+            if press.modifiers.contains(.command) || press.modifiers.contains(.control) {
+                model.togglePeek()
+                return .handled
+            }
+            if model.isPeeking {
+                model.dismissPeek()
+                return .handled
+            }
+            if isNavigatingList || text.isEmpty {
+                model.togglePeek()
+                return .handled
+            }
+            return .ignored
+
         case .downArrow:
+            isNavigatingList = true
             model.moveSelection(1)
             return .handled
 
         case .upArrow:
+            isNavigatingList = true
             model.moveSelection(-1)
             return .handled
 
@@ -248,6 +347,11 @@ public struct SearchPanelView: View {
 
     private func handleCharacter(_ press: KeyPress) -> KeyPress.Result {
         guard press.modifiers.contains(.command) else { return .ignored }
+
+        if press.characters == "y" {
+            model.togglePeek()
+            return .handled
+        }
 
         if press.characters == "p" {
             return model.togglePinOnSelection() ? .handled : .ignored
