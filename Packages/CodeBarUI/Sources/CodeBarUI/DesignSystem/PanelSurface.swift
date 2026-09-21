@@ -11,7 +11,9 @@ private struct PanelSurface: ViewModifier {
         if #available(macOS 26, *) {
             content.glassEffect(.regular, in: .rect(cornerRadius: Metric.cardRadius))
         } else {
-            content.background(.ultraThinMaterial)
+            content
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: Metric.cardRadius))
         }
     }
 }

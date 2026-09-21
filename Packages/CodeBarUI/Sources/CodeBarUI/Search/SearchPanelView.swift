@@ -40,6 +40,7 @@ public struct SearchPanelView: View {
             }
         }
         .frame(width: Metric.panelWidth)
+        .ignoresSafeArea()
         .onAppear { isFocused = true }
         .onChange(of: model.displaySessionID) { _, _ in
             text = ""

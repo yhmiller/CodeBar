@@ -92,6 +92,7 @@ final class SearchPanelController {
                 }
             )
             .panelSurface()
+            .ignoresSafeArea()
         )
         hosting.sizingOptions = [.preferredContentSize]
 
@@ -103,6 +104,10 @@ final class SearchPanelController {
         )
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
+        panel.titlebarSeparatorStyle = .none
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.isMovableByWindowBackground = true
