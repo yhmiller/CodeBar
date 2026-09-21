@@ -67,6 +67,9 @@ final class SearchPanelController {
 
     func hide() {
         panel?.orderOut(nil)
+        Task {
+            await (NSApp.delegate as? AppDelegate)?.actions.refresh()
+        }
     }
 
     private func makePanel() -> NSPanel {
