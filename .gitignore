@@ -29,3 +29,4 @@ __pycache__/
 Scripts/
 Tools/
 docs/
+.agents/skills/typesafe-ai/
