@@ -14,6 +14,7 @@ final class CopyConfirmationPanel {
     private var dismissal: Task<Void, Never>?
 
     func show(_ copiedText: String) {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
         AccessibilityNotification.Announcement("Copied \(copiedText)").post()
         dismissal?.cancel()
 
@@ -44,7 +45,9 @@ final class CopyConfirmationPanel {
             context.duration = reduceMotion ? 0 : FADE_OUT
             panel.animator().alphaValue = 0
         } completionHandler: {
-            panel.orderOut(nil)
+            MainActor.assumeIsolated {
+                panel.orderOut(nil)
+            }
         }
     }
 

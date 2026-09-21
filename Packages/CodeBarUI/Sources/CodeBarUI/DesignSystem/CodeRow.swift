@@ -27,17 +27,54 @@ struct CodeRow: View {
         return contrast == .increased ? 0.18 : 0.28
     }
 
+    var highlightQuery: String? = nil
+
     @ScaledMetric(relativeTo: .body) private var codeColumn: CGFloat = Metric.codeColumn
+
+    private var codeColumnWidth: CGFloat {
+        if code.code.count > 7 {
+            let extra = CGFloat(code.code.count - 7) * 9.5
+            return codeColumn + extra
+        }
+        return codeColumn
+    }
+
+    private var attributedDisplay: AttributedString {
+        guard let highlight = highlightQuery?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !highlight.isEmpty else {
+            return AttributedString(code.display)
+        }
+        var attributed = AttributedString(code.display)
+        let terms = highlight.split(separator: " ").map(String.init).filter { !$0.isEmpty }
+        let lowerDisplay = code.display.lowercased()
+
+        for term in terms {
+            let lowerTerm = term.lowercased()
+            var searchStartIndex = lowerDisplay.startIndex
+
+            while searchStartIndex < lowerDisplay.endIndex,
+                  let matchRange = lowerDisplay.range(of: lowerTerm, range: searchStartIndex..<lowerDisplay.endIndex) {
+                if let attrRange = Range(matchRange, in: attributed) {
+                    attributed[attrRange].inlinePresentationIntent = .stronglyEmphasized
+                    if !isSelected {
+                        attributed[attrRange].foregroundColor = Color.accentColor
+                    }
+                }
+                searchStartIndex = matchRange.upperBound
+            }
+        }
+        return attributed
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Metric.m) {
             Text(code.code)
                 .font(CodeTypography.codeRow)
                 .foregroundStyle(dimsCode ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
-                .frame(width: density.usesFixedCodeColumn ? codeColumn : nil,
+                .frame(width: density.usesFixedCodeColumn ? codeColumnWidth : nil,
                        alignment: .leading)
 
-            Text(code.display)
+            Text(attributedDisplay)
                 .font(CodeTypography.description)
                 .lineLimit(density.descriptionLines)
                 .fixedSize(horizontal: false, vertical: true)

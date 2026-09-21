@@ -252,7 +252,7 @@ public struct MainWindowView: View {
         )) {
             ForEach(model.searchResults) { result in
                 VStack(alignment: .leading, spacing: Metric.xxs) {
-                    CodeRow(code: result.code, density: .list, showsSystemBadge: false)
+                    CodeRow(code: result.code, density: .list, showsSystemBadge: false, highlightQuery: searchText)
                     if let chapter = result.code.chapter {
                         Text(chapter)
                             .font(.caption2)

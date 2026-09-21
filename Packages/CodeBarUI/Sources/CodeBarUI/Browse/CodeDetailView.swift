@@ -63,8 +63,8 @@ public struct CodeDetailView: View {
             Text(detail.code.code)
                 .font(CodeTypography.codeHero)
             Text(detail.code.display)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(.title3.weight(.medium))
+                .foregroundStyle(.primary)
 
             billability(detail)
         }

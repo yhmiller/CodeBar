@@ -1,3 +1,4 @@
+import AppKit
 import CodeBarUI
 import CodeCore
 import CodePlatform
@@ -44,6 +45,7 @@ final class LibraryActions {
     }
 
     func togglePin(_ code: ClinicalCode) {
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
         Task {
             try? await library.togglePin(code)
             await refresh()

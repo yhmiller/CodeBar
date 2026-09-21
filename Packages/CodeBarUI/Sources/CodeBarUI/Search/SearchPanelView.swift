@@ -103,7 +103,11 @@ public struct SearchPanelView: View {
                             isSelected: model.isSelected(result),
                             isPinned: model.isPinned(result.code),
                             showsSystemBadge: model.showsSystemBadge,
-                            onTogglePin: { model.togglePin(result.code) }
+                            onTogglePin: {
+                                NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
+                                model.togglePin(result.code)
+                            },
+                            highlightQuery: text
                         )
                         .onTapGesture {
                             model.copy(result)
