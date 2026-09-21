@@ -200,3 +200,33 @@ struct CodeRow: View {
         return ""
     }
 }
+
+private extension CodeRow.Density {
+    var descriptionLines: Int {
+        self == .panel ? 2 : 1
+    }
+
+    var usesFixedCodeColumn: Bool {
+        self == .panel
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .panel: Metric.rowPadding
+        case .list: 0
+        case .compact: Metric.s
+        }
+    }
+
+    var verticalPadding: CGFloat {
+        switch self {
+        case .panel: Metric.s
+        case .list: 0
+        case .compact: Metric.xs
+        }
+    }
+
+    var inset: CGFloat {
+        self == .panel ? Metric.rowInset : 0
+    }
+}

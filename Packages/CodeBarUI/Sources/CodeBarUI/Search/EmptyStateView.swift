@@ -14,6 +14,7 @@ struct EmptyStateView: View {
     let onTogglePin: (ClinicalCode) -> Void
     var onSearchExample: ((String) -> Void)? = nil
 
+    @State private var listHeight: CGFloat = 0
 
     var body: some View {
         if pinned.isEmpty && recent.isEmpty {
@@ -38,8 +39,10 @@ struct EmptyStateView: View {
                     )
                 }
                 .padding(.vertical, Metric.s)
+                .measuringHeight()
             }
-            .frame(maxHeight: Metric.resultListMaxHeight)
+            .frame(height: min(listHeight, Metric.resultListMaxHeight))
+            .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
         }
     }
 
@@ -167,14 +170,20 @@ struct EmptyStateView: View {
 
     private var examples: [ExampleItem] {
         guard let system = scopedSystem else {
-            return [
-                ExampleItem(query: "@cpt", label: "Procedures"),
-                ExampleItem(query: "@loinc", label: "Labs"),
-                ExampleItem(query: "@icd", label: "Diagnoses"),
-                ExampleItem(query: "@snomed", label: "Concepts"),
+            var items: [ExampleItem] = []
+            if showsSystemBadge {
+                items.append(contentsOf: [
+                    ExampleItem(query: "@cpt", label: "Procedures"),
+                    ExampleItem(query: "@loinc", label: "Labs"),
+                    ExampleItem(query: "@icd", label: "Diagnoses"),
+                    ExampleItem(query: "@snomed", label: "Concepts")
+                ])
+            }
+            items.append(contentsOf: [
                 ExampleItem(query: "Diabetes", label: nil),
                 ExampleItem(query: "Hypertension", label: nil)
-            ]
+            ])
+            return items
         }
 
         switch system {
@@ -265,24 +274,27 @@ private struct FlowLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
-        let width = proposal.width ?? 0
-        var height: CGFloat = 0
+        let maxWidth = proposal.width ?? .infinity
         var currentX: CGFloat = 0
         var currentY: CGFloat = 0
         var maxHeightInRow: CGFloat = 0
+        var maxRowWidth: CGFloat = 0
 
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if width > 0 && currentX + size.width > width && currentX > 0 {
+            if maxWidth.isFinite && currentX + size.width > maxWidth && currentX > 0 {
+                maxRowWidth = max(maxRowWidth, currentX - spacing)
                 currentX = 0
                 currentY += maxHeightInRow + spacing
                 maxHeightInRow = 0
             }
             currentX += size.width + spacing
             maxHeightInRow = max(maxHeightInRow, size.height)
-            height = currentY + maxHeightInRow
         }
-        return CGSize(width: width, height: height)
+        maxRowWidth = max(maxRowWidth, max(0, currentX - spacing))
+        let totalHeight = currentY + maxHeightInRow
+        let idealWidth = proposal.width ?? maxRowWidth
+        return CGSize(width: idealWidth, height: totalHeight)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {

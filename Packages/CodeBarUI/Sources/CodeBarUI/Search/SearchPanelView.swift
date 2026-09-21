@@ -7,6 +7,7 @@ public struct SearchPanelView: View {
     @State private var model: SearchViewModel
 
     @State private var text: String = ""
+    @State private var listHeight: CGFloat = 0
 
     @FocusState private var isFocused: Bool
 
@@ -64,11 +65,7 @@ public struct SearchPanelView: View {
                     size: 16,
                     weight: model.activeSystemScope != nil ? .semibold : .regular
                 ))
-                .foregroundStyle(
-                    model.activeSystemScope != nil
-                        ? AnyShapeStyle(model.activeSystemScope!.themeColor)
-                        : AnyShapeStyle(Color.secondary)
-                )
+                .foregroundStyle(model.activeSystemScope?.themeColor ?? .secondary)
                 .frame(width: 20, height: 20)
                 .animation(.spring(response: 0.25, dampingFraction: 0.75), value: model.activeSystemScope)
                 .accessibilityHidden(true)
@@ -83,7 +80,6 @@ public struct SearchPanelView: View {
             // inserted/removed, to avoid transition identity assertion crashes.
             Button(action: {
                 text = ""
-                model.setSystemScope(nil)
             }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
@@ -99,22 +95,22 @@ public struct SearchPanelView: View {
     }
 
     private var scopeAccentDivider: some View {
-        ZStack {
-            Divider()
-            if let scope = model.activeSystemScope {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [scope.themeColor.opacity(0.55), scope.themeColor.opacity(0.12), .clear],
-                            startPoint: .leading,
-                            endPoint: .trailing
+        Divider()
+            .overlay(alignment: .leading) {
+                if let scope = model.activeSystemScope {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [scope.themeColor.opacity(0.55), scope.themeColor.opacity(0.12), .clear],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .frame(height: 1.5)
-                    .transition(.opacity)
+                        .frame(height: 1.5)
+                        .transition(.opacity)
+                }
             }
-        }
-        .animation(.easeInOut(duration: 0.2), value: model.activeSystemScope)
+            .animation(.easeInOut(duration: 0.2), value: model.activeSystemScope)
     }
 
     private var footerContext: PanelFooter.Context? {
@@ -137,8 +133,15 @@ public struct SearchPanelView: View {
                 },
                 onTogglePin: { model.togglePin($0) },
                 onSearchExample: { exampleTerm in
-                    text = exampleTerm
-                    model.setQuery(exampleTerm)
+                    if let parsedSystem = QueryScoper.parse(exampleTerm).scopedSystem {
+                        model.setSystemScope(parsedSystem)
+                        text = ""
+                    } else {
+                        if let active = model.activeSystemScope {
+                            model.setSystemScope(active)
+                        }
+                        text = exampleTerm
+                    }
                 }
             )
         } else if model.results.isEmpty {
@@ -190,8 +193,10 @@ public struct SearchPanelView: View {
                     }
                 }
                 .padding(.vertical, Metric.s)
+                .measuringHeight()
             }
-            .frame(maxHeight: Metric.resultListMaxHeight)
+            .frame(height: min(listHeight, Metric.resultListMaxHeight))
+            .onPreferenceChange(ContentHeightPreferenceKey.self) { listHeight = $0 }
             .onChange(of: model.selectedResultID) { _, newValue in
                 guard let newValue else { return }
                 withAnimation(reduceMotion ? nil : .easeOut(duration: SCROLL_ANIMATION_DURATION)) {

@@ -8,8 +8,6 @@ public struct SystemScopeFilterBar: View {
     public let activeScope: CodeSystem?
     public let onSelectScope: (CodeSystem?) -> Void
 
-    @State private var hoveredScope: String? = nil
-
     public init(
         availableSystems: [CodeSystem],
         activeScope: CodeSystem?,
@@ -23,7 +21,7 @@ public struct SystemScopeFilterBar: View {
     public var body: some View {
         if availableSystems.count > 1 {
             HStack(spacing: Metric.xs + 1) {
-                scopeChip(
+                ScopeChipButton(
                     title: "All",
                     icon: "square.grid.2x2",
                     isActive: activeScope == nil,
@@ -33,7 +31,7 @@ public struct SystemScopeFilterBar: View {
                 }
 
                 ForEach(availableSystems, id: \.self) { system in
-                    scopeChip(
+                    ScopeChipButton(
                         title: system.shortLabel,
                         icon: system.iconName,
                         isActive: activeScope == system,
@@ -55,15 +53,19 @@ public struct SystemScopeFilterBar: View {
             .animation(.spring(response: 0.24, dampingFraction: 0.82), value: activeScope)
         }
     }
+}
 
-    private func scopeChip(
-        title: String,
-        icon: String,
-        isActive: Bool,
-        color: Color,
-        tagHint: String? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
+private struct ScopeChipButton: View {
+    let title: String
+    let icon: String
+    let isActive: Bool
+    let color: Color
+    var tagHint: String? = nil
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
         Button(action: {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
             action()
@@ -91,7 +93,7 @@ public struct SystemScopeFilterBar: View {
                     .fill(
                         isActive
                             ? (color == .primary ? Color.primary.opacity(0.14) : color.opacity(0.18))
-                            : (hoveredScope == title ? Color.primary.opacity(0.07) : Color.primary.opacity(0.03))
+                            : (isHovered ? Color.primary.opacity(0.07) : Color.primary.opacity(0.03))
                     )
             )
             .overlay(
@@ -99,17 +101,17 @@ public struct SystemScopeFilterBar: View {
                     .strokeBorder(
                         isActive
                             ? (color == .primary ? Color.primary.opacity(0.28) : color.opacity(0.55))
-                            : (hoveredScope == title ? Color.primary.opacity(0.14) : Color.primary.opacity(0.06)),
+                            : (isHovered ? Color.primary.opacity(0.14) : Color.primary.opacity(0.06)),
                         lineWidth: 1
                     )
             )
             .shadow(color: isActive ? color.opacity(color == .primary ? 0 : 0.22) : .clear, radius: 4, y: 1)
-            .scaleEffect(hoveredScope == title && !isActive ? 1.02 : 1.0)
+            .scaleEffect(isHovered && !isActive ? 1.02 : 1.0)
         }
         .buttonStyle(.plain)
-        .onHover { isHovered in
+        .onHover { hovering in
             withAnimation(.easeOut(duration: 0.12)) {
-                hoveredScope = isHovered ? title : nil
+                isHovered = hovering
             }
         }
         .help(tagHint != nil ? "Filter by \(title) (or type \(tagHint!))" : "Show all code sets")
